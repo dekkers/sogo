@@ -5,3 +5,4 @@
 0005-Set-SOGoMailSpoolPath-to-var-spool-sogo-by-default.patch
 0006-Put-private-libraries-in-usr-lib-sogo.patch
 0007-Compile-daemon-as-PIE.patch
+0008-Detect-Mac-OS-X-10.8-Address-Book-and-iCal-correctly.patch
