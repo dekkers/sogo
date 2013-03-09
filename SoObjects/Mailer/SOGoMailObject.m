@@ -85,7 +85,7 @@ static BOOL debugSoParts       = NO;
       /* The following disabled code should not be needed, except if we use
          annotations (see davEntityTag below) */
       // if (![[ud objectForKey: @"SOGoMailDisableETag"] boolValue]) {
-      mailETag = [[NSString alloc] initWithFormat: @"\"imap4url_%d_%d_%03d\"",
+      mailETag = [[NSString alloc] initWithFormat: @"\"imap4url_%@_%@_%@\"",
                                    UIX_MAILER_MAJOR_VERSION,
                                    UIX_MAILER_MINOR_VERSION,
                                    UIX_MAILER_SUBMINOR_VERSION];
@@ -253,13 +253,13 @@ static BOOL debugSoParts       = NO;
 
 - (id) bodyStructure
 {
-  id body;
+  id bodyStructure;
 
-  body = [[self fetchCoreInfos] valueForKey: @"body"];
+  bodyStructure = [[self fetchCoreInfos] valueForKey: @"bodystructure"];
   if (debugBodyStructure)
-    [self logWithFormat: @"BODY: %@", body];
+    [self logWithFormat: @"BODYSTRUCTURE: %@", bodyStructure];
 
-  return body;
+  return bodyStructure;
 }
 
 - (NGImap4Envelope *) envelope
@@ -746,7 +746,7 @@ static BOOL debugSoParts       = NO;
   if ([prefix hasSuffix: @"/"])
     prefix = [prefix substringToIndex: [prefix length] - 1];
   [self _feedAttachmentIds: attachmentIds
-	withInfos: [coreInfos objectForKey: @"body"]
+	withInfos: [coreInfos objectForKey: @"bodystructure"]
 	andPrefix: prefix];
 
   return attachmentIds;

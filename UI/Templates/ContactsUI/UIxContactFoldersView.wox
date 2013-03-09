@@ -31,18 +31,19 @@
   <div id="uploadDialog" style="display: none" class="dialog left">
     <div>
       <h3><var:string label:value="Import Cards"/></h3>
-      <p><var:string label:value="Select a vCard or LDIF file."/></p>
+      <p class="prompt"><var:string label:value="Select a vCard or LDIF file."/></p>
       <form const:href="" name="uploadForm" id="uploadForm" method="post"
         enctype="multipart/form-data"
         onsubmit="return AIM.submit(this, {'onStart' : validateUploadForm, 
         'onComplete' : uploadCompleted})">
-        <p><input type="file" name="contactsFile" id="contactsFile" /></p>
-        <p><a href="#" class="button actionButton" id="uploadSubmit"
+        <p class="prompt"><input type="file" name="contactsFile" id="contactsFile" class="textField" />
+          <a href="#" class="button actionButton" id="uploadSubmit"
             onclick="if($('uploadForm').onsubmit()) $('uploadForm').submit()">
             <span><var:string label:value="Upload" /></span></a>
           <a href="#" class="button" const:id="uploadCancel">
             <span><var:string label:value="Cancel" /></span></a></p>
       </form>
+      <hr/>
     </div>
   </div>
 
@@ -52,6 +53,7 @@
       <p id="uploadResultsContent"><!-- empty --></p>
       <p><a href="#" class="button" const:id="uploadOK">
           <span><var:string label:value="Done" /></span></a></p>
+      <hr/>
     </div>
   </div>
   
@@ -84,39 +86,23 @@
       <li><var:string label:value="Move To" /></li>
       <li><var:string label:value="Copy To" /></li>
       <li><var:string label:value="Export" /></li>
+      <li><var:string label:value="View Raw Source" /></li>
     </ul>
   </div>
 
-  <div class="contactFoldersList" id="contactFoldersList">
-    <div class="tabsContainer" id="smallToolbarContainer">
-      <ul>
-        <li target="abToolbar">
-          <span><var:string label:value="Address Books" /></span>
-        </li>
-      </ul>
-      <div class="tabs">
-        <div id="abToolbar" class="tab">
-          <a href="#" class="smallToolbarButton">
-            <span><img rsrc:src="add-addressbook.png" 
-                label:title="New Addressbook..."/>
-            </span>
-          </a>
-          <a href="#" class="smallToolbarButton">
-            <span>
-              <img rsrc:src="add-user-addressbook.png" 
-                label:title="Subscribe to an Addressbook..." />
-            </span>
-          </a>
-          <a href="#" class="smallToolbarButton">
-            <span>
-              <img rsrc:src="remove-addressbook.png" 
-                label:title="Remove the selected Addressbook"/>
-            </span>
-          </a>
-        </div>
-      </div>
+  <div id="contactFoldersList">
+    <h6><var:string label:value="Address Books" /></h6>
+    <div id="abToolbar">
+      <a href="#" class="smallToolbarButton"
+         ><span><img rsrc:src="add-addressbook.png" label:title="New Addressbook..."
+         /></span></a>
+      <a href="#" class="smallToolbarButton"
+         ><span><img rsrc:src="add-user-addressbook.png" label:title="Subscribe to an Addressbook..."
+         /></span></a>
+      <a href="#" class="smallToolbarButton"
+         ><span><img rsrc:src="remove-addressbook.png" label:title="Remove the selected Addressbook"
+         /></span></a>
     </div>
-
     <ul id="contactFolders">
       <var:foreach list="contactFolders" item="currentFolder"
         ><li var:id="currentContactFolderId"
@@ -128,7 +114,6 @@
           ></var:foreach
         >
     </ul>
-
     <var:if condition="hasContactSelectionButtons">
       <div class="contactSelection">
         <var:component value="selectorComponent" />
@@ -167,8 +152,8 @@
           var:categories="currentContact.c_categories"
           var:id="currentContact.c_name"
           var:contactname="currentContact.c_cn">
-          <td class="displayName"><var:string value="currentContact.c_cn" const:escapeHTML="YES" /></td>
-          <td><var:string value="currentContact.c_mail"/></td>
+          <td class="displayName" var:title="currentContact.c_cn"><var:string value="currentContact.c_cn" const:escapeHTML="YES" /></td>
+          <td var:title="currentContact.c_mail"><var:string value="currentContact.c_mail"/></td>
           <td><var:string value="currentContact.c_screenname"/></td>
           <td><var:string value="currentContact.c_o"/></td>
           <td><var:string value="currentContact.c_telephonenumber"/></td>

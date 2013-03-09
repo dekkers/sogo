@@ -30,6 +30,7 @@
 "Disable auto reply on" = "Desactivar la resposta automàtica en";
 "Please specify your message and your email addresses for which you want to enable auto reply."
 = "Especifiqueu el missatge i les adreces de correu per a les quals voleu activar la resposta automàtica.";
+"Your vacation message must not end with a single dot on a line." = "El seu missatge d'autoresposta per vacances no ha d'acabar amb un punt en una línia a part. ";
 "End date of your auto reply must be in the future."
 = "La data de finalització de la seva resposta automàtica ha d'estar en el futur.";
 
@@ -76,11 +77,17 @@
 "longDateFmt_3" = "%e de %b de %Y";
 "longDateFmt_4" = "%e %B %Y";
 "longDateFmt_5" = "";
+"longDateFmt_6" = "";
+"longDateFmt_7" = "";
+"longDateFmt_8" = "";
+"longDateFmt_9" = "";
+"longDateFmt_10" = "";
 
 "timeFmt_0" = "%H:%M";
 "timeFmt_1" = "%H.%M";
 "timeFmt_2" = "%H h. %M";
 "timeFmt_3" = "";
+"timeFmt_4" = "";
 
 /* calendar */
 "Week begins on :" = "Setmana comença en: ";
@@ -134,6 +141,7 @@
 "messageforward_inline" = "Incorporats";
 "messageforward_attached" = "Com a adjunts";
 
+"When replying to a message:" = "En contestar a un missatge";
 "replyplacement_above" = "amb la resposta abans";
 "replyplacement_below" = "amb la resposta després";
 "And place my signature" = "Col·locant la signatura";
@@ -142,22 +150,31 @@
 "Compose messages in" = "Compondre els missatges en";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Text net";
+"Display remote inline images" = "Mostrar imatges remotes embegudes";
+"displayremoteinlineimages_never" = "Mai";
+"displayremoteinlineimages_always" = "Sempre";
 
 /* IMAP Accounts */
 "New Mail Account" = "Compte de correu nou";
 
 "Server Name:" = "Servidor:";
 "Port:" = "Port:";
+"Encryption:" = "Encriptació:";
+"None" = "Cap";
 "User Name:" = "Usuari:";
 "Password:" = "Contrasenya:";
 
 "Full Name:" = "Nom complet:";
 "Email:" = "Correu electrònic:";
+"Reply To Email:" = "Respondre a aquesta adreça de correu: ";
 "Signature:" = "Signatura:";
 "(Click to create)" = "(Clic per a crear-la)";
 
 "Signature" = "Signatura";
 "Please enter your signature below:" = "Si us plau, poseu la signatura a sota:";
+
+"Please specify a valid sender address." = "Per favor, especifique una adreça vàlida per al remitent. ";
+"Please specify a valid reply-to address." = "Per favor, especifique una adreça de resposta vàlida. ";
 
 /* Additional Parameters */
 "Additional Parameters" = "Paràmetres addicionals";
@@ -168,11 +185,11 @@
 "Change" = "Canviar";
 
 /* Event+task classifications */
-"Default events classification :" = "Default events classification :";
-"Default tasks classification :" = "Default tasks classification :";
-"PUBLIC_item" = "Public";
-"CONFIDENTIAL_item" = "Confidential";
-"PRIVATE_item" = "Private";
+"Default events classification :" = "Classificació per defecte dels esdeveniments ";
+"Default tasks classification :" = "Classificació per defecte de les tasques ";
+"PUBLIC_item" = "Públic ";
+"CONFIDENTIAL_item" = "Confidencial ";
+"PRIVATE_item" = "Privat ";
 
 /* Event+task categories */
 "category_none" = "Cap";
@@ -189,17 +206,21 @@
 "choose" = "Choose ...";
 "Catalan" = "Català";
 "Czech" = "Česky";
-"DanishDenmark" = "Dansk (Danmark)";
+"Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Slovensky";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
@@ -231,6 +252,7 @@
 "match any of the following rules:" = "compleixin ALGUNA d'aquestes regles:";
 "match all messages" = "tots els missatges";
 "Perform these actions:" = "Realitzar aquestes accions:";
+"Untitled Filter" = "Filtre sense títol";
 
 "Subject" = "Assumpte";
 "From" = "De";
@@ -271,6 +293,7 @@
 "Label 4" = "Etiqueta 4";
 "Label 5" = "Etiqueta 5";
 
+"The password was changed successfully." = "La contrasenya s'ha canviat correctament";
 "Password must not be empty." = "La contrasenya no ha d'estar buida.";
 "The passwords do not match. Please try again." = "Les contrasenyes no coincideixen. Intenta-ho de nou.";
 "Password change failed" = "Ha fallat el canvi de contrasenya";

@@ -1,6 +1,6 @@
 /* SOGoUserDefaults.h - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc.
+ * Copyright (C) 2011-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -35,6 +35,9 @@ extern NSString *SOGoWeekStartFirst4DayWeek;
 extern NSString *SOGoWeekStartFirstFullWeek;
 
 @interface SOGoUserDefaults : SOGoDefaultsSource
+{
+  NSString *userLanguage;
+}
 
 + (SOGoUserDefaults *) defaultsForUser: (NSString *) userId
                               inDomain: (NSString *) domainId;
@@ -48,9 +51,6 @@ extern NSString *SOGoWeekStartFirstFullWeek;
 
 - (void) setDefaultCalendar: (NSString *) newDefaultCalendar;
 - (NSString *) defaultCalendar;
-
-- (void) setAppointmentSendEMailReceipts: (BOOL) newPoil;
-- (BOOL) appointmentSendEMailReceipts;
 
 - (void) setLongDateFormat: (NSString *) newFormat;
 - (void) unsetLongDateFormat;
@@ -117,6 +117,9 @@ extern NSString *SOGoWeekStartFirstFullWeek;
 
 - (void) setMailComposeMessageType: (NSString *) newValue;
 - (NSString *) mailComposeMessageType;
+
+- (void) setMailDisplayRemoteInlineImages: (NSString *) newValue;
+- (NSString *) mailDisplayRemoteInlineImages;
 
 - (void) setMailMessageForwarding: (NSString *) newValue;
 - (NSString *) mailMessageForwarding;

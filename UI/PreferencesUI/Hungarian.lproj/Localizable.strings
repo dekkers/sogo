@@ -24,7 +24,7 @@
 "Enable vacation auto reply" = "Automatikus távollét üzenet engedélyezése";
 "Auto reply message :" = "Automatikus válasz minden feladónak csak egy alkalommal :";
 "Email addresses (separated by commas) :" = "Email címek (vesszővel elválasztva)";
-"Add default email addresses" = "Alapértelmezett email címek hozzáadása";
+"Add default email addresses" = "Saját email címek hozzáadása";
 "Days between responses :" = "Válaszok közötti napok száma:";
 "Do not send responses to mailing lists" = "Levelező listákra válasz mellőzése";
 "Disable auto reply on" = "Automatikus válasz tiltása";
@@ -87,6 +87,7 @@
 "timeFmt_1" = "%I:%M %p";
 "timeFmt_2" = "";
 "timeFmt_3" = "";
+"timeFmt_4" = "";
 
 /* calendar */
 "Week begins on :" = "Hét kezdőnapja:";
@@ -140,30 +141,40 @@
 "messageforward_inline" = "Levélként";
 "messageforward_attached" = "Mellékletként";
 
+"When replying to a message:" = "Amikor válaszol egy üzenetre:";
 "replyplacement_above" = "Válasz elhelyezése az idézet fölött";
 "replyplacement_below" = "Válasz elhelyezése az idézet alatt";
 "And place my signature" = "Aláírás beszúrása";
-"signatureplacement_above" = "az üzenetem alá";
+"signatureplacement_above" = "a válaszüzenet alá";
 "signatureplacement_below" = "az idézet alá";
 "Compose messages in" = "Üzenet formátuma";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Egyszerű szöveg";
+"Display remote inline images" = "Távoli beágyazott képek megjelenítése";
+"displayremoteinlineimages_never" = "Soha";
+"displayremoteinlineimages_always" = "Mindig";
 
 /* IMAP Accounts */
 "New Mail Account" = "Új email fiók";
 
 "Server Name:" = "Kiszolgáló neve:";
 "Port:" = "Port:";
+"Encryption:" = "Titkosítás:";
+"None" = "Nincs";
 "User Name:" = "Felhasználónév:";
 "Password:" = "Jelszó:";
 
 "Full Name:" = "Teljes név:";
 "Email:" = "Email cím:";
+"Reply To Email:" = "Válaszlevél";
 "Signature:" = "Aláírás:";
 "(Click to create)" = "(A létrehozáshoz kattintson ide)";
 
 "Signature" = "Aláírás";
 "Please enter your signature below:" = "Kérem itt adja meg az aláírását";
+
+"Please specify a valid sender address." = "Egy érvényes feladó címet adjon meg.";
+"Please specify a valid reply-to address." = "Egy érvényes válaszcímet adjon meg.";
 
 /* Additional Parameters */
 "Additional Parameters" = "További beállítások";
@@ -182,7 +193,7 @@
 
 /* Event+task categories */
 "category_none" = "Nincs";
-"calendar_category_labels" = "Évforduló,Születésnap,Üzleti,Meghívás,Ügyfelek,Versenytársak,Vevő,Kedvencek,Nyomonkövetés,Ajándékozás,Szabadság,Ötletek,Meeting,Ügyek,Egyéb,Személyes,Projektek,Állami ünnep,Állapot,Szállítók,Utazás,Szünidő";
+"calendar_category_labels" = "Évforduló,Születésnap,Üzleti,Meghívás,Ügyfelek,Versenytársak,Vevő,Kedvencek,Nyomonkövetés,Ajándékozás,Szabadság,Ötletek,Megbeszélés,Ügyek,Egyéb,Személyes,Projektek,Állami ünnep,Állapot,Szállítók,Utazás,Szünidő";
 
 /* Default module */
 "Calendar" = "Naptár";
@@ -198,15 +209,19 @@
 "Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
-"SpanishSpain" = "Spanyol";
+"Slovak" = "Szlovén";
+"SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
 "Ukrainian" = "Українська";
@@ -228,7 +243,7 @@
 "Filters" = "Szűrők";
 "Active" = "Aktív";
 "Move Up" = "Mozgatás fel";
-"Move Down" = "Mzgatás le";
+"Move Down" = "Mozgatás le";
 
 /* Filters - UIxFilterEditor */
 "Filter name:" = "Szűrő neve:";
@@ -237,6 +252,7 @@
 "match any of the following rules:" = "legalább egy szabálynak megfelelnek:";
 "match all messages" = "az összes üzenetnek megfelelnek";
 "Perform these actions:" = "Az alábbi műveletek végrehajtása:";
+"Untitled Filter" = "Névtelen szűrő";
 
 "Subject" = "Tárgy";
 "From" = "Feladó";
@@ -277,15 +293,16 @@
 "Label 4" = "Címke 4";
 "Label 5" = "Címke 5";
 
-"Password must not be empty." = "Le mot de passe ne doit pas être vide.";
-"The passwords do not match. Please try again." = "Les mots de passe ne sont pas identiques. Essayez de nouveau.";
-"Password change failed" = "Échec au changement";
-"Password change failed - Permission denied" = "Échec au changement - mauvaises permissions";
-"Password change failed - Insufficient password quality" = "Échec au changement - qualité insuffisante";
-"Password change failed - Password is too short" = "Échec au changement - mot de passe trop court";
-"Password change failed - Password is too young" = "Échec au changement - mot de passe trop récent";
-"Password change failed - Password is in history" = "Échec au changement - mot de passe dans l'historique";
-"Unhandled policy error: %{0}" = "Erreur inconnue pour le ppolicy: %{0}";
-"Unhandled error response" = "Erreur inconnue";
-"Password change is not supported." = "Changement de mot de passe non-supporté.";
-"Unhandled HTTP error code: %{0}" = "Code HTTP non-géré: %{0}";
+"The password was changed successfully." = "A jelszó megváltoztatása sikeres.";
+"Password must not be empty." = "Jelszó nem lehet üres.";
+"The passwords do not match. Please try again." = "Jelszavak nem egyeznek meg. Kérem próbálja meg újra.";
+"Password change failed" = "Jelszó változtatása sikertelen";
+"Password change failed - Permission denied" = "Jelszó változtatása sikertelen - hozzáférés megtagadva";
+"Password change failed - Insufficient password quality" = "Jelszó változtatása sikertelen - a jelszó erőssége nem megfelelő";
+"Password change failed - Password is too short" = "Jelszó változtatása sikertelen - a jelszó túl rövid";
+"Password change failed - Password is too young" = "Jelszó változtatása sikertelen - a jelszó túl egyszerű";
+"Password change failed - Password is in history" = "Jelszó változtatás sikertelen - korábbi jelszó nem használható";
+"Unhandled policy error: %{0}" = "Nem kezelt szabályrendszer hiba: %{0}";
+"Unhandled error response" = "Nem kezelt hiba válasz";
+"Password change is not supported." = "Jelszó változtatása nem támogatott.";
+"Unhandled HTTP error code: %{0}" = "Nem kezelt HTTP hiba kód: %{0}";

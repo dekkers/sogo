@@ -1,6 +1,6 @@
 /* MAPIStoreFolder.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -23,13 +23,16 @@
 /* TODO: main key arrays must be initialized */
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSCalendarDate.h>
+#import <Foundation/NSData.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSURL.h>
 #import <NGExtensions/NSObject+Logs.h>
 #import <SOGo/SOGoContentObject.h>
+#import <SOGo/SOGoUser.h>
 #import <SOGo/SOGoFolder.h>
 
 #import "MAPIStoreActiveTables.h"
@@ -44,11 +47,12 @@
 #import "MAPIStoreSamDBUtils.h"
 #import "MAPIStoreTypes.h"
 #import "MAPIStoreUserContext.h"
+#import "NSData+MAPIStore.h"
 #import "NSDate+MAPIStore.h"
 #import "NSString+MAPIStore.h"
 #import "NSObject+MAPIStore.h"
-#import "SOGoMAPIFSFolder.h"
-#import "SOGoMAPIFSMessage.h"
+#import "SOGoMAPIDBFolder.h"
+#import "SOGoMAPIDBMessage.h"
 
 #include <gen_ndr/exchange.h>
 
@@ -78,33 +82,68 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
       // messageKeys = nil;
       // faiMessageKeys = nil;
       // folderKeys = nil;
-      faiFolder = nil;
+      dbFolder = nil;
       context = nil;
 
-      propsFolder = nil;
-      propsMessage = nil;
+      // propsFolder = nil;
+      // propsMessage = nil;
     }
 
   return self;
 }
 
-- (void) _setupAuxiliaryObjects
+- (void) setupAuxiliaryObjects
 {
-  NSURL *propsURL;
-  NSString *urlString;
+  NSURL *folderURL;
+  NSMutableString *pathPrefix;
+  NSString *path, *folderName;
+  NSArray *parts;
+  NSUInteger lastPartIdx;
+  MAPIStoreUserContext *userContext;
 
-  urlString = [[self url] stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding];
-  propsURL = [NSURL URLWithString: urlString];
-  [self logWithFormat: @"_setupAuxiliaryObjects: %@", propsURL];
-  ASSIGN (faiFolder,
-          [SOGoMAPIFSFolder folderWithURL: propsURL
-                             andTableType: MAPISTORE_FAI_TABLE]);
-  ASSIGN (propsFolder,
-          [SOGoMAPIFSFolder folderWithURL: propsURL
-                             andTableType: MAPISTORE_FOLDER_TABLE]);
-  ASSIGN (propsMessage,
-          [SOGoMAPIFSMessage objectWithName: @"properties.plist"
-                                inContainer: propsFolder]);
+  folderURL = [NSURL URLWithString: [self url]];
+  /* note: -[NSURL path] returns an unescaped representation */
+  path = [folderURL path];
+  path = [path substringFromIndex: 1];
+  if ([path length] > 0)
+    {
+      parts = [path componentsSeparatedByString: @"/"];
+      lastPartIdx = [parts count] - 1;
+      if ([path hasSuffix: @"/"])
+        lastPartIdx--;
+      folderName = [parts objectAtIndex: lastPartIdx];
+    }
+  else
+    folderName = [folderURL host];
+
+  userContext = [self userContext];
+  [userContext ensureFolderTableExists];
+
+  ASSIGN (dbFolder,
+          [SOGoMAPIDBFolder objectWithName: folderName
+                               inContainer: [container dbFolder]]);
+  [dbFolder setTableUrl: [userContext folderTableURL]];
+  if (!container && [path length] > 0)
+    {
+      pathPrefix = [NSMutableString stringWithCapacity: 64];
+      [pathPrefix appendFormat: @"/%@", [folderURL host]];
+      parts = [parts subarrayWithRange: NSMakeRange (0, lastPartIdx)];
+      if ([parts count] > 0)
+        [pathPrefix appendFormat: @"/%@", [parts componentsJoinedByString: @"/"]];
+      [dbFolder setPathPrefix: pathPrefix];
+    }
+  [dbFolder reloadIfNeeded];
+
+  /* propsMessage and self share the same properties dictionary */
+  // ASSIGN (propsMessage,
+  //         [SOGoMAPIDBMessage objectWithName: @"properties.plist"
+  //                               inContainer: dbFolder]);
+  // [propsMessage setObjectType: MAPIDBObjectTypeInternal];
+  // [propsMessage reloadIfNeeded];
+  [properties release];
+  properties = [dbFolder properties];
+  [properties retain];
+
   [self setupVersionsMessage];
 }
 
@@ -118,7 +157,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
                             inContainer: newContainer])
       && newContainer)
     {
-      [self _setupAuxiliaryObjects];
+      [self setupAuxiliaryObjects];
     }
 
   return self;
@@ -128,45 +167,49 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 {
   ASSIGN (context, newContext);
   if (newContext)
-    [self _setupAuxiliaryObjects];
+    [self setupAuxiliaryObjects];
 }
 
 - (MAPIStoreContext *) context
 {
   if (!context)
-    [self setContext: [container context]];
+    [self setContext: (MAPIStoreContext *) [container context]];
 
   return context;
 }
 
 - (void) dealloc
 {
+  [self logWithFormat: @"METHOD '%s' (%d)", __FUNCTION__, __LINE__];
+
   // [messageKeys release];
   // [faiMessageKeys release];
   // [folderKeys release];
-  [propsMessage release];
-  [propsFolder release];
-  [faiFolder release];
+  // [propsMessage release];
+  [dbFolder release];
   [context release];
 
   [super dealloc];
 }
 
+- (SOGoMAPIDBFolder *) dbFolder
+{
+  return dbFolder;
+}
+
 /* backend interface */
 
-- (SOGoMAPIFSMessage *) propertiesMessage
-{
-  return propsMessage;
-}
+// - (SOGoMAPIDBMessage *) propertiesMessage
+// {
+//   return propsMessage;
+// }
 
 - (uint64_t) objectVersion
 {
   NSNumber *value;
-  NSDictionary *props;
   uint64_t cn;
 
-  props = [propsMessage properties];
-  value = [props objectForKey: MAPIPropertyKey (PidTagChangeNumber)];
+  value = [properties objectForKey: MAPIPropertyKey (PidTagChangeNumber)];
   if (value)
     cn = [value unsignedLongLongValue];
   else
@@ -174,10 +217,10 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
       [self logWithFormat: @"no value for PidTagChangeNumber, adding one now"];
       cn = [[self context] getNewChangeNumber];
       value = [NSNumber numberWithUnsignedLongLong: cn];
-      props = [NSDictionary dictionaryWithObject: value
-                                          forKey: MAPIPropertyKey (PidTagChangeNumber)];
-      [propsMessage appendProperties: props];
-      [propsMessage save];
+
+      [properties setObject: value
+                     forKey: MAPIPropertyKey (PidTagChangeNumber)];
+      [dbFolder save];
     }
 
   return cn >> 16;
@@ -185,47 +228,42 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 
 - (id) lookupFolder: (NSString *) folderKey
 {
-  MAPIStoreFolder *childFolder = nil;
+  MAPIStoreFolder *childFolder;
   SOGoFolder *sogoFolder;
   WOContext *woContext;
 
   if ([[self folderKeys] containsObject: folderKey])
     {
       woContext = [[self userContext] woContext];
-      sogoFolder = [sogoObject lookupName: folderKey
-                                inContext: woContext
+      sogoFolder = [sogoObject lookupName: folderKey inContext: woContext
                                   acquire: NO];
-      [sogoFolder setContext: woContext];
       if (sogoFolder && ![sogoFolder isKindOfClass: NSExceptionK])
-        childFolder = [isa mapiStoreObjectWithSOGoObject: sogoFolder
-                                             inContainer: self];
+        {
+          [sogoFolder setContext: woContext];
+          childFolder = [isa mapiStoreObjectWithSOGoObject: sogoFolder
+                                               inContainer: self];
+        }
     }
+  else
+    childFolder = nil;
 
   return childFolder;
 }
 
 - (id) lookupFolderByURL: (NSString *) childURL
 {
-  MAPIStoreObject *foundObject = nil;
-  NSString *baseURL, *subURL;
-  NSArray *parts;
-  NSUInteger partsCount;
+  MAPIStoreObject *foundObject;
+  NSString *key, *slashLessURL;
 
-  baseURL = [self url];
-  if (![baseURL hasSuffix: @"/"])
-    baseURL = [NSString stringWithFormat: @"%@/", baseURL];
-  if ([childURL hasPrefix: baseURL])
-    {
-      subURL = [childURL substringFromIndex: [baseURL length]];
-      if ([subURL length] > 0)
-        {
-          parts = [subURL componentsSeparatedByString: @"/"];
-          partsCount = [parts count];
-          if ((partsCount == 1)
-              || (partsCount == 2 && [[parts objectAtIndex: 1] length] == 0))
-            foundObject = [self lookupFolder: [parts objectAtIndex: 0]];
-        }
-    }
+  if ([childURL hasSuffix: @"/"])
+    slashLessURL = [childURL substringToIndex: [childURL length] - 1];
+  else
+    slashLessURL = childURL;
+  key = [self childKeyFromURL: slashLessURL];
+  if (key)
+    foundObject = [self lookupFolder: key];
+  else
+    foundObject = nil;
 
   return foundObject;
 }
@@ -263,9 +301,9 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
     {
       if ([[self faiMessageKeys] containsObject: messageKey])
         {
-          msgObject = [faiFolder lookupName: messageKey
-                                  inContext: nil
-                                    acquire: NO];
+          msgObject = [dbFolder lookupName: messageKey
+                                 inContext: nil
+                                   acquire: NO];
           childMessage
             = [MAPIStoreFAIMessageK mapiStoreObjectWithSOGoObject: msgObject
                                                       inContainer: self];
@@ -275,10 +313,9 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   return childMessage;
 }
 
-- (id) lookupMessageByURL: (NSString *) childURL
+- (NSString *) childKeyFromURL: (NSString *) childURL
 {
-  MAPIStoreObject *foundObject = nil;
-  NSString *baseURL, *subURL, *key;
+  NSString *baseURL, *subURL, *key = nil;
   NSArray *parts;
   NSUInteger partsCount;
 
@@ -294,13 +331,29 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
           partsCount = [parts count];
           if (partsCount == 1)
             {
-              key = [parts objectAtIndex: 0];
-              foundObject = [self lookupFAIMessage: key];
-              if (!foundObject)
-                foundObject = [self lookupMessage: key];
+              key = [[parts objectAtIndex: 0]
+                      stringByReplacingPercentEscapesUsingEncoding: NSUTF8StringEncoding];
             }
         }
     }
+
+  return key;
+}
+
+- (id) lookupMessageByURL: (NSString *) childURL
+{
+  MAPIStoreObject *foundObject;
+  NSString *key;
+
+  key = [self childKeyFromURL: childURL];
+  if (key)
+    {
+      foundObject = [self lookupFAIMessage: key];
+      if (!foundObject)
+        foundObject = [self lookupMessage: key];
+    }
+  else
+    foundObject = nil;
 
   return foundObject;
 }
@@ -359,8 +412,9 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
               baseURL = [self url];
               if (![baseURL hasSuffix: @"/"])
                 baseURL = [NSString stringWithFormat: @"%@/", baseURL];
-              childURL = [NSString stringWithFormat: @"%@%@",
-                                   baseURL, folderKey];
+              childURL = [NSString stringWithFormat: @"%@%@/",
+                                   baseURL,
+                                   [folderKey stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
               [mapping registerURL: childURL withID: fid];
               childFolder = [self lookupFolder: folderKey];
               if (childFolder)
@@ -382,9 +436,8 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 
 - (int) deleteFolder
 {
-  [propsMessage delete];
-  [propsFolder delete];
-  [faiFolder delete];
+  // [propsMessage delete];
+  [dbFolder delete];
 
   [self cleanupCaches];
 
@@ -605,24 +658,23 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   return rc;
 }
 
-- (int) moveCopyMessageWithMID: (uint64_t) srcMid
-                    fromFolder: (MAPIStoreFolder *) sourceFolder
-                       withMID: (uint64_t) targetMid
-                  andChangeKey: (struct Binary_r *) targetChangeKey
-                      wantCopy: (uint8_t) wantCopy
+// private method
+- (int) _moveCopyMessageWithMID: (uint64_t) srcMid
+                     fromFolder: (MAPIStoreFolder *) sourceFolder
+                        withMID: (uint64_t) targetMid
+                   andChangeKey: (struct Binary_r *) targetChangeKey
+                       wantCopy: (uint8_t) wantCopy
+                       inMemCtx: (TALLOC_CTX *) memCtx
 {
   int rc;
   MAPIStoreMessage *sourceMsg, *destMsg;
-  TALLOC_CTX *memCtx;
-  struct SPropTagArray *availableProps;
-  bool *exclusions;
-  NSUInteger count;
-  enum MAPITAGS propTag;
-  struct SRow *aRow;
-  int error;
-  void *data;
+  //TALLOC_CTX *memCtx;
+  struct SRow aRow;
+  struct SPropValue property;
 
-  memCtx = talloc_zero (NULL, TALLOC_CTX);
+  [self logWithFormat: @"-moveCopyMessageWithMID: 0x%.16llx .. withMID: 0x%.16llx .. wantCopy: %d", srcMid, targetMid, wantCopy];
+
+  //memCtx = talloc_zero (NULL, TALLOC_CTX);
   rc = [sourceFolder openMessage: &sourceMsg
                          withMID: srcMid
                       forWriting: NO
@@ -630,62 +682,29 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   if (rc != MAPISTORE_SUCCESS)
     goto end;
 
-  rc = [sourceMsg getAvailableProperties: &availableProps
-                                inMemCtx: memCtx];
-  if (rc != MAPISTORE_SUCCESS)
-    goto end;
-
-  exclusions = talloc_array(NULL, bool, 65536);
-  exclusions[PR_ROW_TYPE >> 16] = true;
-  exclusions[PR_INSTANCE_KEY >> 16] = true;
-  exclusions[PR_INSTANCE_NUM >> 16] = true;
-  exclusions[PR_INST_ID >> 16] = true;
-  exclusions[PR_FID >> 16] = true;
-  exclusions[PR_MID >> 16] = true;
-  exclusions[PR_SOURCE_KEY >> 16] = true;
-  exclusions[PR_PARENT_SOURCE_KEY >> 16] = true;
-  exclusions[PR_PARENT_FID >> 16] = true;
-  exclusions[PR_CHANGE_KEY >> 16] = true;
-  exclusions[PR_PREDECESSOR_CHANGE_LIST >> 16] = true;
-
-  aRow = talloc_zero (memCtx, struct SRow);
-  aRow->lpProps = talloc_array (aRow, struct SPropValue, 65535);
-
-  for (count = 0; count < availableProps->cValues; count++)
-    {
-      propTag = availableProps->aulPropTag[count];
-      if (!exclusions[propTag >> 16])
-        {
-          error = [sourceMsg getProperty: &data
-                                 withTag: propTag
-                                inMemCtx: aRow];
-          if (error == MAPISTORE_SUCCESS && data)
-            {
-              set_SPropValue_proptag(&aRow->lpProps[aRow->cValues], propTag, data);
-              aRow->cValues++;
-            }
-        }
-    }
-
-  if (targetChangeKey)
-    {
-      set_SPropValue_proptag(&aRow->lpProps[aRow->cValues], PR_CHANGE_KEY, targetChangeKey);
-      aRow->cValues++;
-    }
-
   rc = [self createMessage: &destMsg withMID: targetMid
               isAssociated: [sourceMsg isKindOfClass: MAPIStoreFAIMessageK]];
   if (rc != MAPISTORE_SUCCESS)
     goto end;
-  rc = [destMsg addPropertiesFromRow: aRow];
-  if (rc != MAPISTORE_SUCCESS)
-    goto end;
+
+  [sourceMsg copyToMessage: destMsg  inMemCtx: memCtx];
+
+  if (targetChangeKey)
+    {
+      property.ulPropTag = PidTagChangeKey;
+      property.value.bin = *targetChangeKey;
+      aRow.cValues = 1;
+      aRow.lpProps = &property;
+      rc = [destMsg addPropertiesFromRow: &aRow];
+      if (rc != MAPISTORE_SUCCESS)
+        goto end;
+    }
   [destMsg save];
   if (!wantCopy)
     rc = [sourceFolder deleteMessageWithMID: srcMid andFlags: 0];
 
  end:
-  talloc_free (memCtx);
+  //talloc_free (memCtx);
 
   return rc;
 }
@@ -696,6 +715,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
                         withMIDs: (uint64_t *) targetMids
                    andChangeKeys: (struct Binary_r **) targetChangeKeys
                         wantCopy: (uint8_t) wantCopy
+                        inMemCtx: (TALLOC_CTX *) memCtx
 {
   int rc = MAPISTORE_SUCCESS;
   NSUInteger count;
@@ -704,6 +724,9 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   MAPIStoreMapping *mapping;
   SOGoUser *ownerUser;
   struct Binary_r *targetChangeKey;
+  //TALLOC_CTX *memCtx;
+
+  //memCtx = talloc_zero (NULL, TALLOC_CTX);
 
   ownerUser = [[self userContext] sogoUser];
 
@@ -725,11 +748,12 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
                 targetChangeKey = targetChangeKeys[count];
               else
                 targetChangeKey = NULL;
-              rc = [self moveCopyMessageWithMID: srcMids[count]
-                                     fromFolder: sourceFolder
-                                        withMID: targetMids[count]
-                                   andChangeKey: targetChangeKey
-                                       wantCopy: wantCopy];
+              rc = [self _moveCopyMessageWithMID: srcMids[count]
+                                      fromFolder: sourceFolder
+                                         withMID: targetMids[count]
+                                    andChangeKey: targetChangeKey
+                                        wantCopy: wantCopy
+                                        inMemCtx: memCtx];
             }
           else
             rc = MAPISTORE_ERR_NOT_FOUND;
@@ -752,6 +776,133 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
     }
   else
     rc = MAPISTORE_ERR_DENIED;
+  
+  //talloc_free (memCtx);
+  
+  return rc;
+}
+
+- (enum mapistore_error) moveCopyToFolder: (MAPIStoreFolder *) targetFolder
+                              withNewName: (NSString *) newFolderName
+                                   isMove: (BOOL) isMove
+                              isRecursive: (BOOL) isRecursive
+                                 inMemCtx: (TALLOC_CTX *) memCtx
+
+{
+  enum mapistore_error rc;
+  NSAutoreleasePool *pool;
+  struct SRow folderRow;
+  struct SPropValue nameProperty;
+  MAPIStoreFolder *subFolder, *newFolder;
+  NSArray *children;
+  MAPIStoreMapping *mapping;
+  MAPIStoreMessage *message, *targetMessage;
+  NSUInteger count, max;
+  NSString *childKey;
+  uint64_t fmid;
+  //TALLOC_CTX *memCtx;
+
+  //memCtx = talloc_zero (NULL, TALLOC_CTX);
+
+  /* TODO: one possible issue with this algorithm is that moved messages will
+     lack a version number and will all be assigned a new one, even though
+     they have not changed. This also means that they will be transferred
+     again to the client during a sync operation. */
+
+  if ([targetFolder supportsSubFolders])
+    {
+      mapping = [self mapping];
+
+      if (!newFolderName)
+        newFolderName = [sogoObject displayName];
+      nameProperty.ulPropTag = PidTagDisplayName;
+      nameProperty.value.lpszW = [newFolderName UTF8String];
+      folderRow.lpProps = &nameProperty;
+      folderRow.cValues = 1;
+      rc = [targetFolder createFolder: &folderRow
+                              withFID: [self objectId]
+                               andKey: &childKey];
+      if (rc == MAPISTORE_SUCCESS)
+        {
+          newFolder = [targetFolder lookupFolder: childKey];
+          [self copyPropertiesToObject: newFolder  inMemCtx: memCtx];
+
+          pool = [NSAutoreleasePool new];
+          children = [self messageKeys];
+          max = [children count];
+          for (count = 0; count < max; count++)
+            {
+              childKey = [children objectAtIndex: count];
+              message = [self lookupMessage: childKey];
+              targetMessage = [newFolder createMessage: NO];
+              [targetMessage setIsNew: YES];
+              [message copyToMessage: targetMessage  inMemCtx: memCtx];
+              if (isMove)
+                {
+                  fmid = [mapping idFromURL: [message url]];
+                  [self deleteMessageWithMID: fmid andFlags: 0];
+                  [mapping registerURL: [targetMessage url]
+                                withID: fmid];
+                }
+              [targetMessage save];
+            }
+          [pool release];
+
+          pool = [NSAutoreleasePool new];
+          children = [self faiMessageKeys];
+          max = [children count];
+          for (count = 0; count < max; count++)
+            {
+              childKey = [children objectAtIndex: count];
+              message = [self lookupFAIMessage: childKey];
+              targetMessage = [newFolder createMessage: YES];
+              [targetMessage setIsNew: YES];
+              [message copyToMessage: targetMessage  inMemCtx: memCtx];
+              if (isMove)
+                {
+                  fmid = [mapping idFromURL: [message url]];
+                  [self deleteMessageWithMID: fmid andFlags: 0];
+                  [mapping registerURL: [targetMessage url]
+                                withID: fmid];
+                }
+              [targetMessage save];
+            }
+          [pool release];
+
+          if (isRecursive)
+            {
+              pool = [NSAutoreleasePool new];
+              children = [self folderKeys];
+              max = [children count];
+              for (count = 0; count < max; count++)
+                {
+                  childKey = [children objectAtIndex: count];
+                  subFolder = [self lookupFolder: childKey];
+                  [subFolder moveCopyToFolder: newFolder withNewName: nil
+                                       isMove: isMove
+                                  isRecursive: isRecursive
+                                     inMemCtx: memCtx];
+
+                }
+              [pool release];
+            }
+
+          if (isMove)
+            {
+              fmid = [mapping idFromURL: [self url]];
+              [mapping unregisterURLWithID: fmid];
+              [self deleteFolder];
+              [mapping registerURL: [newFolder url]
+                            withID: fmid];
+            }
+          [targetFolder cleanupCaches];
+        }
+      [self cleanupCaches];
+    }
+  else
+    rc = MAPISTORE_ERR_DENIED;
+
+  //talloc_free (memCtx);
 
   return rc;
 }
@@ -780,6 +931,35 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 
 - (void) setupVersionsMessage
 {
+}
+
+- (void) ensureIDsForChildKeys: (NSArray *) keys
+{
+  NSMutableArray *missingURLs;
+  MAPIStoreMapping *mapping;
+  NSUInteger count, max;
+  NSString *baseURL, *URL, *key;
+  NSArray *newIDs;
+  uint64_t idNbr;
+  
+  baseURL = [self url];
+
+  mapping = [self mapping];
+  max = [keys count];
+  missingURLs = [NSMutableArray arrayWithCapacity: max];
+  for (count = 0; count < max; count++)
+    {
+      key = [keys objectAtIndex: count];
+      URL = [NSString stringWithFormat: @"%@%@", baseURL, key];
+      idNbr = [mapping idFromURL: URL];
+      if (idNbr == NSNotFound)
+        [missingURLs addObject: URL];
+    }
+
+  max = [missingURLs count];
+  newIDs = [[self context] getNewFMIDs: max];
+  [mapping registerURLs: missingURLs
+                withIDs: newIDs];
 }
 
 - (void) postNotificationsForMoveCopyMessagesWithMIDs: (uint64_t *) srcMids
@@ -889,7 +1069,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
     }
 }
 
-- (int) getDeletedFMIDs: (struct I8Array_r **) fmidsPtr
+- (int) getDeletedFMIDs: (struct UI8Array_r **) fmidsPtr
                   andCN: (uint64_t *) cnPtr
        fromChangeNumber: (uint64_t) changeNum
             inTableType: (enum mapistore_table_type) tableType
@@ -901,7 +1081,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   NSNumber *cnNbr;
   NSUInteger count, max;
   MAPIStoreMapping *mapping;
-  struct I8Array_r *fmids;
+  struct UI8Array_r *fmids;
   uint64_t fmid;
 
   keys = [self getDeletedKeysFromChangeNumber: changeNum andCN: &cnNbr
@@ -912,9 +1092,9 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 
       max = [keys count];
 
-      fmids = talloc_zero (memCtx, struct I8Array_r);
+      fmids = talloc_zero (memCtx, struct UI8Array_r);
       fmids->cValues = 0;
-      fmids->lpi8 = talloc_array (fmids, int64_t, max);
+      fmids->lpui8 = talloc_array (fmids, uint64_t, max);
       *fmidsPtr = fmids;
       if (max > 0)
         *cnPtr = [cnNbr unsignedLongLongValue];
@@ -934,7 +1114,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
                                      "never existed" in the OpenChange
                                      databases */
             {
-              fmids->lpi8[fmids->cValues] = fmid;
+              fmids->lpui8[fmids->cValues] = fmid;
               fmids->cValues++;
             }
         }
@@ -1003,7 +1183,11 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   /* TODO: this should no longer be required once mapistore v2 API is in
      place, when we can then do this from -dealloc below */
 
+  [dbFolder reloadIfNeeded];
+
   propsCopy = [newProperties mutableCopy];
+  [propsCopy autorelease];
+
   currentProp = bannedProps;
   while (*currentProp)
     {
@@ -1011,9 +1195,8 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
       currentProp++;
     }
 
-  [propsMessage appendProperties: propsCopy];
-  [propsMessage save];
-  [propsCopy release];
+  [properties addEntriesFromDictionary: propsCopy];
+  [dbFolder save];
 }
 
 - (NSArray *) messageKeys
@@ -1038,9 +1221,10 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 - (NSArray *) faiMessageKeysMatchingQualifier: (EOQualifier *) qualifier
                              andSortOrderings: (NSArray *) sortOrderings
 {
-  return [faiFolder
-           toOneRelationshipKeysMatchingQualifier: qualifier
-                                 andSortOrderings: sortOrderings];
+  return [dbFolder childKeysOfType: MAPIDBObjectTypeFAI
+                    includeDeleted: NO
+                 matchingQualifier: qualifier
+                  andSortOrderings: sortOrderings];
 }
 
 - (NSArray *) faiMessageKeys
@@ -1182,16 +1366,39 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   return MAPISTORE_SUCCESS;
 }
 
-/*
-  Possible values are:
-
-  0x00000000 Read-Only
-  0x00000001 Modify
-*/
-- (int) getPidTagAccessLevel: (void **) data
-                    inMemCtx: (TALLOC_CTX *) memCtx
+- (int) getPidTagRights: (void **) data
+               inMemCtx: (TALLOC_CTX *) memCtx
 {
-  *data = MAPILongValue (memCtx, 0x01);
+  uint32_t rights = 0;
+  SOGoUser *ownerUser;
+  BOOL userIsOwner;
+
+  ownerUser = [[self userContext] sogoUser];
+
+  userIsOwner = [[context activeUser] isEqual: ownerUser];
+  if (userIsOwner || [self subscriberCanReadMessages])
+    rights |= RightsReadItems;
+  if (userIsOwner || [self subscriberCanCreateMessages])
+    rights |= RightsCreateItems;
+  if (userIsOwner || [self subscriberCanModifyMessages])
+    rights |= RightsEditOwn | RightsEditAll;
+  if (userIsOwner || [self subscriberCanDeleteMessages])
+    rights |= RightsDeleteOwn | RightsDeleteAll;
+  if ((userIsOwner || [self subscriberCanCreateSubFolders])
+      && [self supportsSubFolders])
+    rights |= RightsCreateSubfolders;
+  if (userIsOwner)
+    rights |= RightsFolderOwner | RightsFolderContact;
+  
+  *data = MAPILongValue (memCtx, rights);
+
+  return MAPISTORE_SUCCESS;
+}
+
+- (int) getPidTagAccessControlListData: (void **) data
+                              inMemCtx: (TALLOC_CTX *) memCtx
+{
+  *data = [[NSData data] asBinaryInMemCtx: memCtx];
 
   return MAPISTORE_SUCCESS;
 }
@@ -1217,7 +1424,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 - (int) getPidTagSubfolders: (void **) data
                    inMemCtx: (TALLOC_CTX *) memCtx
 {
-  *data = MAPIBoolValue (memCtx, [[self folderKeys] count] > 0);
+  *data = MAPIBoolValue (memCtx, [self supportsSubFolders] && [[self folderKeys] count] > 0);
   
   return MAPISTORE_SUCCESS;
 }
@@ -1286,6 +1493,19 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   return MAPISTORE_SUCCESS;
 }
 
+- (int) getProperties: (struct mapistore_property_data *) data
+             withTags: (enum MAPITAGS *) tags
+             andCount: (uint16_t) columnCount
+             inMemCtx: (TALLOC_CTX *) memCtx
+{
+  [dbFolder reloadIfNeeded];
+
+  return [super getProperties: data
+                     withTags: tags
+                     andCount: columnCount
+                     inMemCtx: memCtx];
+}
+
 - (int) getProperty: (void **) data
             withTag: (enum MAPITAGS) propTag
            inMemCtx: (TALLOC_CTX *) memCtx
@@ -1293,8 +1513,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   int rc;
   id value;
 
-  value = [[propsMessage properties]
-            objectForKey: MAPIPropertyKey (propTag)];
+  value = [properties objectForKey: MAPIPropertyKey (propTag)];
   if (value)
     rc = [value getValue: data forTag: propTag inMemCtx: memCtx];
   else
@@ -1306,13 +1525,15 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 - (MAPIStoreMessage *) _createAssociatedMessage
 {
   MAPIStoreMessage *newMessage;
-  SOGoMAPIFSMessage *fsObject;
+  SOGoMAPIDBMessage *dbObject;
   NSString *newKey;
 
   newKey = [NSString stringWithFormat: @"%@.plist",
                      [SOGoObject globallyUniqueObjectId]];
-  fsObject = [SOGoMAPIFSMessage objectWithName: newKey inContainer: faiFolder];
-  newMessage = [MAPIStoreFAIMessageK mapiStoreObjectWithSOGoObject: fsObject
+  dbObject = [SOGoMAPIDBMessage objectWithName: newKey inContainer: dbFolder];
+  [dbObject setObjectType: MAPIDBObjectTypeFAI];
+  [dbObject setIsNew: YES];
+  newMessage = [MAPIStoreFAIMessageK mapiStoreObjectWithSOGoObject: dbObject
                                                        inContainer: self];
   
   return newMessage;
@@ -1327,9 +1548,15 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
     newMessage = [self _createAssociatedMessage];
   else
     newMessage = [self createMessage];
-  [newMessage setIsNew: YES];
+  /* FIXME: this is ugly as the specifics of message creation should all be
+     delegated to subclasses */
+  if ([newMessage respondsToSelector: @selector (setIsNew:)])
+    [newMessage setIsNew: YES];
   woContext = [[self userContext] woContext];
-  [[newMessage sogoObject] setContext: woContext];
+  /* FIXME: this is ugly too as the specifics of message creation should all
+     be delegated to subclasses */
+  if ([newMessage respondsToSelector: @selector (sogoObject:)])
+    [[newMessage sogoObject] setContext: woContext];
 
   return newMessage;
 }
@@ -1577,12 +1804,49 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
   return MAPISTORE_SUCCESS;
 }
 
+- (enum mapistore_error) preloadMessageBodiesWithMIDs: (const struct UI8Array_r *) mids
+                                          ofTableType: (enum mapistore_table_type) tableType
+{
+  uint32_t count;
+  NSMutableArray *messageKeys;
+  MAPIStoreMapping *mapping;
+  NSString *messageURL, *messageKey;
+
+  messageKeys = [NSMutableArray arrayWithCapacity: mids->cValues];
+
+  mapping = [self mapping];
+  for (count = 0; count < mids->cValues; count++)
+    {
+      messageURL = [mapping urlFromID: mids->lpui8[count]];
+      if (messageURL)
+        {
+          messageKey = [self childKeyFromURL: messageURL];
+          if (messageKey)
+            [messageKeys addObject: messageKey];
+        }
+    }
+
+  return [self preloadMessageBodiesWithKeys: messageKeys
+                                ofTableType: tableType];
+}
+
+- (enum mapistore_error) preloadMessageBodiesWithKeys: (NSArray *) keys
+                                          ofTableType: (enum mapistore_table_type) tableType
+{
+  return MAPISTORE_SUCCESS;
+}
+
 - (uint64_t) objectId
 {
   uint64_t objectId;
+  NSString *folderKey;
 
   if (container)
-    objectId = [super objectId];
+    {
+      folderKey = [NSString stringWithFormat: @"%@/",
+                            [sogoObject nameInContainer]];
+      objectId = [container idForObjectWithKey: folderKey];
+    }
   else
     objectId = [self idForObjectWithKey: nil];
 
@@ -1597,12 +1861,12 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
 
 - (NSDate *) creationTime
 {
-  return [propsMessage creationTime];
+  return [dbFolder creationDate];
 }
 
 - (NSDate *) lastModificationTime
 {
-  return [propsMessage lastModificationTime];
+  return [dbFolder lastModified];
 }
 
 /* subclasses */

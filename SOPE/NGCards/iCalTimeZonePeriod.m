@@ -103,10 +103,26 @@
 //   return dayOfWeek;
 // }
 
+- (void) dealloc
+{
+  [startDate release];
+  [super dealloc];
+}
+
 - (NSCalendarDate *) startDate
 {
-  return [(iCalDateTime *) [self uniqueChildWithTag: @"dtstart"]
-			   dateTime];
+  if (!startDate)
+    {
+      startDate =  [(iCalDateTime *) [self uniqueChildWithTag: @"dtstart"]
+                                     dateTime];
+      [startDate retain];
+    }
+  return startDate;
+}
+
+- (iCalRecurrenceRule *) recurrenceRule
+{
+  return (iCalRecurrenceRule *) [self firstChildWithTag: @"rrule"];
 }
 
 /**
@@ -115,8 +131,8 @@
  * We assume that a RRULE for a timezone will always be YEARLY with a BYMONTH
  * and a BYDAY rule.
  */
-- (NSCalendarDate *) _occurenceForDate: (NSCalendarDate *) refDate
-			       byRRule: (iCalRecurrenceRule *) rrule
+- (NSCalendarDate *) _occurrenceForDate: (NSCalendarDate *) refDate
+                                byRRule: (iCalRecurrenceRule *) rrule
 {
   NSCalendarDate *tmpDate;
   iCalByDayMask *byDayMask;
@@ -164,17 +180,19 @@
   return tmpDate;
 }
 
-- (NSCalendarDate *) occurenceForDate: (NSCalendarDate *) refDate;
+- (NSCalendarDate *) occurrenceForDate: (NSCalendarDate *) refDate;
 {
   NSCalendarDate *tmpDate;
   iCalRecurrenceRule *rrule;
 
+  tmpDate = nil;
   rrule = (iCalRecurrenceRule *) [self uniqueChildWithTag: @"rrule"];
+
   if ([rrule isVoid])
     tmpDate
       = [(iCalDateTime *) [self uniqueChildWithTag: @"dtstart"] dateTime];
-  else
-    tmpDate = [self _occurenceForDate: refDate byRRule: rrule];
+  else if ([rrule untilDate] == nil || [refDate compare: [rrule untilDate]] == NSOrderedAscending)
+    tmpDate = [self _occurrenceForDate: refDate byRRule: rrule];
 
   return tmpDate;
 }
@@ -182,6 +200,11 @@
 - (int) secondsOffsetFromGMT
 {
   return [self _secondsOfOffset: @"tzoffsetto"];
+}
+
+- (NSComparisonResult) compare: (iCalTimeZonePeriod *) otherPeriod
+{
+  return [[self startDate] compare: [otherPeriod startDate]];
 }
 
 @end

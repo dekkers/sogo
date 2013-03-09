@@ -57,6 +57,7 @@
 #import <SOGo/SOGoDateFormatter.h>
 #import <SOGo/SOGoUser.h>
 #import <SOGo/SOGoUserDefaults.h>
+#import <SOGo/SOGoUserSettings.h>
 
 #import <UI/Common/WODirectAction+SOGo.h>
 
@@ -299,7 +300,7 @@
 
   hasAttachment = NO;
 
-  parts = [[message objectForKey: @"body"] objectForKey: @"parts"];
+  parts = [[message objectForKey: @"bodystructure"] objectForKey: @"parts"];
   if ([parts count] > 1)
     {
       dispositions = [[parts objectsForKey: @"disposition"

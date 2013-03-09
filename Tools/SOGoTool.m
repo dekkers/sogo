@@ -21,7 +21,10 @@
  */
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSCharacterSet.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSUserDefaults.h>
 
 #import "SOGoTool.h"
 
@@ -49,6 +52,7 @@
   [instance autorelease];
 
   [instance setArguments: toolArguments];
+  [instance setSanitizedArguments: toolArguments];
   [instance setVerbose: isVerbose];
 
   return [instance run];
@@ -59,6 +63,7 @@
   if ((self = [super init]))
     {
       arguments = nil;
+      sanitizedArguments = nil;
       verbose = NO;
     }
 
@@ -70,6 +75,61 @@
   ASSIGN (arguments, newArguments);
 }
 
+- (void) setSanitizedArguments: (NSArray *) newArguments
+{
+  int i;
+
+  NSArray *keys;
+  NSDictionary   *cliArguments;
+  NSMutableArray *mutArguments;
+  NSString *kArg, *k, *v;
+  NSUInteger kArgPos;
+
+  mutArguments = [NSMutableArray arrayWithArray: newArguments];
+
+  /* Remove NSArgumentDomain '-key value' from the arguments */
+  cliArguments = [[NSUserDefaults standardUserDefaults]
+                                 volatileDomainForName:NSArgumentDomain];
+  keys = [cliArguments allKeys];
+  for (i=0; i < [keys count]; i++)
+    {
+      k = [keys objectAtIndex: i];
+      v = [cliArguments objectForKey:k];
+
+      /* -p will be 'p' in NSArgumentDomain */
+      kArg = [NSString stringWithFormat:@"-%@", k];
+      kArgPos = [mutArguments indexOfObject: kArg];
+
+      if (kArgPos != NSNotFound)
+        {
+          /* Remove arguments at kArgPos+1 and kArgPos
+           * if their sequence matches that of the ArgumentDomain data: -k v
+           */
+          if (kArgPos < ([mutArguments count] - 1) &&
+                [[mutArguments objectAtIndex: kArgPos+1] isEqualToString: v])
+            {
+              [mutArguments removeObjectAtIndex: kArgPos+1];
+              [mutArguments removeObjectAtIndex: kArgPos];
+            }
+          else
+            {
+              /* this should not happen unless the argument is the last one */
+              [mutArguments removeObjectAtIndex: kArgPos];
+            }
+        }
+    }
+
+  if ([mutArguments count])
+    {
+      ASSIGN (sanitizedArguments, mutArguments);
+    }
+  else
+    {
+      DESTROY(sanitizedArguments);
+    }
+
+}
+
 - (void) setVerbose: (BOOL) newVerbose
 {
   verbose = newVerbose;
@@ -78,6 +138,7 @@
 - (void) dealloc
 {
   [arguments release];
+  [sanitizedArguments release];
   [super dealloc];
 }
 

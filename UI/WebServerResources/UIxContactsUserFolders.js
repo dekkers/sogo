@@ -1,9 +1,7 @@
 var d;
 
-function onSearchFormSubmit() {
-    startAnimation($("pageContent"), $("filterPanel"));
-
-    var searchValue = $("searchValue");
+function onSearchFormSubmit(filterPanel) {
+    var searchValue = filterPanel.down('[name="search"]');
     var encodedValue = encodeURI(searchValue.value);
 
     if (encodedValue.blank()) {
@@ -16,8 +14,11 @@ function onSearchFormSubmit() {
             document.userFoldersRequest.aborted = true;
             document.userFoldersRequest.abort();
         }
-        document.userFoldersRequest
-            = triggerAjaxRequest(url, usersSearchCallback);
+        if (encodedValue.trim().length > minimumSearchLength) {
+            startAnimation($("pageContent"), filterPanel);
+            document.userFoldersRequest
+                = triggerAjaxRequest(url, usersSearchCallback);
+        }
     }
 
     return false;
@@ -62,23 +63,33 @@ function addUserLineToTree(tree, parent, line) {
 }
 
 function buildUsersTree(treeDiv, response) {
+    if (!treeDiv.clean) {
+        var oldD = $("d"); // the folders tree
+        if (oldD) {
+            oldD.remove();
+            delete d;
+        }
+        treeDiv.clean = true;
+        $("addButton").addClassName("disabled");
+    }
+
     d = new dTree("d");
     d.config.hideRoot = true;
     d.icon.root = ResourcesURL + '/tbtv_account_17x17.gif';
     d.icon.folder = ResourcesURL + '/tbtv_leaf_corner_17x17.png';
     d.icon.folderOpen = ResourcesURL + '/tbtv_leaf_corner_17x17.png';
     d.icon.node = ResourcesURL + '/tbtv_leaf_corner_17x17.png';
-    d.icon.line = ResourcesURL + '/tbtv_line_17x17.gif';
-    d.icon.join = ResourcesURL + '/tbtv_junction_17x17.gif';
-    d.icon.joinBottom = ResourcesURL + '/tbtv_corner_17x17.gif';
-    d.icon.plus = ResourcesURL + '/tbtv_plus_17x17.gif';
-    d.icon.plusBottom = ResourcesURL + '/tbtv_corner_plus_17x17.gif';
-    d.icon.minus = ResourcesURL + '/tbtv_minus_17x17.gif';
-    d.icon.minusBottom = ResourcesURL + '/tbtv_corner_minus_17x17.gif';
-    d.icon.nlPlus = ResourcesURL + '/tbtv_corner_plus_17x17.gif';
-    d.icon.nlMinus = ResourcesURL + '/tbtv_corner_minus_17x17.gif';
+    d.icon.line = ResourcesURL + '/tbtv_line_17x22.png';
+    d.icon.join = ResourcesURL + '/tbtv_junction_17x22.png';
+    d.icon.joinBottom = ResourcesURL + '/tbtv_corner_17x22.png';
+    d.icon.plus = ResourcesURL + '/tbtv_plus_17x22.png';
+    d.icon.plusBottom = ResourcesURL + '/tbtv_corner_plus_17x22.png';
+    d.icon.minus = ResourcesURL + '/tbtv_minus_17x22.png';
+    d.icon.minusBottom = ResourcesURL + '/tbtv_corner_minus_17x22.png';
+    d.icon.nlPlus = ResourcesURL + '/tbtv_corner_plus_17x22.png';
+    d.icon.nlMinus = ResourcesURL + '/tbtv_corner_minus_17x22.png';
     d.icon.empty = ResourcesURL + '/empty.gif';
-    d.preload ();
+    d.preload();
     d.add(0, -1, '');
 
     var isUserDialog = (window.opener.userFolderType == "user");
@@ -92,21 +103,21 @@ function buildUsersTree(treeDiv, response) {
         for (var i = 0; i < response.length; i++) {
             if (!isUserDialog) {
                 var toggle = $("tgd" + (1 + i * 2));
-                toggle.observe ("click", onUserNodeToggle);
+                toggle.on("click", onUserNodeToggle);
             }
             var sd = $("sd" + (1 + i * multiplier));
-            sd.observe("click", onTreeItemClick);
+            sd.on("click", onTreeItemClick);
         }
     }
     else {
-        $("searchValue").addClassName("notfound");
+        $$('[name="search"]').first().addClassName("notfound");
     }
 }
 
 function onUserNodeToggle(event) {
     this.stopObserving("click", onUserNodeToggle);
 
-    var person = this.parentNode.getAttribute("dataname");
+    var person = this.parentNode.getAttribute("dataname").unescapeHTML();
 
     var url = (UserFolderURLForUser(person) + "foldersSearch"
                + "?type=" + window.opener.userFolderType);
@@ -153,20 +164,20 @@ function foldersSearchCallback(http) {
 
             dd.innerHTML = '';
             for (var i = 1; i < folders.length - 1; i++)
-                dd.appendChild (addFolderBranchToTree (d, user, folders[i], nodeId, i, false));
-            dd.appendChild (addFolderBranchToTree (d, user, folders[folders.length-1], nodeId,
-                                                   (folders.length - 1), true));
+                dd.appendChild (addFolderBranchToTree(d, user, folders[i], nodeId, i, false));
+            dd.appendChild (addFolderBranchToTree(d, user, folders[folders.length-1], nodeId,
+                                                  (folders.length - 1), true));
             //dd.update(str);
             for (var i = 1; i < folders.length; i++) {
                 var sd = $("sd" + (nodeId + i));
-                sd.observe("click", onTreeItemClick);
+                sd.on("click", onTreeItemClick);
             }
         }
         else {
             dd.innerHTML = '';
-            dd.appendChild(addFolderNotFoundNode (d, nodeId, null));
+            dd.appendChild(addFolderNotFoundNode(d, nodeId, null));
             var sd = $("sd" + (nodeId + 1));
-            sd.observe("click", onTreeItemClick);
+            sd.on("click", onTreeItemClick);
         }
 
         d.aIndent.pop();
@@ -185,18 +196,18 @@ function addFolderBranchToTree(tree, user, folder, nodeId, subId, isLast) {
     var pos = name.lastIndexOf(' (');
     if (pos > -1)
         name = name.substring(0, pos); // strip the part with fullname and email
-    var node = new Node(subId, nodeId, name, 0, '#', folderId,
-                        folderInfos[2] + '-folder', '', '', icon, icon);
+    var node = new dTreeNode(subId, nodeId, name, 0, '#', folderId,
+                             folderInfos[2] + '-folder', '', '', icon, icon);
     node._ls = isLast;
     var content = tree.node(node, (nodeId + subId), null);
 
     return content;
 }
 
-function addFolderNotFoundNode (tree, nodeId) {
+function addFolderNotFoundNode(tree, nodeId) {
     var icon = ResourcesURL + '/dot.png';
-    var node = new Node(1, nodeId, _("No possible subscription"), 0, '#',
-                        null, null, '', '', icon, icon);
+    var node = new dTreeNode(1, nodeId, _("No possible subscription"), 0, '#',
+                             null, null, '', '', icon, icon);
     node._ls = true;
     return tree.node(node, (nodeId + 1));
 }
@@ -240,7 +251,7 @@ function onConfirmFolderSelection(event) {
 function onFolderSearchKeyDown(event) {
     if (event.keyCode == Event.KEY_BACKSPACE
         || IsCharacterKey(event.keyCode)) {
-        $("searchValue").removeClassName("notfound");
+        $(this).removeClassName("notfound");
         var div = $("folders");
         if (!div.clean) {
             var oldD = $("d"); // the folders tree
@@ -255,11 +266,11 @@ function onFolderSearchKeyDown(event) {
 }
 
 function initUserFoldersWindow() {
-    var searchValue = $("searchValue");
-    searchValue.observe("keydown", onFolderSearchKeyDown);
+    var searchValue = $$('[name="search"]').first();
+    searchValue.on("keydown", onFolderSearchKeyDown);
 
-    $("addButton").observe("click", onConfirmFolderSelection);
-    $("doneButton").observe("click", onCloseButtonClick);
+    $("addButton").on("click", onConfirmFolderSelection);
+    $("doneButton").on("click", onCloseButtonClick);
 
     searchValue.focus();
 }

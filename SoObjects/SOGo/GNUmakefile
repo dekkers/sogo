@@ -6,10 +6,10 @@ include ../../Version
 
 FRAMEWORK_NAME = SOGo
 
+SOGo_VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
+
 #SOGo_INSTALL_DIR = $(SOGO_LIBDIR)
 SOGo_INSTALL_DIR = $(DESTDIR)$(GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_FRAMEWORKS)
-
-SOGo_VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
 SOGo_HEADER_FILES = \
 	SOGoBuild.h \
@@ -141,6 +141,16 @@ SOGo_OBJC_FILES = \
 SOGo_RESOURCE_FILES = \
 	SOGoDefaults.plist \
 	DAVReportMap.plist
+
+ifeq ($(saml2_config), yes)
+	SOGo_HEADER_FILES += SOGoSAML2Session.h SOGoSAML2Exceptions.h
+	SOGo_OBJC_FILES += SOGoSAML2Session.m SOGoSAML2Exceptions.m
+	SOGo_RESOURCE_FILES += SOGoSAML2Metadata.xml
+
+SOGoSAML2Exceptions.h SOGoSAML2Exceptions.m: gen-saml2-exceptions.py
+	$(ECHO_CREATING) ./gen-saml2-exceptions.py $(LASSO_CFLAGS) $(END_ECHO)
+
+endif
 
 ifeq ($(ldap_config),yes)
 

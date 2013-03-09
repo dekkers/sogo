@@ -1,6 +1,6 @@
 /* MAPIStoreFAIMessage.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -19,6 +19,8 @@
  * the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+
+#import <SOGo/SOGoUser.h>
 
 #import "MAPIStoreActiveTables.h"
 #import "MAPIStoreContext.h"

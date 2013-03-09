@@ -1,7 +1,7 @@
 /* generic.js - this file is part of SOGo
 
    Copyright (C) 2005 SKYRIX Software AG
-   Copyright (C) 2006-2011 Inverse
+   Copyright (C) 2006-2012 Inverse
 
  SOGo is free software; you can redistribute it and/or modify it under
  the terms of the GNU Lesser General Public License as published by the
@@ -118,7 +118,7 @@ function extractEmailAddress(mailTo) {
     var email = "";
 
     var emailre
-        = /(([a-zA-Z0-9\._-]+)*[a-zA-Z0-9_-]+@([a-zA-Z0-9\._-]+)*[a-zA-Z0-9_-]+)/;
+        = /([a-zA-Z0-9\._\-]*[a-zA-Z0-9_\-]+@[a-zA-Z0-9\._\-]*[a-zA-Z0-9])/;
     if (emailre.test(mailTo)) {
         emailre.exec(mailTo);
         email = RegExp.$1;
@@ -206,6 +206,42 @@ function openUserFolderSelector(callback, type) {
     }
 }
 
+function openGenericWindow(url, wId) {
+    var div = $("popupFrame");
+    if (div) {
+        if (!div.hasClassName("small"))
+            div.addClassName("small");
+        var iframe = div.down("iframe");
+        iframe.src = url;
+        if (!wId)
+	    wId = "genericFrame";
+        iframe.id = wId;;
+        var bgDiv = $("bgFrameDiv");
+        if (bgDiv) {
+            bgDiv.show();
+        }
+        else {
+            bgDiv = createElement("div", "bgFrameDiv");
+            document.body.appendChild(bgDiv);
+        }
+        div.show();
+
+        return div;
+    }
+    else {
+        if (!wId)
+            wId = "_blank";
+        else
+            wId = sanitizeWindowName(wId);
+
+        var w = window.open(url, wId,
+                            "width=550,height=650,resizable=1,scrollbars=1,location=0");
+        w.focus();
+
+        return w;
+    }
+}
+
 function openContactWindow(url, wId) {
     var div = $("popupFrame");
     if (div) {
@@ -283,7 +319,7 @@ function openMailComposeWindow(url, wId) {
 }
 
 function openMailTo(senderMailTo) {
-    var addresses = senderMailTo.split(",");
+    var addresses = senderMailTo.split(";");
     var sanitizedAddresses = new Array();
     var subject = extractSubject(senderMailTo);
     for (var i = 0; i < addresses.length; i++) {
@@ -1037,14 +1073,15 @@ function popupSearchMenu(event) {
 }
 
 function setSearchCriteria(event) {
-    var searchValue = $("searchValue");
-    var searchCriteria = $("searchCriteria");
+    var panel = $(this).up('.filterPanel');
+    var searchValue = panel.down('[name="search"]');
+    var searchCriteria = panel.down('[name="criteria"]');
 
     if (searchValue.ghostPhrase == searchValue.value)
         searchValue.value = "";
 
     searchValue.ghostPhrase = this.innerHTML;
-    searchCriteria.value = this.getAttribute('id');
+    searchCriteria.value = this.readAttribute('data-option');
 
     if (this.parentNode.chosenNode)
         this.parentNode.chosenNode.removeClassName("_chosen");
@@ -1056,20 +1093,18 @@ function setSearchCriteria(event) {
         searchValue.lastSearch = "";
         this.parentNode.chosenNode = this;
 
-        onSearchFormSubmit();
+        onSearchFormSubmit(panel);
     }
 }
 
 function configureSearchField() {
-    var searchValue = $("searchValue");
-
-    if (searchValue) {
-        searchValue.observe("click", popupSearchMenu);
-        searchValue.observe("blur", onSearchBlur);
-        searchValue.observe("focus", onSearchFocus);
-        searchValue.observe("keydown", onSearchKeyDown);
-        searchValue.observe("mousedown", onSearchMouseDown);
-    }
+    $$('.searchBox [name="search"]').each(function(searchValue) {
+        searchValue.on("click", popupSearchMenu);
+        searchValue.on("blur", onSearchBlur);
+        searchValue.on("focus", onSearchFocus);
+        searchValue.on("keydown", onSearchKeyDown);
+        searchValue.on("mousedown", onSearchMouseDown);
+    });
 }
 
 function onSearchMouseDown(event) {
@@ -1082,7 +1117,7 @@ function onSearchMouseDown(event) {
 }
 
 function onSearchFocus(event) {
-    ghostPhrase = this.ghostPhrase;
+    var ghostPhrase = this.ghostPhrase;
     if (this.value == ghostPhrase) {
         this.value = "";
         this.setAttribute("modified", "");
@@ -1094,15 +1129,16 @@ function onSearchFocus(event) {
 
 function onSearchBlur(event) {
     if (!this.value || this.value.blank()) {
+        var id = $(this).up('[data-search]').readAttribute('data-search');
         this.setAttribute("modified", "");
         this.setStyle({ color: "#909090" });
         this.value = this.ghostPhrase;
         if (this.timer)
             clearTimeout(this.timer);
-        search["value"] = "";
+        search[id]["value"] = "";
         if (this.lastSearch != "") {
             this.lastSearch = "";
-            refreshCurrentFolder();
+            refreshCurrentFolder(id);
         }
     } else if (this.value == this.ghostPhrase) {
         this.setAttribute("modified", "");
@@ -1124,42 +1160,48 @@ function IsCharacterKey(keyCode) {
 
 function onSearchKeyDown(event) {
     if (event.keyCode == Event.KEY_RETURN) {
+        var panel = $(this).up('.filterPanel');
         if (this.timer)
             clearTimeout(this.timer);
-        onSearchFormSubmit();
+        onSearchFormSubmit(panel);
         preventDefault(event);
     }
     else if (event.keyCode == Event.KEY_BACKSPACE
              || IsCharacterKey(event.keyCode)) {
+        var panel = $(this).up('.filterPanel');
         if (this.timer)
             clearTimeout(this.timer);
-        this.timer = setTimeout("onSearchFormSubmit()", 500);
+        this.timer = onSearchFormSubmit.delay(0.5, panel);
     }
 }
 
-function onSearchFormSubmit(event) {
-    var searchValue = $("searchValue");
-    var searchCriteria = $("searchCriteria");
+function onSearchFormSubmit(filterPanel) {
+    var id = filterPanel.readAttribute('data-search');
+    var searchValue = filterPanel.down('[name="search"]');
+    var searchCriteria = filterPanel.down('[name="criteria"]');
 
     if (searchValue.value != searchValue.ghostPhrase
         && (searchValue.value != searchValue.lastSearch
-            || searchValue.value.strip().length > 0)) {
-        search["criteria"] = searchCriteria.value;
-        search["value"] = searchValue.value;
+            && (searchValue.value.strip().length > minimumSearchLength
+                || searchValue.value.strip() == "."
+                || searchValue.value.length == 0))) {
+        search[id]["criteria"] = searchCriteria.value;
+        search[id]["value"] = searchValue.value;
         searchValue.lastSearch = searchValue.value;
-        refreshCurrentFolder();
+        refreshCurrentFolder(id);
     }
 }
 
 function initCriteria() {
-    var searchCriteria = $("searchCriteria");
-    var searchValue = $("searchValue");
-    var searchOptions = $("searchOptions");
-
-    if (searchValue) {
+    $$('[data-search]').each(function(element) {
+        var box = $(element);
+        var id = box.readAttribute('data-search');
+        var searchCriteria = box.down('[name="criteria"]');
+        var searchValue = box.down('[name="search"]');
+        var searchOptions = box.down('.choiceMenu');
         var firstOption = searchOptions.down("li");
         if (firstOption) {
-            searchCriteria.value = firstOption.getAttribute('id');
+            searchCriteria.value = firstOption.readAttribute('data-option');
             searchValue.ghostPhrase = firstOption.innerHTML;
             searchValue.lastSearch = "";
             if (searchValue.value == '') {
@@ -1172,9 +1214,11 @@ function initCriteria() {
                 searchOptions.chosenNode.removeClassName("_chosen");
             firstOption.addClassName("_chosen");
             searchOptions.chosenNode = firstOption;
+            // Initialize global array
+            search[id] = {};
         }
         searchValue.blur();
-    }
+    });
 }
 
 /* toolbar buttons */
@@ -1194,7 +1238,7 @@ function popupToolbarMenu(node, menuId) {
                      visibility: "visible" });
 
     document.currentPopupMenu = popup;
-    $(document.body).observe("mouseup", onBodyClickMenuHandler);
+    $(document.body).on("mouseup", onBodyClickMenuHandler);
 }
 
 /* contact selector */
@@ -1274,7 +1318,7 @@ function accessToSubscribedFolder(serverFolder) {
         var username = parts[0];
         var paths = parts[1].split("/");
         if (username == UserLogin) {
-            folder = paths[1];
+            folder = "/" + paths[1];
         }
         else {
             folder = "/" + username.asCSSIdentifier() + "_" + paths[1];
@@ -1620,6 +1664,9 @@ function onLoadHandler(event) {
         progressImage.parentNode.removeChild(progressImage);
     $(document.body).observe("contextmenu", onBodyClickContextMenu);
 
+    // Some module are initialized only once this method is completed
+    document.fire('generic:loaded');
+
     onFinalLoadHandler();
 }
 
@@ -1628,10 +1675,12 @@ function onCloseButtonClick(event) {
         Event.stop(event);
 
     if (window.frameElement && window.frameElement.id) {
-        jQuery(parent$("bgFrameDiv")).fadeOut('fast');
-        var div = parent$("popupFrame");
-        div.hide();
-        div.down("iframe").src = "/SOGo/loading";
+        var bgDiv = parent$("bgFrameDiv");
+        jQuery(bgDiv).fadeOut('fast', function(event) {
+            var div = parent$("popupFrame");
+            div.hide();
+            div.down("iframe").src = "/SOGo/loading";
+        });
     }
     else {
         window.close();
@@ -1822,8 +1871,21 @@ function parent$(element) {
     return (p ? p.getElementById(element) : null);
 }
 
+function parentvar(name) {
+    var div = $("popupFrame");
+
+    if (div)
+        p = parent;
+    else if (this.opener)
+        p = this.opener;
+    else
+        p = null;
+
+    return (p ? p[name] : null);
+}
+
 /* stubs */
-function refreshCurrentFolder() {
+function refreshCurrentFolder(id) {
 }
 
 function configureDragHandles() {
@@ -1858,8 +1920,8 @@ function _(key) {
 
 AIM = {
     frame: function(c) {
-        var d = new Element ('div');
-        var n = d.identify ();
+        var d = new Element('div');
+        var n = d.identify();
         d.innerHTML = '<iframe class="hidden" src="about:blank" id="'
             + n + '" name="' + n + '" onload="AIM.loaded(\'' + n + '\')"></iframe>';
         document.body.appendChild(d);
@@ -1978,6 +2040,8 @@ function _showAlertDialog(label) {
         document.body.appendChild(dialog);
         dialogs[label] = dialog;
     }
+    if (Prototype.Browser.IE)
+        jQuery('#bgDialogDiv').css('opacity', 0.4);
     jQuery(dialog).fadeIn('fast');
 }
 
@@ -2016,6 +2080,8 @@ function _showConfirmDialog(title, label, callbackYes, callbackNo, yesLabel, noL
         document.body.appendChild(dialog);
         dialogs[key] = dialog;
     }
+    if (Prototype.Browser.IE)
+        jQuery('#bgDialogDiv').css('opacity', 0.4);
     jQuery(dialog).fadeIn('fast');
 }
 
@@ -2055,6 +2121,8 @@ function _showPromptDialog(title, label, callback, defaultValue) {
         document.body.appendChild(dialog);
         dialogs[title+label] = dialog;
     }
+    if (Prototype.Browser.IE)
+        jQuery('#bgDialogDiv').css('opacity', 0.4);
     jQuery(dialog).fadeIn('fast', function () { dialog.down("input").focus(); });
 }
 
@@ -2101,6 +2169,8 @@ function _showSelectDialog(title, label, options, button, callbackFcn, callbackA
     }
     if (defaultValue)
 	defaultOption = dialog.down('option[value="'+defaultValue+'"]').selected = true;
+    if (Prototype.Browser.IE)
+        jQuery('#bgDialogDiv').css('opacity', 0.4);
     jQuery(dialog).fadeIn('fast');
 }
 
@@ -2140,6 +2210,8 @@ function _showAuthenticationDialog(label, callback) {
         document.body.appendChild(dialog);
         dialogs[label] = dialog;
     }
+    if (Prototype.Browser.IE)
+        jQuery('#bgDialogDiv').css('opacity', 0.4);
     jQuery(dialog).fadeIn('fast', function () { dialog.down("input").focus(); });
 }
 

@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Dimanche";
-"Monday" = "Lundi";
-"Tuesday" = "Mardi";
-"Wednesday" = "Mercredi";
-"Thursday" = "Jeudi";
-"Friday" = "Vendredi";
-"Saturday" = "Samedi";
 "DayOfTheMonth" = "Jour du mois";
-
-"Sun" = "Dim";
-"Mon" = "Lun";
-"Tue" = "Mar";
-"Wed" = "Mer";
-"Thu" = "Jeu";
-"Fri" = "Ven";
-"Sat" = "Sam";
-
-"a2_Sunday" = "Di";
-"a2_Monday" = "Lu";
-"a2_Tuesday" = "Ma";
-"a2_Wednesday" = "Me";
-"a2_Thursday" = "Je";
-"a2_Friday" = "Ve";
-"a2_Saturday" = "Sa";
-
 "dayLabelFormat" = "%d/%m/%Y";
 "today" = "Aujourd'hui";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "ce mois";
-
-"January" = "Janvier";
-"February" = "Février";
-"March" = "Mars";
-"April" = "Avril";
-"May" = "Mai";
-"June" = "Juin";
-"July" = "Juillet";
-"August" = "Août";
-"September" = "Septembre";
-"October" = "Octobre";
-"November" = "Novembre";
-"December" = "Décembre";
-
-"a3_January" = "Jan";
-"a3_February" = "Fev";
-"a3_March" = "Mar";
-"a3_April" = "Avr";
-"a3_May" = "Mai";
-"a3_June" = "Jun";
-"a3_July" = "Jul";
-"a3_August" = "Aou";
-"a3_September" = "Sep";
-"a3_October" = "Oct";
-"a3_November" = "Nov";
-"a3_December" = "Dec";
 
 "Previous Month" = "Mois précédent";
 "Next Month" = "Mois suivant";
@@ -110,6 +60,7 @@
 "Import Events" = "Importer des événements";
 "Select an iCalendar file (.ics)." = "Sélectionner un fichier. iCalendar (*.ics).";
 "Upload" = "Ajouter";
+"Uploading" = "Téléversement en cours";
 "Publish Calendar..." = "Publier l'agenda...";
 "Reload Remote Calendars" = "Recharger les agendas distants";
 "Properties" = "Propriétés";
@@ -429,6 +380,7 @@ validate_invalid_startdate = "La date de début est invalide !";
 validate_invalid_enddate   = "La date de fin est invalide !";
 validate_endbeforestart    = "La date de fin est avant la date de début.";
 
+"Events" = "Événements";
 "Tasks" = "Tâches";
 "Show completed tasks" = "Afficher les tâches accomplies";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "La date de fin est avant la date de début.";
 "Title" = "Titre";
 "Start" = "Début";
 "End" = "Fin";
+"Due Date" = "Fin prévue";
 "Location" = "Lieu";
+
 "(Private Event)" = "(Événement privé)";
 
 vevent_class0 = "(Événement public)";
 vevent_class1 = "(Événement privé)";
 vevent_class2 = "(Événement confidentiel)";
+
+"Priority" = "Priorité";
+"Category" = "Catégorie";
 
 vtodo_class0 = "(Tâche publique)";
 vtodo_class1 = "(Tâche privée)";
@@ -536,6 +493,11 @@ vtodo_class2 = "(Tâche confidentielle)";
 "Show alarms" = "Afficher les alarmes";
 "Show tasks" = "Afficher les tâches";
 
+"Notifications" = "Notifications";
+"Receive a mail when I modify my calendar" = "Émettre un courrier quand je modifie mon agenda";
+"Receive a mail when someone else modifies my calendar" = "Émettre un courrier quand quelqu'un d'autre modifie mon agenda";
+"When I modify my calendar, send a mail to:" = "Quand je modifie mon agenda, émettre un courrier à :";
+
 "Links to this Calendar" = "Liens vers cet agenda";
 "Authenticated User Access" = "Accès aux utilisateurs authentifiés";
 "CalDAV URL" = "Accès en CalDAV";
@@ -549,7 +511,7 @@ vtodo_class2 = "(Tâche confidentielle)";
 "monthDayFieldInvalid" = "Veuillez spécifier un chiffre supérieur ou égal à 1 dans la journée du mois.";
 "yearFieldInvalid" = "Veuillez spécifier un chiffre supérieur ou égal à 1 dans le champ Année(s).";
 "appointmentFieldInvalid" = "Veuillez spécifier un chiffre supérieur ou égal à 1 dans le champ rendez-vous.";
-"recurrenceUnsupported" = "Ce type de récurrence n\'est pas supporté.";
+"recurrenceUnsupported" = "Ce type de récurrence n\\\'est pas supporté.";
 "Please specify a calendar name." = "Veuillez définir un nom au calendrier.";
 "tagNotDefined" = "Vous devez spécifier un label si vous désirez synchroniser ce calendrier.";
 "tagAlreadyExists" = "Le label spécifié est déjà associé à un autre calendrier. Choisissez-en un autre.";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Tâche confidentielle)";
 "Delete Task" = "Supprimer la tâche";
 "Delete Event" = "Supprimer l'événement";
 "Copy event to my calendar" = "Copier l'événement dans mon agenda";
+"View Raw Source" = "Afficher le contenu original";
 
 "Subscribe to a web calendar..." = "S'inscrire à un agenda en ligne...";
 "URL of the Calendar" = "URL de l'agenda";

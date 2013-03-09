@@ -20,8 +20,11 @@
 */
 
 #import <Foundation/NSCalendarDate.h>
+#import <Foundation/NSCharacterSet.h>
 
 #import <NGObjWeb/WOContext+SoObjects.h>
+#import <NGObjWeb/WOResponse.h>
+
 #import <NGCards/iCalEvent.h>
 #import <NGCards/iCalEventChanges.h>
 
@@ -33,12 +36,33 @@
 #import "SOGoAptMailNotification.h"
 
 @interface SOGoAptMailUpdate : SOGoAptMailNotification
+{
+  NSMutableDictionary *changes;
+  NSString *currentItem;
+}
+
 @end
 
 @implementation SOGoAptMailUpdate
 
+- (id) init
+{
+  self = [super init];
+
+  changes = [[NSMutableDictionary alloc] init];
+
+  return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(currentItem);
+  RELEASE(changes);
+  [super dealloc];
+}
+
 - (NSString *) valueForProperty: (NSString *) property
-              withDateFormatter: (SOGoDateFormatter *) dateFormatter
+              withDateFormatter: (SOGoDateFormatter *) _dateFormatter
 {
   static NSDictionary *valueTypes = nil;
   NSString *valueType;
@@ -64,7 +88,10 @@
       if ([valueType isEqualToString: @"date"])
         {
           [value setTimeZone: viewTZ];
-          value = [dateFormatter formattedDateAndTime: value];
+          if ([apt isAllDay])
+            value = [_dateFormatter formattedDate: value];
+          else
+            value = [_dateFormatter formattedDateAndTime: value];
         }
     }
   else
@@ -73,70 +100,81 @@
   return value;
 }
 
-- (void) _setupBodyContentWithFormatter: (SOGoDateFormatter *) dateFormatter
+- (void) _setupBodyContentWithFormatter: (SOGoDateFormatter *) _dateFormatter
 {
-  NSArray *updatedProperties;
-  NSMutableString *bodyContent;
   NSString *property, *label, *value;
+  NSArray *updatedProperties;
   int count, max;
 
   updatedProperties = [[iCalEventChanges changesFromEvent: previousApt
                                                   toEvent: apt]
                         updatedProperties];
-  bodyContent = [NSMutableString new];
   max = [updatedProperties count];
   for (count = 0; count < max; count++)
     {
       property = [updatedProperties objectAtIndex: count];
       value = [self valueForProperty: property
-                   withDateFormatter: dateFormatter];
+                   withDateFormatter: _dateFormatter];
       /* Unhandled properties will return nil */
       if (value)
         {
           label = [self labelForKey: [NSString stringWithFormat: @"%@_label",
                                                property]
                           inContext: context];
-          [bodyContent appendFormat: @"  %@ %@\n", label, value];
+	  [changes setObject: value  forKey: label];
         }
     }
-  [values setObject: bodyContent forKey: @"_bodyContent"];
-  [bodyContent release];
 }
 
-- (void) _setupBodyValuesWithFormatter: (SOGoDateFormatter *) dateFormatter
+- (NSArray *) allChangesList
+{
+  return [changes allKeys];
+}
+
+- (void) setCurrentItem: (NSString *) theItem
+{
+  ASSIGN(currentItem, theItem);
+}
+
+- (NSString *) currentItem
+{
+  return currentItem;
+}
+
+- (NSString *) valueForCurrentItem
+{
+  return [changes objectForKey: currentItem];
+}
+
+- (NSString *) bodyStartText
 {
   NSString *bodyText;
 
   bodyText = [self labelForKey: @"The following parameters have changed"
                    @" in the \"%{Summary}\" meeting:"
                      inContext: context];
-  [values setObject: [values keysWithFormat: bodyText]
-             forKey: @"_bodyStart"];
-  [self _setupBodyContentWithFormatter: dateFormatter];
-  [values setObject: [self labelForKey: @"Please accept"
-                           @" or decline those changes."
-                             inContext: context]
-             forKey: @"_bodyEnd"];
+
+  return [values keysWithFormat: bodyText];
 }
 
 - (void) setupValues
 {
   NSCalendarDate *date;
-  SOGoDateFormatter *dateFormatter;
+  SOGoDateFormatter *localDateFormatter;
 
   [super setupValues];
 
-  dateFormatter = [[context activeUser] dateFormatterInContext: context];
+  localDateFormatter = [[context activeUser] dateFormatterInContext: context];
 
   date = [self oldStartDate];
-  [values setObject: [dateFormatter shortFormattedDate: date]
+  [values setObject: [localDateFormatter shortFormattedDate: date]
              forKey: @"OldStartDate"];
 
   if (![apt isAllDay])
-    [values setObject: [dateFormatter formattedTime: date]
+    [values setObject: [localDateFormatter formattedTime: date]
                forKey: @"OldStartTime"];
 
-  [self _setupBodyValuesWithFormatter: dateFormatter];
+  [self _setupBodyContentWithFormatter: localDateFormatter];
 }
 
 - (NSString *) getSubject
@@ -162,11 +200,14 @@
 
 - (NSString *) getBody
 {
+  NSString *body;
+
   if (!values)
     [self setupValues];
 
-  return [values keysWithFormat:
-                   @"%{_bodyStart}\n%{_bodyContent}\n%{_bodyEnd}\n"];
+  body = [[self generateResponse] contentAsString];
+  
+  return [body stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 }
 
 @end

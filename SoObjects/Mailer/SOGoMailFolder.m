@@ -364,8 +364,8 @@ static NSString *defaultUserID =  @"anyone";
       for (count = 0; count < max ; count++)
 	{
 	  infos = [allValues objectAtIndex: count];
-	  [prefetchedInfos setObject: infos
-			   forKey: [infos objectForKey: @"uid"]];
+          key = [NSString stringWithFormat: @"%@", [infos objectForKey: @"uid"]];
+	  [prefetchedInfos setObject: infos forKey: key];
 	}
     }
   else
@@ -406,7 +406,7 @@ static NSString *defaultUserID =  @"anyone";
 	      
                   // If we are deleting messages within the Trash folder itself, we
                   // do not, of course, try to move messages to the Trash folder.
-                  if ([folderName isEqualToString: [self relativeImap4Name]])
+                  if ([folderName isEqualToString: [imap4 imap4FolderNameForURL: [self imap4URL]]])
                     {
                       *withTrash = NO;
                     }
@@ -414,17 +414,15 @@ static NSString *defaultUserID =  @"anyone";
                     {
                       // If our Trash folder doesn't exist when we try to copy messages
                       // to it, we create it.
-                      result = [[client status: folderName  flags: [NSArray arrayWithObject: @"UIDVALIDITY"]]
-                                 objectForKey: @"result"];
+                      b = [self ensureTrashFolder];
 		  
-                      if (![result boolValue])
-                        [imap4 createMailbox: folderName
-                                       atURL: [[self mailAccountFolder] imap4URL]];
+                      if (b)
+                      {
+                        result = [[client copyUids: uids toFolder: folderName]
+                                   objectForKey: @"result"];
 		  
-                      result = [[client copyUids: uids toFolder: folderName]
-                                 objectForKey: @"result"];
-		  
-                      b = [result boolValue];
+                        b = [result boolValue];
+                      }
                     }
 		}
               else
@@ -956,6 +954,24 @@ static NSString *defaultUserID =  @"anyone";
   return rc;
 }
 
+- (BOOL) ensureTrashFolder
+{
+  SOGoMailFolder *trashFolder;
+  BOOL rc;
+
+  trashFolder = [[self mailAccountFolder] trashFolderInContext: context];
+  rc = NO;
+  if (![trashFolder isKindOfClass: [NSException class]])
+  {
+    rc = [trashFolder exists];
+    if (!rc)
+      rc = [trashFolder create];
+  }
+  if (!rc)
+    [self errorWithFormat: @"Cannot create Trash Mailbox"];
+  return rc;
+}
+
 - (NSException *) delete
 {
   NSException *error;
@@ -1171,6 +1187,9 @@ static NSString *defaultUserID =  @"anyone";
   NSEnumerator *usernames;
   NSString *username;
 
+  if ([mailboxACL isKindOfClass: [NSException class]])
+    return;
+
   newIMAPAcls = [NSMutableDictionary new];
 
   usernames = [[mailboxACL allKeys] objectEnumerator];
@@ -1193,6 +1212,9 @@ static NSString *defaultUserID =  @"anyone";
   NSString *newUsername;
   NSString *imapPrefix;
 
+  if ([mailboxACL isKindOfClass: [NSException class]])
+    return;
+  
   imapPrefix = [[[context activeUser] domainDefaults] imapAclGroupIdPrefix];
   
   newIMAPAcls = [[NSMutableDictionary alloc] init];
@@ -1472,7 +1494,7 @@ static NSString *defaultUserID =  @"anyone";
   return davIMAPFieldsTable;
 }
 
-- (BOOL) _sortElementIsAscending: (DOMElement *) sortElement
+- (BOOL) _sortElementIsAscending: (NGDOMNodeWithChildren <DOMElement> *) sortElement
 {
   NSString *davReverseAttr;
   BOOL orderIsAscending;
@@ -1490,7 +1512,7 @@ static NSString *defaultUserID =  @"anyone";
   return orderIsAscending;
 }
 
-- (NSArray *) _sortOrderingsFromSortElement: (DOMElement *) sortElement
+- (NSArray *) _sortOrderingsFromSortElement: (NGDOMNodeWithChildren *) sortElement
 {
   static NSMutableDictionary *criteriasMap = nil;
   NSArray *davSortCriterias;
@@ -1705,7 +1727,7 @@ static NSString *defaultUserID =  @"anyone";
   return davIMAPFields;
 }
 
-- (NSDictionary *) parseDAVRequestedProperties: (DOMElement *) propElement
+- (NSDictionary *) parseDAVRequestedProperties: (NGDOMNodeWithChildren *) propElement
 {
   NSArray *properties;
   NSDictionary *imapFieldsTable;
@@ -1725,7 +1747,8 @@ static NSString *defaultUserID =  @"anyone";
 {
   WOResponse *r;
   id <DOMDocument> document;
-  DOMElement *documentElement, *propElement, *filterElement, *sortElement;
+  id <DOMElement> filterElement;
+  NGDOMNodeWithChildren *documentElement, *propElement, *sortElement;
   NSDictionary *properties;
   NSArray *messages, *sortOrderings;
   EOQualifier *searchQualifier;
@@ -1734,17 +1757,19 @@ static NSString *defaultUserID =  @"anyone";
   [r prepareDAVResponse];
 
   document = [[context request] contentAsDOMDocument];
-  documentElement = (DOMElement *) [document documentElement];
+  documentElement = [document documentElement];
 
-  propElement = [documentElement firstElementWithTag: @"prop"
-                                         inNamespace: XMLNS_WEBDAV];
+  propElement = (NGDOMNodeWithChildren *) [documentElement
+                                            firstElementWithTag: @"prop"
+                                                    inNamespace: XMLNS_WEBDAV];
   properties = [self parseDAVRequestedProperties: propElement];
   filterElement = [documentElement firstElementWithTag: @"mail-filters"
                                            inNamespace: XMLNS_INVERSEDAV];
   searchQualifier = [EOQualifier
                       qualifierFromMailDAVMailFilters: filterElement];
-  sortElement = [documentElement firstElementWithTag: @"sort"
-                                         inNamespace: XMLNS_INVERSEDAV];
+  sortElement = (NGDOMNodeWithChildren *) [documentElement
+                                            firstElementWithTag: @"sort"
+                                                    inNamespace: XMLNS_INVERSEDAV];
   sortOrderings = [self _sortOrderingsFromSortElement: sortElement];
 
   messages = [self _fetchMessageProperties: [properties allKeys]

@@ -19,9 +19,13 @@
   02111-1307, USA.
 */
 
-#import <NGCards/iCalEvent.h>
+#import <Foundation/NSCharacterSet.h>
 
 #import <NGObjWeb/WOContext+SoObjects.h>
+#import <NGObjWeb/WOResponse.h>
+
+#import <NGCards/iCalEvent.h>
+
 #import <SOGo/NSDictionary+Utilities.h>
 #import <SOGo/NSObject+Utilities.h>
 #import <SOGo/SOGoUser.h>
@@ -49,27 +53,14 @@
 
 - (NSString *) getBody
 {
-  NSString *bodyFormat;
+  NSString *body;
 
   if (!values)
     [self setupValues];
 
-  if ([values objectForKey: @"StartTime"] && [values objectForKey: @"EndTime"])
-    bodyFormat = [self labelForKey: (@"%{Organizer} %{SentByText}has invited you"
-                                     @" to %{Summary}.\n\n"
-                                     @"Start: %{StartDate} at %{StartTime}\n"
-                                     @"End: %{EndDate} at %{EndTime}\n"
-                                     @"Description: %{Description}")
-                         inContext: context];
-  else
-    bodyFormat = [self labelForKey: (@"%{Organizer} %{SentByText}has invited you"
-                                     @" to %{Summary}.\n\n"
-                                     @"Start: %{StartDate}\n"
-                                     @"End: %{EndDate}\n"
-                                     @"Description: %{Description}")
-                         inContext: context];
+  body = [[self generateResponse] contentAsString];
 
-  return [values keysWithFormat: bodyFormat];
+  return [body stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 }
 
 @end

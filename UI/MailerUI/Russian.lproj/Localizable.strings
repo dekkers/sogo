@@ -283,11 +283,14 @@
 = "Сообщения не могут быть помещены в корзину. Хотите ли вы уничтожить их немедленно?";
 
 /* Message editing */
-"error_validationfailed" = "Проверка завершилась неудачей";
 "error_missingsubject" = "Тема сообщения не указана";
 "error_missingrecipients" = "Не указан адрес получателя";
+"Send Anyway" = "Всё равно послать";
 
 /* Message sending */
 "cannot send message: (smtp) all recipients discarded" = "Не удается отправить сообщение: всем получателям, все получатели являются недействительными.";
 "cannot send message (smtp) - recipients discarded:" = "Не удается отправить сообщение. Следующие адреса неверны:";
 "cannot send message: (smtp) error when connecting" = "Не удается отправить сообщение: ошибка при соединении с сервером SMTP.";
+
+"Name" = "ПолноеИмя";
+"Email" = "Email";

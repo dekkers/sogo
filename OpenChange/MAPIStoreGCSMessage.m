@@ -1,6 +1,6 @@
 /* MAPIStoreGCSMessage.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -25,8 +25,10 @@
 #import <Foundation/NSValue.h>
 #import <NGObjWeb/SoSecurityManager.h>
 #import <NGExtensions/NSObject+Logs.h>
+#import <NGExtensions/NSObject+Values.h>
 #import <SOGo/SOGoContentObject.h>
 #import <SOGo/SOGoPermissions.h>
+#import <SOGo/SOGoUser.h>
 
 #import "MAPIStoreContext.h"
 #import "MAPIStoreGCSFolder.h"
@@ -177,7 +179,7 @@
 - (uint64_t) objectVersion
 {
   uint64_t version = ULLONG_MAX;
-  NSNumber *changeNumber;
+  NSString *changeNumber;
  
   if (!isNew)
     {

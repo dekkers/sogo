@@ -1,6 +1,6 @@
 /* MAPIStoreContext.m - this file is part of SOGo
  *
- * Copyright (C) 2010 Inverse inc.
+ * Copyright (C) 2010-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -21,17 +21,16 @@
  */
 
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSURL.h>
-#import <Foundation/NSThread.h>
 
 #import <NGObjWeb/WOContext+SoObjects.h>
 #import <NGExtensions/NSObject+Logs.h>
+#import <NGExtensions/NSObject+Values.h>
 
+#import <SOGo/SOGoFolder.h>
 #import <SOGo/SOGoUser.h>
-
-#import "SOGoMAPIFSFolder.h"
-#import "SOGoMAPIFSMessage.h"
 
 #import "MAPIStoreAttachment.h"
 // #import "MAPIStoreAttachmentTable.h"
@@ -209,7 +208,7 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
                         [NSString stringWithUTF8String: uri]];
   if (![urlString hasSuffix: @"/"])
     urlString = [urlString stringByAppendingString: @"/"];
-  completeURL = [NSURL URLWithString: [urlString stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
+  completeURL = [NSURL URLWithString: urlString];
 
   return completeURL;
 }
@@ -294,9 +293,11 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
               [MAPIStoreUserContext userContextWithUsername: username
                                              andTDBIndexing: indexingTdb]);
 
+#if 0
       mapistore_mgmt_backend_register_user (newConnInfo,
                                             "SOGo",
                                             [username UTF8String]);
+#endif
 
       connInfo = newConnInfo;
       username = [NSString stringWithUTF8String: newConnInfo->username];
@@ -315,9 +316,12 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
 
 - (void) dealloc
 {
+#if 0
   mapistore_mgmt_backend_unregister_user ([self connectionInfo], "SOGo", 
                                           [[userContext username]
                                             UTF8String]);
+#endif
+
   [contextUrl release];
   [userContext release];
   [containersBag release];
@@ -363,7 +367,8 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
   NSString *objectURL, *url;
   // TDB_DATA key, dbuf;
 
-  url = [contextUrl absoluteString];
+  url = [[contextUrl absoluteString]
+            stringByReplacingPercentEscapesUsingEncoding: NSUTF8StringEncoding];
   objectURL = [[userContext mapping] urlFromID: fmid];
   if (objectURL)
     {
@@ -422,31 +427,46 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
   if (![mapping urlFromID: newFid])
     [mapping registerURL: [contextUrl absoluteString]
                   withID: newFid];
-
   [userContext activateWithUser: activeUser];
   woContext = [userContext woContext];
 
   [self ensureContextFolder];
   currentFolder = [self rootSOGoFolder];
-  path = [contextUrl path];
+  [containersBag addObject: currentFolder];
+
+  /* HACK:
+     -[NSURL path] returns unescaped strings in theory. In pratice, sometimes
+     it does, sometimes not. Therefore we use the result of our own
+     implementation of -[NSString
+     stringByReplacingPercentEscapeUsingEncoding:], which returns nil if the
+     original string contains non-ascii chars, from which we can determine
+     whether the path was unescaped or not. */
+  path = [[contextUrl path]
+           stringByReplacingPercentEscapesUsingEncoding: NSUTF8StringEncoding];
+  if (!path)
+    path = [contextUrl path];
+
   if ([path hasPrefix: @"/"])
     path = [path substringFromIndex: 1];
   if ([path hasSuffix: @"/"])
     path = [path substringToIndex: [path length] - 1];
-  pathComponents = [path componentsSeparatedByString: @"/"];
-  max = [pathComponents count];
-  for (count = 0; currentFolder && count < max; count++)
+  if ([path length] > 0)
     {
-      [woContext setClientObject: currentFolder];
-      currentFolder
-        = [currentFolder lookupName: [pathComponents objectAtIndex: count]
-                          inContext: woContext
+      pathComponents = [path componentsSeparatedByString: @"/"];
+      max = [pathComponents count];
+      for (count = 0; currentFolder && count < max; count++)
+        {
+          [woContext setClientObject: currentFolder];
+          currentFolder = [currentFolder
+                            lookupName: [pathComponents objectAtIndex: count]
+                            inContext: woContext
                             acquire: NO];
-      if ([currentFolder isKindOfClass: SOGoObjectK]) /* class common to all
-                                                         SOGo folder types */
-        [containersBag addObject: currentFolder];
-      else
-        currentFolder = nil;
+          if ([currentFolder isKindOfClass: SOGoObjectK]) /* class common to all
+                                                             SOGo folder types */
+            [containersBag addObject: currentFolder];
+          else
+            currentFolder = nil;
+        }
     }
 
   if (currentFolder)
@@ -455,7 +475,6 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
                      mapiStoreObjectWithSOGoObject: currentFolder
                                        inContainer: nil];
       [baseFolder setContext: self];
-
       *folderPtr = baseFolder;
       rc = MAPISTORE_SUCCESS;
     }
@@ -505,19 +524,21 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
   void *rootObject;
 
   if (key)
-    childURL = [NSString stringWithFormat: @"%@%@", folderURL, key];
+    childURL = [NSString stringWithFormat: @"%@%@", folderURL,
+                  [key stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
   else
     childURL = folderURL;
   mapping = [userContext mapping];
   mappingId = [mapping idFromURL: childURL];
   if (mappingId == NSNotFound)
     {
-      [self warnWithFormat: @"no id exist yet, requesting one..."];
+      [self warnWithFormat: @"no id exist yet for '%@', requesting one...",
+            childURL];
       openchangedb_get_new_folderID (connInfo->oc_ctx, &mappingId);
       [mapping registerURL: childURL withID: mappingId];
       contextId = 0;
 
-      mapistore_search_context_by_uri (connInfo->mstore_ctx, [folderURL UTF8String] + 7,
+      mapistore_search_context_by_uri (connInfo->mstore_ctx, [folderURL UTF8String],
                                        &contextId, &rootObject);
       owner = [userContext username];
       mapistore_indexing_record_add_mid (connInfo->mstore_ctx, contextId,
@@ -536,6 +557,60 @@ static inline NSURL *CompleteURLFromMapistoreURI (const char *uri)
     abort ();
 
   return newVersionNumber;
+}
+
+- (NSArray *) getNewChangeNumbers: (uint64_t) max
+{
+  TALLOC_CTX *memCtx;
+  NSMutableArray *newChangeNumbers;
+  uint64_t count;
+  struct UI8Array_r *numbers;
+  NSString *newNumber;
+
+  memCtx = talloc_zero(NULL, TALLOC_CTX);
+  newChangeNumbers = [NSMutableArray arrayWithCapacity: max];
+  
+  if (openchangedb_get_new_changeNumbers (connInfo->oc_ctx,
+                                          memCtx, max, &numbers)
+      != MAPI_E_SUCCESS || numbers->cValues != max)
+    abort ();
+  for (count = 0; count < max; count++)
+    {
+      newNumber
+        = [NSString stringWithUnsignedLongLong: numbers->lpui8[count]];
+      [newChangeNumbers addObject: newNumber];
+    }
+
+  talloc_free (memCtx);
+
+  return newChangeNumbers;
+}
+
+- (NSArray *) getNewFMIDs: (uint64_t) max
+{
+  TALLOC_CTX *memCtx;
+  NSMutableArray *newFMIDs;
+  uint64_t count;
+  struct UI8Array_r *numbers;
+  NSString *newNumber;
+
+  memCtx = talloc_zero(NULL, TALLOC_CTX);
+  newFMIDs = [NSMutableArray arrayWithCapacity: max];
+  
+  if (openchangedb_get_new_folderIDs (connInfo->oc_ctx,
+                                      memCtx, max, &numbers)
+      != MAPI_E_SUCCESS || numbers->cValues != max)
+    abort ();
+  for (count = 0; count < max; count++)
+    {
+      newNumber
+        = [NSString stringWithUnsignedLongLong: numbers->lpui8[count]];
+      [newFMIDs addObject: newNumber];
+    }
+
+  talloc_free (memCtx);
+
+  return newFMIDs;
 }
 
 /* subclasses */

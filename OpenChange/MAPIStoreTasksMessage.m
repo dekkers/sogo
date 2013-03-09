@@ -1,6 +1,6 @@
 /* MAPIStoreTasksMessage.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Ludovic Marcotte <lmarcotte@inverse.ca>
@@ -43,6 +43,7 @@
 #import "MAPIStoreContext.h"
 #import "MAPIStoreTasksFolder.h"
 #import "MAPIStoreTypes.h"
+#import "MAPIStoreUserContext.h"
 #import "NSDate+MAPIStore.h"
 #import "NSObject+MAPIStore.h"
 #import "NSString+MAPIStore.h"
@@ -90,8 +91,8 @@
   return MAPISTORE_SUCCESS;
 }
 
-- (int) getPidTagSubject: (void **) data // SUMMARY
-                inMemCtx: (TALLOC_CTX *) memCtx
+- (int) getPidTagNormalizedSubject: (void **) data // SUMMARY
+                          inMemCtx: (TALLOC_CTX *) memCtx
 {
   iCalToDo *task;
 
@@ -99,6 +100,39 @@
   *data = [[task summary] asUnicodeInMemCtx: memCtx];
 
   return MAPISTORE_SUCCESS;
+}
+
+/* FIXME: Should be combined somehow with the code in MAPIStoreAppointmentWrapper.m */
+- (int) getPidTagBody: (void **) data
+             inMemCtx: (TALLOC_CTX *) memCtx
+{
+  int rc = MAPISTORE_SUCCESS;
+  NSString *stringValue;
+  iCalToDo *task;
+  
+  /* FIXME: there is a confusion in NGCards around "comment" and "description" */
+  task = [sogoObject component: NO secure: YES];
+  stringValue = [task comment];
+  if ([stringValue length] > 0)
+    *data = [stringValue asUnicodeInMemCtx: memCtx];
+  else
+    *data = [@"" asUnicodeInMemCtx: memCtx];
+
+  return rc;
+}
+
+/* FIXME: Should be combined somehow with the code in MAPIStoreAppointmentWrapper.m */
+- (int) getPidLidPrivate: (void **) data // private (bool), should depend on CLASS and permissions
+                inMemCtx: (TALLOC_CTX *) memCtx
+{
+  iCalToDo *task;
+  
+  task = [sogoObject component: NO secure: YES];
+
+  if ([task symbolicAccessClass] == iCalAccessPublic)
+    return [self getNo: data inMemCtx: memCtx];
+
+  return [self getYes: data inMemCtx: memCtx];
 }
 
 - (int) getPidTagImportance: (void **) data
@@ -458,6 +492,18 @@
       doubleValue = [value doubleValue];
       [vToDo setPercentComplete:
                [NSString stringWithFormat: @"%d", (int) (doubleValue * 100)]];
+    }
+
+  /* privacy */
+  /* FIXME: this should be combined with the code found in iCalEvent+MAPIStore.m */
+  value = [properties objectForKey: MAPIPropertyKey(PidLidPrivate)];
+  
+  if (value)
+    {
+      if ([value boolValue])
+	[vToDo setAccessClass: @"PRIVATE"];
+      else
+	[vToDo setAccessClass: @"PUBLIC"];
     }
 
   now = [NSCalendarDate date];

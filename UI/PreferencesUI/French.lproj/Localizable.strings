@@ -87,6 +87,7 @@
 "timeFmt_1" = "%H.%M";
 "timeFmt_2" = "";
 "timeFmt_3" = "";
+"timeFmt_4" = "";
 
 /* calendar */
 "Week begins on :" = "Premier jour de la semaine :";
@@ -126,7 +127,7 @@
 /* Mailer */
 "Show subscribed mailboxes only" = "Afficher seulement les abonnements";
 "Sort messages by threads" = "Grouper les discussions";
-"Check for new mail:" = "Vérifier l'arrivée de messages:";
+"Check for new mail:" = "Vérifier l'arrivée de messages :";
 "messagecheck_manually" = "Manuellement";
 "messagecheck_every_minute" = "Chaque minute";
 "messagecheck_every_2_minutes" = "Toutes les 2 minutes";
@@ -140,30 +141,40 @@
 "messageforward_inline" = "intégrés";
 "messageforward_attached" = "en pièces jointes";
 
+"When replying to a message:" = "En répondant à un message";
 "replyplacement_above" = "Placer ma réponse avant la citation";
 "replyplacement_below" = "Placer ma réponse après la citation";
 "And place my signature" = "Et placer ma signature";
-"signatureplacement_above" = "après ma reponse";
+"signatureplacement_above" = "après ma réponse";
 "signatureplacement_below" = "après la citation";
 "Compose messages in" = "Composer les messages en";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Texte";
+"Display remote inline images" = "Afficher les images externes";
+"displayremoteinlineimages_never" = "Jamais";
+"displayremoteinlineimages_always" = "Toujours";
 
 /* IMAP Accounts */
 "New Mail Account" = "Nouveau compte";
 
 "Server Name:" = "Serveur :";
 "Port:" = "Port :";
+"Encryption:" = "Chiffrement :";
+"None" = "Aucun";
 "User Name:" = "Utilisateur :";
 "Password:" = "Mot de passe :";
 
 "Full Name:" = "Nom complet :";
 "Email:" = "Email :";
+"Reply To Email:" = "Adresse de retour :";
 "Signature:" = "Signature :";
 "(Click to create)" = "(Signature vide)";
 
 "Signature" = "Signature";
 "Please enter your signature below:" = "Introduisez votre signature ci-dessous :";
+
+"Please specify a valid sender address." = "Veuillez définir une adresse d'expédition valide.";
+"Please specify a valid reply-to address." = "Veuillez définir une adresse de retour valide.";
 
 /* Additional Parameters */
 "Additional Parameters" = "Paramètres supplémentaires";
@@ -198,14 +209,18 @@
 "Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Slovensky";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
@@ -237,6 +252,7 @@
 "match any of the following rules:" = "correspondant à une de ces règles :";
 "match all messages" = "sans distinction";
 "Perform these actions:" = "Effectuez ces opérations :";
+"Untitled Filter" = "Nouveau filtre";
 
 "Subject" = "Sujet";
 "From" = "Expéditeur";
@@ -277,6 +293,7 @@
 "Label 4" = "étiquette 4";
 "Label 5" = "étiquette 5";
 
+"The password was changed successfully." = "Votre mot de passe a bien été changé.";
 "Password must not be empty." = "Le mot de passe ne doit pas être vide.";
 "The passwords do not match. Please try again." = "Les mots de passe ne sont pas identiques. Essayez de nouveau.";
 "Password change failed" = "Échec au changement";

@@ -46,6 +46,16 @@
 
 @class WOHTTPURLHandle;
 
+size_t curl_body_function(void *ptr, size_t size, size_t nmemb, void *buffer)
+{
+  size_t total;
+  
+  total = size * nmemb;
+  [(NSMutableData *)buffer appendBytes: ptr length: total];
+  
+  return total;
+}
+
 @implementation SOGoWebAppointmentFolder
 
 - (void) deleteAllContent
@@ -105,17 +115,17 @@
 
 - (NSDictionary *) loadWebCalendar
 {
-  NSString *location, *httpauth;
+  NSString *location, *httpauth, *content, *newDisplayName;
+  NSMutableDictionary *result;
   NSDictionary *authInfos;
-  NSMutableData *bodyData;
+  iCalCalendar *calendar;
+  NSMutableData *buffer;
   NSURL *url;
   CURL *curl;
-  CURLcode rc;
-  char error[CURL_ERROR_SIZE];
-  NSMutableDictionary *result;
-  NSString *content, *newDisplayName;
-  iCalCalendar *calendar;
+
   NSUInteger imported, status;
+  char error[CURL_ERROR_SIZE];
+  CURLcode rc;
 
   result = [NSMutableDictionary dictionary];
 
@@ -142,17 +152,11 @@
               curl_easy_setopt (curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
             }
 
-          bodyData = [NSMutableData data];
-          size_t curlBodyFunction (void *ptr, size_t size, size_t nmemb, void *inSelf)
-          {
-            size_t total;
+	  /* buffering ivar, no need to retain/release */
+	  buffer = [NSMutableData data];
 
-            total = size * nmemb;
-            [bodyData appendBytes: ptr length: total];
-
-            return total;
-          }
-          curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, curlBodyFunction);
+          curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, curl_body_function);
+          curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
           error[0] = 0;
           curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, &error);
@@ -164,13 +168,14 @@
               curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &status);
               [result setObject: [NSNumber numberWithUnsignedInt: status]
                          forKey: @"status"];
+              [self logWithFormat: @"Load web calendar %@ (%i)", location, status];
 
               if (status == 200)
                 {
-                  content = [[NSString alloc] initWithData: bodyData
+                  content = [[NSString alloc] initWithData: buffer
                                                   encoding: NSUTF8StringEncoding];
                   if (!content)
-                    content = [[NSString alloc] initWithData: bodyData
+                    content = [[NSString alloc] initWithData: buffer
                                                     encoding: NSISOLatin1StringEncoding];
                   [content autorelease];
                   calendar = [iCalCalendar parseSingleFromSource: content];

@@ -1,14 +1,15 @@
 /*
  Copyright (C) 2000-2005 SKYRIX Software AG
+ Copyright (C) 2000-2012 Inverse inc.
  
- This file is part of OpenGroupware.org.
+ This file is part of SOGo.
  
- OGo is free software; you can redistribute it and/or modify it under
+ SOGo is free software; you can redistribute it and/or modify it under
  the terms of the GNU Lesser General Public License as published by the
  Free Software Foundation; either version 2, or (at your option) any
  later version.
  
- OGo is distributed in the hope that it will be useful, but WITHOUT ANY
+ SOGo is distributed in the hope that it will be useful, but WITHOUT ANY
  WARRANTY; without even the implied warranty of MERCHANTABILITY or
  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
  License for more details.
@@ -30,15 +31,6 @@
 @end
 
 @implementation UIxContactsFilterPanel
-
-static NSMutableArray *filters = nil;
-
-+ (void) initialize
-{
-#warning how useful is this?
-  if (!filters)
-    filters = [[NSMutableArray alloc] initWithCapacity:4];
-}
 
 - (id) init
 {
@@ -84,13 +76,6 @@ static NSMutableArray *filters = nil;
     searchCriteria = [[self queryParameterForKey: @"criteria"] copy];
 
   return searchCriteria;
-}
-
-/* filters */
-
-- (NSArray *) filters
-{
-  return filters;
 }
 
 /* qualifiers */

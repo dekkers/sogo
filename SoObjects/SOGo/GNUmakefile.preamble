@@ -1,16 +1,17 @@
 # compilation settings
 
-SOGo_INCLUDE_DIRS += -I.. -I../../UI \
-	-DSOGO_MAJOR_VERSION="@\"$(MAJOR_VERSION)\"" \
-	-DSOGO_MINOR_VERSION="@\"$(MINOR_VERSION)\"" \
-	-DSOGO_SUBMINOR_VERSION="@\"$(SUBMINOR_VERSION)\""
+SOGo_INCLUDE_DIRS += -I.. -I../../UI 
 
 HOSTNAME ?= $(shell hostname -f)
 BUILD_DATE = $(shell echo $$USER@$(HOSTNAME); date +"%Y%m%d%H%M")
 
 ADDITIONAL_CPPFLAGS += \
         -DSOGO_BUILD_DATE="@\"$(BUILD_DATE)\"" \
-        -DSOGO_LIBDIR="\"$(SOGO_LIBDIR)\""
+        -DSOGO_LIBDIR="\"$(SOGO_LIBDIR)\"" \
+        -DSOGO_MAJOR_VERSION="@\"$(MAJOR_VERSION)\"" \
+        -DSOGO_MINOR_VERSION="@\"$(MINOR_VERSION)\"" \
+        -DSOGO_SUBMINOR_VERSION="@\"$(SUBMINOR_VERSION)\""
+
 
 SOGo_LIBRARIES_DEPEND_UPON += \
         -Wl,--no-as-needed \
@@ -22,9 +23,25 @@ SOGo_LIBRARIES_DEPEND_UPON += \
 	-lNGCards		\
 	-lNGMime		\
 	-lNGStreams -lNGExtensions -lEOControl \
-	-lXmlRpc -lDOM -lSaxObjC \
+	-lDOM -lSaxObjC \
 	-lNGLdap -lSBJson \
-        -lGDLContentStore
+        -lGDLContentStore \
+        $(BASE_LIBS)
+
+ifeq ($(HAS_LIBRARY_gnutls),yes)
+ADDITIONAL_CPPFLAGS += -DHAVE_GNUTLS=1
+SOGo_LIBRARIES_DEPEND_UPON += -lgnutls
+else
+ifeq ($(HAS_LIBRARY_ssl),yes)
+ADDITIONAL_CPPFLAGS += -DHAVE_OPENSSL=1
+SOGo_LIBRARIES_DEPEND_UPON += -lcrypto
+endif
+endif
+
+ifeq ($(HAS_LIBRARY_lasso), yes)
+ADDITIONAL_CPPFLAGS += $(LASSO_CFLAGS)
+SOGo_LIBRARIES_DEPEND_UPON += $(LASSO_LIBS)
+endif
 
 ifeq ($(findstring openbsd, $(GNUSTEP_HOST_OS)), openbsd)
 SOGo_LIBRARIES_DEPEND_UPON += -lcrypto

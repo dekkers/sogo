@@ -11,8 +11,8 @@
   const:popup="YES"
   title="name"
   var:toolbar="toolbar"
-  const:cssFiles="UIxComponentEditor.css"
-  const:jsFiles="skycalendar.js,UIxComponentEditor.js,SOGoAutoCompletion.js,SOGoTimePicker.js">
+  const:cssFiles="datepicker.css,SOGoTimePicker.css,UIxComponentEditor.css"
+  const:jsFiles="datepicker.js,UIxComponentEditor.js,SOGoAutoCompletion.js,SOGoTimePicker.js">
 
   <script type="text/javascript">
     var activeCalendar = '<var:string value="componentCalendar.nameInContainer"/>';
@@ -22,6 +22,7 @@
     var attendees = <var:string value="jsonAttendees" const:escapeHTML="NO"/>;
     var ownerLogin = '<var:string value="ownerLogin"/>';
     var emailAlarmsEnabled = <var:string value="emailAlarmsEnabled"/>;
+    var firstDayOfWeek = <var:string value="firstDayOfWeek"/>;
     <var:if condition="eventIsReadOnly" const:negate="YES"
 	    ><var:if condition="hasOrganizer">var organizer = <var:string value="jsonOrganizer" const:escapeHTML="NO"/>;</var:if
 	    >var owners = <var:string value="calendarOwnerList.jsonRepresentation" const:escapeHTML="NO"/>;</var:if
@@ -68,8 +69,9 @@
       </span></span>
       <var:if condition="hasOrganizer"
 	><label id="organizerLabel"><var:string label:value="Organizer:"
-	    /><span class="content"><var:string
-	      value="organizerName"/></span></label>
+	    /><span class="content"><a var:href="organizer.email" var:email="organizer.email.rfc822Email"
+              ><var:string value="organizerName" /></a
+              ></span></label>
       </var:if>
       <!--<var:if condition="canBeOrganizer"
 	><label id="organizerListLabel"><var:string label:value="Organizer:"
@@ -101,7 +103,7 @@
              ><var:string label:value="Edit"/></a></span></label>
       <hr />
       <label id="commentArea"><var:string label:value="Description:"
-	  /><textarea rows="20" name="comment" var:value="comment" /></label>
+	  /><span class="content"><textarea rows="20" name="comment" var:value="comment" /></span></label>
       <label id="documentLabel" style="display: none;"><var:string label:value="Document:"
 	  /><span class="content"
 	  ><a href="#" id="documentHref"><!-- space --></a
@@ -214,7 +216,9 @@
   </label>
   <var:if condition="hasAttendees">
     <label id="organizerLabel"><var:string label:value="Organizer:"/>
-    <span class="content"><var:string value="organizerName"/></span>
+    <span class="content"><a var:href="organizer.email" var:email="organizer.email.rfc822Email"
+      ><var:string value="organizerName" /></a
+    ></span>
     </label>
   </var:if>
   <var:if condition="userHasRSVP">

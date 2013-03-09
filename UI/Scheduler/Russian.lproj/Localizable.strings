@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Воскресенье";
-"Monday" = "Понедельник";
-"Tuesday" = "Вторник";
-"Wednesday" = "Среда";
-"Thursday" = "Четверг";
-"Friday" = "Пятница";
-"Saturday" = "Суббота";
 "DayOfTheMonth" = "DayOfTheMonth";
-
-"Sun" = "Вск";
-"Mon" = "Пон";
-"Tue" = "Вт";
-"Wed" = "Ср";
-"Thu" = "Чтв";
-"Fri" = "Пят";
-"Sat" = "Суб";
-
-"a2_Sunday" = "Вс";
-"a2_Monday" = "Пн";
-"a2_Tuesday" = "Вт";
-"a2_Wednesday" = "Ср";
-"a2_Thursday" = "Чт";
-"a2_Friday" = "Пт";
-"a2_Saturday" = "Сб";
-
 "dayLabelFormat" = "%d/%m/%Y";
 "today" = "Сегодня";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "этот месяц";
-
-"January" = "Январь";
-"February" = "Февраль";
-"March" = "Март";
-"April" = "Апрель";
-"May" = "Май";
-"June" = "Июнь";
-"July" = "Июль";
-"August" = "Август";
-"September" = "Сентябрь";
-"October" = "Октябрь";
-"November" = "Ноябрь";
-"December" = "Декабрь";
-
-"a3_January" = "Января";
-"a3_February" = "Февраля";
-"a3_March" = "Марта";
-"a3_April" = "Апреля";
-"a3_May" = "Мая";
-"a3_June" = "Июня";
-"a3_July" = "Июля";
-"a3_August" = "Августа";
-"a3_September" = "Сентября";
-"a3_October" = "Октября";
-"a3_November" = "Ноября";
-"a3_December" = "Декабря";
 
 "Previous Month" = "Предыдущий месяц";
 "Next Month" = "Следующий месяц";
@@ -110,6 +60,7 @@
 "Import Events" = "Импорт событий";
 "Select an iCalendar file (.ics)." = "Выберите iCalendar файл (.ics).";
 "Upload" = "Загрузить";
+"Uploading" = "Закачивается";
 "Publish Calendar..." = "Опубликовать календарь...";
 "Reload Remote Calendars" = "Обновить удаленные календари";
 "Properties" = "Свойства";
@@ -502,6 +453,7 @@ validate_endbeforestart    = "Дата начала позже даты конц
 "Title" = "Название";
 "Start" = "Начало";
 "End" = "Конец";
+"Due Date" = "К дате";
 "Location" = "Место";
 "(Private Event)" = "(Приватное событие)";
 
@@ -536,6 +488,10 @@ vtodo_class2 = "(Конфиденциальное задание)";
 "Show alarms" = "Показать сигналы";
 "Show tasks" = "Показать задания";
 
+"Receive a mail when I modify my calendar" = "Получать письмо в случае если я изменю свой календарь";
+"Receive a mail when someone else modifies my calendar" = "Получать письмо если кто-то изменит мой календарь";
+"When I modify my calendar, send a mail to:" = "Если я изменю свой календарь, отправить письмо на адрес: ";
+
 "Links to this Calendar" = "Ссылки на этот календарь";
 "Authenticated User Access" = "Доступ авторизированных пользователей";
 "CalDAV URL" = "CalDAV url";
@@ -564,9 +520,13 @@ vtodo_class2 = "(Конфиденциальное задание)";
 "Delete Task" = "Удалить задачу";
 "Delete Event" = "Удалить событие";
 "Copy event to my calendar" = "Копировать событие в мой календарь";
+"View Raw Source" = "Показать исходный код сообщения";
 
 "Subscribe to a web calendar..." = "Подписаться на калентарь в сети...";
 "URL of the Calendar" = "URL календаря";
 "Web Calendar" = "Web Calendar";
 "Reload on login" = "Перезагружать при входе";
 "Invalid number." = "Число неверно.";
+
+"Category" = "Категория";
+"Priority" = "Приоритет";

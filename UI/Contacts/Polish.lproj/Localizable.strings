@@ -65,18 +65,17 @@
 "New Card" = "Nowy kontakt";
 "New List" = "Nowa lista";
 "Properties" = "Właściwości";
-"Sharing..." = "Udostępnianie...";
+"Sharing..." = "Udostępnianie";
 "Write" = "Napisz";
 "Delete" = "Usuń";
 "Instant Message" = "Szybka wiadomość";
-"Add..." = "Dodaj...";
+"Add..." = "Dodaj";
 "Remove" = "Usuń";
 
 "Please wait..." = "Zaczekaj chwilę...";
 "No possible subscription" = "Brak możliwej subskrypcji";
 
 "Preferred" = "Preferowane";
-"Card for %@" = "Kontakt %@";
 "Display:" = "Wyświetl:";
 "Display Name:" = "Nazwa wyświetlana:";
 "Email:" = "E-mail:";
@@ -85,7 +84,7 @@
 "Phone Number:" = "Numer telefonu:";
 "Prefers to receive messages formatted as:" = "Preferuje wiadomości w formacie:";
 "Screen Name:" = "Nazwa ekranowa:";
-"Categories:" = "Categories:";
+"Categories:" = "Kategorie:";
 
 "First:" = "Imię:";
 "Last:" = "Nazwisko:";
@@ -99,9 +98,9 @@
 "Pager:" = "Pager:";
 
 /* categories */
-"contacts_category_labels" = "Colleague, Competitor, Customer, Friend, Family, Business Partner, Provider, Press, VIP";
-"Categories" = "Categories";
-"New category" = "New category";
+"contacts_category_labels" = "Kolega, Konkurencja, Klient, Przyjaciel, Rodzina, Biznes, Dostawca, Prasa, VIP";
+"Categories" = "Kategorie";
+"New category" = "Nowa kategoria";
 
 /* adresses */
 "Title:" = "Tytuł:";
@@ -125,13 +124,13 @@
 "Birthday (yyyy-mm-dd):" = "Urodziny (yyyy-mm-dd):";
 "Freebusy URL:" = "URL statusu wolny-zajęty:";
 
-"Add as..." = "Dodaj jako...";
+"Add as..." = "Dodaj jako";
 "Recipient" = "Odbiorca";
 "Carbon Copy" = "Do wiadomości";
 "Blind Carbon Copy" = "Ukryte do wiadomości";
 
-"New Addressbook..." = "Nowa książka adresowa...";
-"Subscribe to an Addressbook..." = "Subskrybuj książkę adresową...";
+"New Addressbook..." = "Nowa książka adresowa";
+"Subscribe to an Addressbook..." = "Subskrybuj książkę adresową";
 "Remove the selected Addressbook" = "Usuń zaznaczoną książkę adresową";
 
 "Name of the Address Book" = "Nazwa książki adresowej";
@@ -155,7 +154,9 @@
 "Unable to subscribe to that folder!"
 = "Nie można włączyć subskrypcji tego foldera.";
 
-"User rights for:" = "Uprawnienia użytkownika:";
+/* acls */
+"Access rights to" = "Uprawnienia dla";
+"For user" = "Dla użytkownika";
 
 "Any Authenticated User" = "Każdy zalogowany użytkownik";
 "Public Access" = "Dostęp publiczny";
@@ -193,10 +194,12 @@
 "Add" = "Dodaj";
 "Lists can't be moved or copied." = "Listy nie mogą być przeniesione ani skopiowane.";
 "Export" = "Eksport";
-"Export Address Book..." = "Eksportuj książkę adresową...";
+"Export Address Book..." = "Eksportuj książkę adresową";
+"View Raw Source" = "Obejrzyj źródło";
 "Import Cards" = "Importuj kontakty";
 "Select a vCard or LDIF file." = "Wskaż plik vCard lub LDIF.";
 "Upload" = "Wyślij";
+"Uploading" = "Wysyłanie";
 "Done" = "Zrobione";
 "An error occured while importing contacts." = "W trakcie importu kontaktów pojawił się błąd.";
 "No card was imported." = "Nie zaimportowano żadnego kontaktu.";

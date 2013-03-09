@@ -37,6 +37,7 @@
 #import <SOGo/SOGoUserDefaults.h>
 #import <Appointments/iCalEvent+SOGo.h>
 #import <Appointments/SOGoAppointmentObject.h>
+#import <Appointments/SOGoAppointmentFolder.h>
 
 #import <Common/WODirectAction+SOGo.h>
 
@@ -67,12 +68,8 @@
       co = [self clientObject];
       event = (iCalEvent *) [[self clientObject] occurence];
 
-      ud = [[context activeUser] userDefaults];
-      tz = [ud timeZone];
       start = [event startDate];
-      [start setTimeZone: tz];
       end = [event endDate];
-      [end setTimeZone: tz];
 
       if ([event isAllDay])
         {
@@ -87,6 +84,10 @@
         }
       else
         {
+          ud = [[context activeUser] userDefaults];
+          tz = [ud timeZone];
+          [start setTimeZone: tz];
+          [end setTimeZone: tz];
           newStart = [start dateByAddingYears: 0 months: 0
                                          days: [daysDelta intValue]
                                         hours: 0 minutes: [startDelta intValue]
@@ -103,6 +104,7 @@
       if ([event hasRecurrenceRules])
 	[event updateRecurrenceRulesUntilDate: end];
 
+      [event setLastModified: [NSCalendarDate calendarDate]];
       [co saveComponent: event];
 
       response = [self responseWith204];

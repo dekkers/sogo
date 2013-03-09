@@ -3,6 +3,8 @@
  * Copyright (C) 2009-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
+ *         Ludovic Marcotte <lmarcotte@inverse.ca>
+ *         Francis Lachapelle <flachapelle@inverse.ca>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +32,8 @@
 #import <NGCards/iCalEvent.h>
 #import <NGCards/iCalPerson.h>
 
+#import <SOGo/NSDictionary+Utilities.h>
+#import <SOGo/NSObject+Utilities.h>
 #import <SOGo/NSString+Utilities.h>
 #import <SOGo/SOGoUserManager.h>
 #import <SOGo/SOGoDateFormatter.h>
@@ -57,8 +61,10 @@ static NSCharacterSet *wsSet = nil;
   if ((self = [super init]))
     {
       originator = nil;
-      recipients = nil;
-      isSubject = NO;
+      addedAttendees = nil;
+      deletedAttendees = nil;
+      updatedAttendees = nil;
+      calendarName = nil;
     }
 
   return self;
@@ -67,30 +73,11 @@ static NSCharacterSet *wsSet = nil;
 - (void) dealloc
 {
   [originator release];
-  [recipients release];
+  [addedAttendees release];
+  [deletedAttendees release];
+  [updatedAttendees release];
+  [calendarName release];
   [super dealloc];
-}
-
-
-- (NSString *) getSubject
-{
-  NSString *subject;
-
-  if (!values)
-    [self setupValues];
-
-  isSubject = YES;
-  subject = [[[self generateResponse] contentAsString]
-	      stringByTrimmingCharactersInSet: wsSet];
-  if (!subject)
-    {
-      [self errorWithFormat:@"Failed to properly generate subject! Please check "
-	    @"template for component '%@'!",
-	    [self name]];
-      subject = @"ERROR: missing subject!";
-    }
-
-  return [subject asQPSubjectString: @"utf-8"];
 }
 
 - (NSString *) getBody
@@ -99,8 +86,6 @@ static NSCharacterSet *wsSet = nil;
 
   if (!values)
     [self setupValues];
-
-  isSubject = NO;
 
   body = [[self generateResponse] contentAsString];
 
@@ -112,14 +97,34 @@ static NSCharacterSet *wsSet = nil;
   ASSIGN (originator, newOriginator);
 }
 
-- (void) setRecipients: (NSArray *) newRecipients
+- (void) setAddedAttendees: (NSArray *) theAttendees;
 {
-  ASSIGN (recipients, newRecipients);
+  ASSIGN (addedAttendees, theAttendees);
 }
 
-- (NSArray *) recipients
+- (NSArray *) addedAttendees;
 {
-  return recipients;
+  return addedAttendees;
+}
+
+- (void) setDeletedAttendees: (NSArray *) theAttendees;
+{
+  ASSIGN (deletedAttendees, theAttendees);
+}
+
+- (NSArray *) deletedAttendees;
+{
+  return deletedAttendees;
+}
+
+- (NSArray *) updatedAttendes
+{
+  return updatedAttendees;
+}
+
+- (void) setUpdatedAttendees: (NSArray *) theAttendees
+{
+  ASSIGN (updatedAttendees, theAttendees);
 }
 
 - (void) setCurrentRecipient: (iCalPerson *) newCurrentRecipient
@@ -130,6 +135,54 @@ static NSCharacterSet *wsSet = nil;
 - (iCalPerson *) currentRecipient
 {
   return currentRecipient;
+}
+
+- (void) setOperation: (SOGoEventOperation) theOperation
+{
+  operation = theOperation;
+}
+
+- (void) setCalendarName: (NSString *) theCalendarName
+{
+  ASSIGN (calendarName, theCalendarName);
+}
+
+- (NSString *) calendarName
+{
+  return calendarName;
+}
+
+- (NSString *) aptSummary
+{
+  NSString *s;
+
+  if (!values)
+    [self setupValues];
+
+  switch (operation)
+    {
+    case EventCreated:
+      s = [self labelForKey: @"The event \"%{Summary}\" was created"
+                  inContext: context];
+      break;
+      
+    case EventDeleted:
+      s = [self labelForKey: @"The event \"%{Summary}\" was deleted"
+                  inContext: context];
+      break;
+      
+    case EventUpdated:
+    default:
+      s = [self labelForKey: @"The event \"%{Summary}\" was updated"
+                  inContext: context];
+    }
+
+  return [values keysWithFormat: s];
+}
+
+- (NSString *) getSubject
+{
+  return [[[self aptSummary] stringByTrimmingCharactersInSet: wsSet] asQPSubjectString: @"utf-8"];
 }
 
 - (NSString *) _formattedUserDate: (NSCalendarDate *) date
@@ -163,17 +216,5 @@ static NSCharacterSet *wsSet = nil;
 {
   return [self _formattedUserDate: [(iCalEvent *) apt endDate]];
 }
-
-@end
-
-@implementation SOGoAptMailInvitationReceipt : SOGoAptMailReceipt
-
-@end
-
-@implementation SOGoAptMailUpdateReceipt : SOGoAptMailReceipt
-
-@end
-
-@implementation SOGoAptMailDeletionReceipt : SOGoAptMailReceipt
 
 @end

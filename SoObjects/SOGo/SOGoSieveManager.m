@@ -51,7 +51,7 @@ static NSMutableDictionary *fieldTypes = nil;
 static NSDictionary *sieveFields = nil;
 static NSDictionary *sieveFlags = nil;
 static NSDictionary *operatorRequirements = nil;
-static NSDictionary *methodRequirements = nil;
+static NSMutableDictionary *methodRequirements = nil;
 static NSString *sieveScriptName = @"sogo";
 
 
@@ -188,16 +188,16 @@ static NSString *sieveScriptName = @"sogo";
   if (!methodRequirements)
     {
       methodRequirements
-        = [NSDictionary dictionaryWithObjectsAndKeys:
-                          @"imapflags", @"addflag",
-                        @"imapflags", @"removeflag",
-                        @"imapflags", @"flag",
-                        @"vacation", @"vacation",
-                        @"notify", @"notify",
-                        @"fileinto", @"fileinto",
-                        @"reject", @"reject",
-                        @"regex", @"regex",
-                        nil];
+        = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                 @"imapflags", @"addflag",
+                               @"imapflags", @"removeflag",
+                               @"imapflags", @"flag",
+                               @"vacation", @"vacation",
+                               @"notify", @"notify",
+                               @"fileinto", @"fileinto",
+                               @"reject", @"reject",
+                               @"regex", @"regex",
+                               nil];
       [methodRequirements retain];
     }
 }
@@ -563,7 +563,6 @@ static NSString *sieveScriptName = @"sogo";
   NSString *sieveText;
   NSArray *scripts;
   int count, max;
-  BOOL previousWasConditional;
   NSDictionary *currentScript;
 
   sieveScript = [NSMutableString stringWithCapacity: 8192];
@@ -576,22 +575,12 @@ static NSString *sieveScriptName = @"sogo";
   max = [scripts count];
   if (max)
     {
-      previousWasConditional = NO;
       for (count = 0; !scriptError && count < max; count++)
         {
           currentScript = [scripts objectAtIndex: count];
           if ([[currentScript objectForKey: @"active"] boolValue])
             {
               sieveText = [self _convertScriptToSieve: currentScript];
-              if ([sieveText hasPrefix: @"if"])
-                {
-                  if (previousWasConditional)
-                    [sieveScript appendFormat: @"els"];
-                  else
-                    previousWasConditional = YES;
-                }
-              else
-                previousWasConditional = NO;
               [sieveScript appendString: sieveText];
             }
         }
@@ -626,8 +615,8 @@ static NSString *sieveScriptName = @"sogo";
   SOGoUserDefaults *ud;
   SOGoDomainDefaults *dd;
   NGSieveClient *client;
-  NSString *filterScript, *v, *sieveServer;
-  NSURL *url;
+  NSString *filterScript, *v, *sieveServer, *sieveScheme, *sieveQuery, *imapServer;
+  NSURL *url, *cUrl;
   
   int sievePort;
   BOOL b, connected;
@@ -642,15 +631,138 @@ static NSString *sieveScriptName = @"sogo";
   connected = YES;
   b = NO;
 
+  
+  // We connect to our Sieve server and check capabilities, in order
+  // to generate the right script, based on capabilities
+  //
+  // sieveServer might have the following format:
+  //
+  // sieve://localhost
+  // sieve://localhost:2000
+  // sieve://localhost:2000/?tls=YES
+  //
+  // Values such as "localhost" or "localhost:2000" are NOT supported.
+  //
+  // We first try to get the user's preferred Sieve server
+  sieveServer = [[[user mailAccounts] objectAtIndex: 0] objectForKey: @"sieveServerName"];
+  imapServer = [[[user mailAccounts] objectAtIndex: 0] objectForKey: @"serverName"];
+
+  cUrl = [NSURL URLWithString: (sieveServer ? sieveServer : @"")];
+
+  if ([dd sieveServer] && [[dd sieveServer] length] > 0)
+    url = [NSURL URLWithString: [dd sieveServer]];
+  else
+    url = [NSURL URLWithString: @"localhost"];
+
+  if ([cUrl host])
+    sieveServer = [cUrl host];
+  if (!sieveServer && [url host])
+    sieveServer = [url host];
+  if (!sieveServer && [dd sieveServer])
+    sieveServer = [dd sieveServer];
+  if (!sieveServer && imapServer)
+    sieveServer = [[NSURL URLWithString: imapServer] host];
+  if (!sieveServer)
+    sieveServer = @"localhost";
+
+  sieveScheme = [cUrl scheme] ? [cUrl scheme] : [url scheme];
+  if (!sieveScheme)
+    sieveScheme = @"sieve";
+
+  if ([cUrl port])
+    sievePort = [[cUrl port] intValue];
+  else
+    if ([url port])
+      sievePort = [[url port] intValue];
+    else
+      sievePort = 2000;
+
+  sieveQuery = [cUrl query] ? [cUrl query] : [url query];
+  if (sieveQuery)
+    sieveQuery = [NSString stringWithFormat: @"/?%@", sieveQuery];
+  else
+    sieveQuery = @"";
+
+  url = [NSURL URLWithString: [NSString stringWithFormat: @"%@://%@:%d%@",
+                               sieveScheme, sieveServer, sievePort, sieveQuery]];
+
+  client = [[NGSieveClient alloc] initWithURL: url];
+  
+  if (!client) {
+    NSLog(@"Sieve connection failed on %@", [url description]);
+    return NO;
+  }
+  
+  if (!thePassword) {
+    [client closeConnection];
+    return NO;
+  }
+
+  NS_DURING
+    {
+      result = [client login: theLogin  authname: theAuthName  password: thePassword];
+    }
+  NS_HANDLER
+    {
+      connected = NO;
+    }
+  NS_ENDHANDLER
+
+  if (!connected)
+    {
+      NSLog(@"Sieve connection failed on %@", [url description]);
+      return NO;
+    }
+
+  if (![[result valueForKey:@"result"] boolValue]) {
+    NSLog(@"failure. Attempting with a renewed password (no authname supported)");
+    thePassword = [theAccount imap4PasswordRenewed: YES];
+    result = [client login: theLogin  password: thePassword];
+  }
+  
+  if (![[result valueForKey:@"result"] boolValue]) {
+    NSLog(@"Could not login '%@' on Sieve server: %@: %@",
+	  theLogin, client, result);
+    [client closeConnection];
+    return NO;
+  }
+  
+  // We adjust the "methodRequirements" based on the server's 
+  // capabilities. Cyrus exposes "imapflags" while Dovecot (and
+  // potentially others) expose "imap4flags" as specified in RFC5332
+  if ([client hasCapability: @"imap4flags"])
+    {
+      [methodRequirements setObject: @"imap4flags"  forKey: @"addflag"];
+      [methodRequirements setObject: @"imap4flags"  forKey: @"removeflag"];
+      [methodRequirements setObject: @"imap4flags"  forKey: @"flag"];
+    }
+  
+  //
+  // Now let's generate the script
+  //
   script = [NSMutableString string];
 
-  // Right now, we handle Sieve filters here and only for vacation
-  // and forwards. Traditional filters support (for fileinto, for
-  // example) will be added later.
-  values = [ud vacationOptions];
+  // We first handle filters
+  filterScript = [self sieveScriptWithRequirements: req];
+  if (filterScript)
+    {
+      if ([filterScript length])
+        {
+          b = YES;
+          [script appendString: filterScript];
+        }
+    }
+  else
+    {
+      NSLog(@"Sieve generation failure: %@", [self lastScriptError]);
+      [client closeConnection];
+      return NO;
+    }
 
   // We handle vacation messages.
   // See http://ietfreport.isoc.org/idref/draft-ietf-sieve-vacation/
+  values = [ud vacationOptions];
+
   if (values && [[values objectForKey: @"enabled"] boolValue])
     {
       NSArray *addresses;
@@ -717,21 +829,6 @@ static NSString *sieveScriptName = @"sogo";
 	[script appendString: @"keep;\r\n"];
     }
   
-  filterScript = [self sieveScriptWithRequirements: req];
-  if (filterScript)
-    {
-      if ([filterScript length])
-        {
-          b = YES;
-          [script appendString: filterScript];
-        }
-    }
-  else
-    {
-      NSLog(@"Sieve generation failure: %@", [self lastScriptError]);
-      return NO;
-    }
-
   if ([req count])
     {
       header = [NSString stringWithFormat: @"require [\"%@\"];\r\n",
@@ -739,87 +836,6 @@ static NSString *sieveScriptName = @"sogo";
       [script insertString: header  atIndex: 0];
     }
 
-  // We connect to our Sieve server and upload the script.
-  //
-  // sieveServer might have the following format:
-  //
-  // sieve://localhost
-  // sieve://localhost:2000
-  // sieve://localhost:2000/?tls=YES
-  //
-  // Values such as "localhost" or "localhost:2000" are NOT supported.
-  //
-  sieveServer = [dd sieveServer];
-  sievePort = 2000;
-  url = nil;
-      
-  if (!sieveServer)
-    {
-      NSString *s;
-      
-      s = [dd imapServer];
-      
-      if (s)
-	{
-	  NSURL *url;
-	  
-	  url = [NSURL URLWithString: s];
-
-	  if ([url host])
-	    sieveServer = [url host];
-	  else
-	    sieveServer = s;
-	}
-      else
-	sieveServer = @"localhost";
-      
-      url = [NSURL URLWithString: [NSString stringWithFormat: @"%@:%d", sieveServer, sievePort]];
-    }
-  else
-    {
-      url = [NSURL URLWithString: sieveServer];
-    }
-
-  client = [[NGSieveClient alloc] initWithURL: url];
-  
-  if (!client) {
-    NSLog(@"Sieve connection failed on %@", [url description]);
-    return NO;
-  }
-  
-  if (!thePassword) {
-    [client closeConnection];
-    return NO;
-  }
-
-  NS_DURING
-    {
-      result = [client login: theLogin  authname: theAuthName  password: thePassword];
-    }
-  NS_HANDLER
-    {
-      connected = NO;
-    }
-  NS_ENDHANDLER
-
-  if (!connected)
-    {
-      NSLog(@"Sieve connection failed on %@", [url description]);
-      return NO;
-    }
-
-  if (![[result valueForKey:@"result"] boolValue]) {
-    NSLog(@"failure. Attempting with a renewed password (no authname supported)");
-    thePassword = [theAccount imap4PasswordRenewed: YES];
-    result = [client login: theLogin  password: thePassword];
-  }
-  
-  if (![[result valueForKey:@"result"] boolValue]) {
-    NSLog(@"Could not login '%@' on Sieve server: %@: %@",
-	  theLogin, client, result);
-    [client closeConnection];
-    return NO;
-  }
 
   /* We ensure to deactive the current active script since it could prevent
      its deletion from the server. */

@@ -18,7 +18,10 @@ BODY
   overflow: hidden; }
 
 HR
-{ height: 0px; }
+{ height: 0;
+border: 0;
+border-top: 1px solid #ddd;
+border-bottom: 1px solid #eee; }
 
 TABLE, DIV, IMG
 { font-family: inherit;
@@ -28,7 +31,7 @@ TABLE, DIV, IMG
   padding: 0px; }
 
 FIELDSET
-{ border: 1px solid #999;
+{ border: 1px solid #aaa;
   margin-bottom: 2px; }
 
 IMG#progressIndicator
@@ -54,6 +57,14 @@ LABEL
 { color: #262B33;
   white-space: nowrap;
   margin-left: .5em; }
+
+H6
+{ font-size: 11px;
+  color: #9ABCD8;
+  color: #627e9c;
+  text-transform: uppercase;
+  margin: 10px 0px 5px 0px;
+  padding-left: 5px; }
 
 TABLE
 { table-layout: fixed;
@@ -183,6 +194,8 @@ SELECT
   margin: 2px;
   padding-right: 1px;
   background-color: #CCDDEC;
+  border: 1px solid #999;
+  border-radius: 4px;
   color: #262B33; }
 
 DIV.contactSelector DIV.contactList
@@ -430,7 +443,7 @@ DIV.dragHandle:active
 { background-color: #99a; }
 
 /* search fields */
-DIV#filterPanel
+DIV.filterPanel
 { height: 2em;
   vertical-align: middle;
   width: 100%;
@@ -493,9 +506,7 @@ DIV.noJavascriptErrorMessage A
   margin: 0px auto; }
 
 LI.denied
-{ background-color: #fefefe;
-  font-style: italic;
-  color: #f33; }
+{ color: #999; }
 
 .popupMenu LI:hover,
 .popupMenu LI.selected,
@@ -507,20 +518,20 @@ TD._selected
   color: #fff;
 }
 
-LI[class~="_selected"].denied
+LI._selected.denied
 { 
   background-color: #f33;
 }
 
 .hidden
-{ visibility: hidden; }
+{ display: none; }
 
 /* folder tree (js) )*/
 DIV.dTreeNode A SPAN.nodeName
 {
   margin: 0px .2em;
-  padding-left: .2em;
-  padding-right: .2em;
+  padding: 0px .2em;
+  display: inline-block;
 }
 
 DIV.dTreeNode A._selected SPAN.nodeName
@@ -541,6 +552,8 @@ DIV.dTreeNode SPAN._dragOver
 {
   background-color: #9ABCD8 !important;
   color: #fff !important;
+  -webkit-border-radius: 4px;
+  border-radius: 4px;
 }
 
 /* resizable columns */
@@ -560,35 +573,78 @@ DIV.resize-handle
 DIV.dialog
 { position: absolute;
   width: 350px;
-  z-index: 50; }
+  z-index: 1000;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+  -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  -webkit-background-clip: padding-box;
+  -moz-background-clip: padding;
+  background-clip: padding-box;
+  *border-right-width: 2px;
+  *border-bottom-width: 2px;
+  color: #000;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px; }
 
 DIV.dialog > DIV
-{ border: 1px solid #444;
-  -webkit-box-shadow: 0 5px 10px rgba(0,0,0,.5);
-  box-shadow: 0 5px 10px rgba(0,0,0,.5);
-  background-color: #fff;
-  padding: 5px;
-  padding-bottom: 26px; }
+{ padding: 5px 10px; }
 
-DIV.dialog.left
-{ background-image: url("dialog-left.png");
-  background-repeat: no-repeat;
-  background-position: top left; }
+.dialog.left > DIV {
+  padding-right: 5px;
+}
+.dialog.left > DIV:before {
+  content: '';
+  display: inline-block;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 7px solid #ccc;
+  border-right-color: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  left: -7px;
+  top: 6px;
+}
+.dialog.left > DIV:after {
+  content: '';
+  display: inline-block;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #ffffff;
+  position: absolute;
+  left: -6px;
+  top: 7px;
+}
 
-DIV.dialog.left DIV
-{ border-left: 0px;
-  margin-left: 19px;
-  text-align: left; }
-
-DIV.dialog.right
-{ background-image: url("dialog-right.png");
-  background-repeat: no-repeat;
-  background-position: top right; }
-
-DIV.dialog.right DIV
-{ border-right: 0px;
-  margin-right: 19px;
-  text-align: right; }
+.dialog.right > DIV {
+  padding-left: 5px;
+}
+.dialog.right > DIV:before {
+  content: '';
+  display: inline-block;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 7px solid #ccc;
+  border-left-color: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  right: -7px;
+  top: 6px;
+}
+.dialog.right > DIV:after {
+  content: '';
+  display: inline-block;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #ffffff;
+  position: absolute;
+  right: -6px;
+  top: 7px;
+}
 
 DIV.dialog.none
 { position: relative;
@@ -608,19 +664,24 @@ DIV.dialog HR
   color: #fff;
   border: 0px; }
 
-DIV.dialog.none H3
+DIV.dialog H3
 { margin: 0; }
 
 DIV.dialog.none P
 { margin: 0px;
   padding: 5px 0px; }
 
-DIV.dialog.none P.prompt
+DIV.dialog P.prompt
 { text-align: right; }
 
 DIV.dialog P.list
 { max-height: 200px;
   overflow-y: auto; }
+
+DIV.dialog .button
+{ font-family: Lucida Grande, Bitstream VeraSans, Tahoma, sans-serif;
+  font-size: 8pt;
+  margin-top: 10px; }
 
 DIV#bgFrameDiv
 { position: absolute;
@@ -639,20 +700,6 @@ DIV#bgDialogDiv
   z-index: 2;
   background: -webkit-radial-gradient(ellipse cover,rgba(0, 0, 0, .1) 0,rgba(0, 0, 0, .1) 20%,rgba(0, 0, 0, .7) 80%);
   background: -moz-linear-gradient(top, rgba(0, 0, 0, .5),  rgba(0, 0, 0, .1)); }
-
-DIV#uploadDialog,
-DIV#uploadResults
-{ border-width: 1px;
-  width: 260px; }
-
-DIV#uploadDialog DIV,
-DIV#uploadResults DIV
-{ width: 260px; }
-
-DIV#uploadDialog H3,
-DIV#uploadResults H3
-{ margin-top: 0px;
-  font-size: 1.2em; }
 
 /* INPUT styles */
 TEXTAREA
@@ -676,9 +723,10 @@ INPUT[disabled], INPUT[readonly],
 SELECT[disabled], SELECT[readonly],
 TEXTAREA[disabled], TEXTAREA[readonly]
 { background: #E6E7E6;
+  border-color: #ccc;
   color: #9ABCD8; }
 
-INPUT[type="text"], INPUT[type="password"], INPUT[type="file"]
+INPUT[type="text"], INPUT[type="password"], INPUT[type="file"], TEXTAREA
 { background: url("input_bg.gif"); }
 
 TEXTAREA
@@ -695,7 +743,8 @@ INPUT.comboBoxField
 { margin-right: 0px; }
 
 INPUT.textField._invalid, INPUT.comboBoxField._invalid
-{ background-color: #f00 !important; }
+{ background-color: #f66 !important;
+  border-color: #f00; }
 
 BUTTON.comboBoxButton
 { background-image: url("arrow-down.png");
@@ -721,7 +770,7 @@ BUTTON.comboBoxButton:active
   background-color: #d6d7d6;
 }
 
-INPUT#searchValue
+INPUT[name="search"]
 { margin-right: 1em;
   width: 20em;
   padding-left: 24px;
@@ -772,6 +821,43 @@ A.disabled.button SPAN
 A.disabled.button:active SPAN
 { background-position: top left;
   padding: 5px 2px 5px 5px; }
+
+dt, dd {
+  line-height: 20px;
+}
+dd {
+  margin-left: 9px;
+}
+.dl-horizontal dt {
+  float: left;
+  width: 225px;
+  overflow: hidden;
+  clear: left;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+fieldset .dl-horizontal dt {
+  width: 150px;
+}
+.dl-horizontal dd {
+  margin-left: 235px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+fieldset .dl-horizontal dd {
+  margin-left: 160px;
+}
+
+.dl-horizontal ul {
+  list-style-type: none;
+  margin: 0px;
+  padding-left: 0px;
+}
+.dl-horizontal li {
+  margin-left: 0;
+}
 
 /* Frames */
 TABLE.frame,
@@ -1065,6 +1151,10 @@ DIV.bottomToolbar A.bottomButton SPAN:active
   right: 0px;
   bottom: 0px;
   left: 0px; }
+
+/* ckeditor */
+span.cke_skin_kama
+{ padding: 0px !important; }
 
 @media print
 {

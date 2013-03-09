@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2007-2010 Inverse inc.
+  Copyright (C) 2007-2012 Inverse inc.
   Copyright (C) 2004-2005 SKYRIX Software AG
 
   This file is part of SOGo.
@@ -57,6 +57,7 @@
 #import <SOGo/NSArray+Utilities.h>
 #import <SOGo/NSCalendarDate+SOGo.h>
 #import <SOGo/NSString+Utilities.h>
+#import <SOGo/SOGoBuild.h>
 #import <SOGo/SOGoDomainDefaults.h>
 #import <SOGo/SOGoMailer.h>
 #import <SOGo/SOGoUser.h>
@@ -176,10 +177,8 @@ static NSString    *userAgent      = nil;
 {
   MultiMixedType = [NGMimeType mimeType: @"multipart" subType: @"mixed"];
   [MultiMixedType retain];
-  userAgent      = [NSString stringWithFormat: @"SOGoMail %d.%d.%d",
-			     UIX_MAILER_MAJOR_VERSION,
-			     UIX_MAILER_MINOR_VERSION,
-			     UIX_MAILER_SUBMINOR_VERSION];
+  userAgent      = [NSString stringWithFormat: @"SOGoMail %@",
+			     SOGoVersion];
   [userAgent retain];
 }
 
@@ -269,7 +268,7 @@ static NSString    *userAgent      = nil;
 {
   id headerValue;
   unsigned int count;
-  NSString *messageID, *priority, *pureSender,*replyTo;
+  NSString *messageID, *priority, *pureSender, *replyTo;
 
   for (count = 0; count < 8; count++)
     {
@@ -314,8 +313,8 @@ static NSString    *userAgent      = nil;
   if ([replyTo length] > 0)
     {
       [headers setObject: replyTo forKey: @"reply-to"];
-      [headers removeObjectForKey: @"replyTo"];
     }
+  [headers removeObjectForKey: @"replyTo"];
 
   if ([[newHeaders objectForKey: @"receipt"] isEqualToString: @"true"])
     {
@@ -804,8 +803,8 @@ static NSString    *userAgent      = nil;
 - (void) fetchMailForForwarding: (SOGoMailObject *) sourceMail
 {
   NSDictionary *info, *attachment;
+  NSString *signature, *nl;
   SOGoUserDefaults *ud;
-  NSString *signature;
 
   [sourceMail fetchCoreInfos];
   
@@ -831,11 +830,14 @@ static NSString    *userAgent      = nil;
     }
   else
     {
-  // TODO: use subject for filename?
-//   error = [newDraft saveAttachment:content withName:@"forward.eml"];
+      // TODO: use subject for filename?
+      // error = [newDraft saveAttachment:content withName:@"forward.eml"];
       signature = [[self mailAccountFolder] signature];
       if ([signature length])
-	[self setText: [NSString stringWithFormat: @"\n-- \n%@", signature]];
+        {
+          nl = (isHTML ? @"<br/>" : @"\n");
+          [self setText: [NSString stringWithFormat: @"%@-- %@%@", nl, nl, signature]];
+        }
       attachment = [NSDictionary dictionaryWithObjectsAndKeys:
 				   [sourceMail filenameForForward], @"filename",
 				 @"message/rfc822", @"mimetype",
@@ -1569,9 +1571,11 @@ static NSString    *userAgent      = nil;
 
   dd = [[context activeUser] domainDefaults];
   error = [[SOGoMailer mailerWithDomainDefaults: dd]
-                sendMailData: cleaned_message
-                toRecipients: [self allBareRecipients]
-                      sender: [self sender]];
+                  sendMailData: cleaned_message
+                  toRecipients: [self allBareRecipients]
+                        sender: [self sender]
+             withAuthenticator: [self authenticatorInContext: context]
+                     inContext: context];
   if (!error && copyToSent)
     {
       sentFolder = [[self mailAccountFolder] sentFolderInContext: context];

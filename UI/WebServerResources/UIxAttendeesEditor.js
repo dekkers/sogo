@@ -100,6 +100,7 @@ function onContactKeydown(event) {
         preventDefault(event);
         this.scrollLeft = 0;
         $(this).up('DIV').scrollLeft = 0;
+        attendeesEditor.selectedIndex = -1;
         if (this.confirmedValue)
             this.value = this.confirmedValue;
         this.hasfreebusy = false;
@@ -177,7 +178,7 @@ function onContactKeydown(event) {
 
 function performSearch(input) {
     // Perform address completion
-    if (!input.value.blank()) {
+    if (input.value.trim().length > minimumSearchLength) {
         var urlstr = (UserFolderURL
                       + "Contacts/allContactSearch?excludeGroups=1&search="
                       + encodeURIComponent(input.value));
@@ -1643,16 +1644,19 @@ document.observe("dom:loaded", onFreeBusyLoadHandler);
 function initTimeWidgets(widgets) {
     this.timeWidgets = widgets;
 
-    assignCalendar('startTime_date');
-    assignCalendar('endTime_date');
-
-    widgets['start']['date'].observe("change", this.onAdjustTime, false);
-    widgets['start']['time'].observe("time:change", this.onAdjustTime, false);
+    jQuery(widgets['start']['date']).closest('.date').datepicker(
+        { autoclose: true, position: 'above', weekStart: parentvar('firstDayOfWeek') });
+    jQuery(widgets['start']['date']).change(onAdjustTime);
+    widgets['start']['time'].on("time:change", onAdjustTime);
     widgets['start']['time'].addInterface(SOGoTimePickerInterface);
+    widgets['start']['time'].setPosition('above');
 
-    widgets['end']['date'].observe("change", this.onAdjustTime, false);
-    widgets['end']['time'].observe("time:change", this.onAdjustTime, false);
+    jQuery(widgets['end']['date']).closest('.date').datepicker(
+        { autoclose: true, position: 'above', weekStart: parentvar('firstDayOfWeek') });
+    jQuery(widgets['end']['date']).change(onAdjustTime);
+    widgets['end']['time'].on("time:change", onAdjustTime);
     widgets['end']['time'].addInterface(SOGoTimePickerInterface);
+    widgets['end']['time'].setPosition('above');
 
     var allDayLabel = $("allDay");
     if (allDayLabel) {

@@ -1,6 +1,6 @@
 /* MAPIStoreContext.h - this file is part of SOGo
  *
- * Copyright (C) 2010 Inverse inc. 
+ * Copyright (C) 2010-2012 Inverse inc. 
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -103,7 +103,9 @@
 
 - (uint64_t) idForObjectWithKey: (NSString *) key
                     inFolderURL: (NSString *) folderURL;
+- (NSArray *) getNewFMIDs: (uint64_t) max;
 - (uint64_t) getNewChangeNumber;
+- (NSArray *) getNewChangeNumbers: (uint64_t) max;
 
 /* subclass methods */
 + (NSString *) MAPIModuleName;

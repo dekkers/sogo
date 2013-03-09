@@ -1,6 +1,6 @@
 /* MAPIStoreFolder.h - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -38,29 +38,36 @@
 @class MAPIStoreMessageTable;
 @class MAPIStorePermissionsTable;
 @class SOGoFolder;
-@class SOGoMAPIFSFolder;
-@class SOGoMAPIFSMessage;
+@class SOGoMAPIDBFolder;
+@class SOGoMAPIDBMessage;
 
-#import "MAPIStoreObject.h"
+#import "MAPIStoreSOGoObject.h"
 
-@interface MAPIStoreFolder : MAPIStoreObject
+@interface MAPIStoreFolder : MAPIStoreSOGoObject
 {
   MAPIStoreContext *context;
   // NSArray *messageKeys;
   // NSArray *faiMessageKeys;
   // NSArray *folderKeys;
 
-  SOGoMAPIFSFolder *faiFolder;
-  SOGoMAPIFSFolder *propsFolder;
-  SOGoMAPIFSMessage *propsMessage;
+  SOGoMAPIDBFolder *dbFolder;
+  // SOGoMAPIDBFolder *faiFolder;
+  // SOGoMAPIDBFolder *propsFolder;
+  // SOGoMAPIDBMessage *propsMessage;
 }
 
 - (void) setContext: (MAPIStoreContext *) newContext;
 
+- (void) setupAuxiliaryObjects;
+
+- (SOGoMAPIDBFolder *) dbFolder;
+
 - (NSArray *) activeMessageTables;
 - (NSArray *) activeFAIMessageTables;
 
-- (SOGoMAPIFSMessage *) propertiesMessage;
+// - (SOGoMAPIDBMessage *) propertiesMessage;
+
+- (NSString *) childKeyFromURL: (NSString *) childURL;
 
 - (id) lookupMessageByURL: (NSString *) messageURL;
 - (id) lookupFolderByURL: (NSString *) folderURL;
@@ -116,9 +123,16 @@
                       fromFolder: (MAPIStoreFolder *) sourceFolder
                         withMIDs: (uint64_t *) targetMids
                    andChangeKeys: (struct Binary_r **) targetChangeKeys
-                        wantCopy: (uint8_t) want_copy;
+                        wantCopy: (uint8_t) want_copy
+                        inMemCtx: (TALLOC_CTX *) memCtx;
 
-- (int) getDeletedFMIDs: (struct I8Array_r **) fmidsPtr
+- (enum mapistore_error) moveCopyToFolder: (MAPIStoreFolder *) targetFolder
+                              withNewName: (NSString *) newFolderName
+                                   isMove: (BOOL) isMove
+                              isRecursive: (BOOL) isRecursive
+                          inMemCtx: (TALLOC_CTX *) memCtx;
+
+- (int) getDeletedFMIDs: (struct UI8Array_r **) fmidsPtr
                   andCN: (uint64_t *) cnPtr
        fromChangeNumber: (uint64_t) changeNum
             inTableType: (enum mapistore_table_type) tableType
@@ -132,6 +146,9 @@
 - (int) modifyPermissions: (struct PermissionData *) permissions
                 withCount: (uint16_t) pcount
                  andFlags: (int8_t) flags;
+- (enum mapistore_error) preloadMessageBodiesWithMIDs: (const struct UI8Array_r *) mids
+                                          ofTableType: (enum mapistore_table_type) tableType;
+
 
 /* helpers */
 - (uint64_t) idForObjectWithKey: (NSString *) childKey;
@@ -163,8 +180,12 @@
 
 - (BOOL) supportsSubFolders; /* capability */
 
+- (enum mapistore_error) preloadMessageBodiesWithKeys: (NSArray *) keys
+                                          ofTableType: (enum mapistore_table_type) tableType;
+
 /* subclass helpers */
 - (void) setupVersionsMessage;
+- (void) ensureIDsForChildKeys: (NSArray *) keys;
 - (void) postNotificationsForMoveCopyMessagesWithMIDs: (uint64_t *) srcMids
                                        andMessageURLs: (NSArray *) oldMessageURLs
                                              andCount: (uint32_t) midCount

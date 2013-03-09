@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Domingo";
-"Monday" = "Segunda";
-"Tuesday" = "Terça";
-"Wednesday" = "Quarta";
-"Thursday" = "Quinta";
-"Friday" = "Sexta";
-"Saturday" = "Sábado";
 "DayOfTheMonth" = "Dia do mês";
-
-"Sun" = "Dom";
-"Mon" = "Seg";
-"Tue" = "Ter";
-"Wed" = "Qua";
-"Thu" = "Qui";
-"Fri" = "Sex";
-"Sat" = "Sab";
-
-"a2_Sunday" = "Do";
-"a2_Monday" = "Se";
-"a2_Tuesday" = "Te";
-"a2_Wednesday" = "Qu";
-"a2_Thursday" = "Qu";
-"a2_Friday" = "Se";
-"a2_Saturday" = "Sa";
-
 "dayLabelFormat" = "%m/%d/%Y";
 "today" = "Hoje";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "este mês";
-
-"January" = "Janeiro";
-"February" = "Fevereiro";
-"March" = "Março";
-"April" = "Abril";
-"May" = "Maio";
-"June" = "Junho";
-"July" = "Julho";
-"August" = "Agosto";
-"September" = "Setembro";
-"October" = "Outubro";
-"November" = "Novembro";
-"December" = "Dezembro";
-
-"a3_January" = "Janeiro";
-"a3_February" = "Fevereiro";
-"a3_March" = "Março";
-"a3_April" = "Abril";
-"a3_May" = "Maio";
-"a3_June" = "Junho";
-"a3_July" = "Julho";
-"a3_August" = "Agosto";
-"a3_September" = "Setembro";
-"a3_October" = "Outubro";
-"a3_November" = "Novembro";
-"a3_December" = "Dezembro";
 
 "Previous Month" = "Mês Anterior";
 "Next Month" = "Próximo Mês";
@@ -110,6 +60,7 @@
 "Import Events" = "Importar Eventos";
 "Select an iCalendar file (.ics)." = "Selecione um arquivo iCalendar (.ics).";
 "Upload" = "Carregar";
+"Uploading" = "Carregando";
 "Publish Calendar..." = "Publicar Calendário...";
 "Reload Remote Calendars" = "Recarregar Calendários Remotos";
 "Properties" = "Propriedades";
@@ -429,6 +380,7 @@ validate_invalid_startdate = "Campo Data Inicial incorreto!";
 validate_invalid_enddate   = "Campo Data Final incorreto!";
 validate_endbeforestart    = "A data que você informou ocorre antes da data inicial.";
 
+"Events" = "Eventos";
 "Tasks" = "Tarefas";
 "Show completed tasks" = "Exibir tarefas completadas";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "A data que você informou ocorre antes da data ini
 "Title" = "Título";
 "Start" = "Início";
 "End" = "Fim";
+"Due Date" = "Data de Vencimento";
 "Location" = "Localização";
+
 "(Private Event)" = "(Evento Privado)";
 
 vevent_class0 = "(Evento Público)";
 vevent_class1 = "(Evento Privado)";
 vevent_class2 = "(Evento Confidencial)";
+
+"Priority" = "Prioridade";
+"Category" = "Categoria";
 
 vtodo_class0 = "(Tarefa Pública)";
 vtodo_class1 = "(Tarefa Privada)";
@@ -535,6 +492,11 @@ vtodo_class2 = "(Tarefa Confidencial)";
 "Display" = "Exibir";
 "Show alarms" = "Exibir alarmes";
 "Show tasks" = "Exibir tarefas";
+
+"Notifications" = "Notificações";
+"Receive a mail when I modify my calendar" = "Receber um email quando eu modificar meu calendário";
+"Receive a mail when someone else modifies my calendar" = "Receber um email quando alguem modificar meu calendário";
+"When I modify my calendar, send a mail to:" = "Quando eu modificar meu calendário, enviar um email para:";
 
 "Links to this Calendar" = "Links para este Calendário";
 "Authenticated User Access" = "Acesso a Usuário Autenticado";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Tarefa Confidencial)";
 "Delete Task" = "Remover Tarefa";
 "Delete Event" = "Remover Evento";
 "Copy event to my calendar" = "Copiar evento para o meu calendário";
+"View Raw Source" = "Visualizar Fonte";
 
 "Subscribe to a web calendar..." = "Inscrever-se a um calendário web...";
 "URL of the Calendar" = "URL do Calendário";

@@ -1,6 +1,7 @@
 /* SOGoSystemDefaults.m - this file is part of SOGo
  *
- * Copyright (C) 2009-2011 Inverse inc.
+ * Copyright (C) 2009-2012 Inverse inc.
+ * Copyright (C) 2012 Jeroen Dekkers <jeroen@dekkers.ch>
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Francis Lachapelle <flachapelle@inverse.ca>
@@ -28,6 +29,7 @@
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSFileManager.h>
 #import <Foundation/NSFileManager.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSUserDefaults.h>
 
 #import <NGExtensions/NSObject+Logs.h>
@@ -61,64 +63,131 @@ BootstrapNSUserDefaults ()
   if (handle)
     {
       SOGoNSUserDefaultsBootstrap = dlsym (handle,
-					   "SOGoNSUserDefaultsBootstrap");
+                                             "SOGoNSUserDefaultsBootstrap");
       if (SOGoNSUserDefaultsBootstrap)
-	SOGoNSUserDefaultsBootstrap ();
+        SOGoNSUserDefaultsBootstrap ();
     }
 }
 
-+ (void) injectSOGoDefaults: (NSUserDefaults *) ud
+static void
+_injectConfigurationFromFile (NSMutableDictionary *defaultsDict,
+                              NSString *filename, NSObject *logger)
 {
-  NSBundle *bundle;
-  NSDictionary *baseSOGoDefaults;
-  NSString *filename;
+  NSDictionary *newConfig, *fileAttrs;
+  NSFileManager *fm;
 
-  bundle = [NSBundle bundleForClass: self];
-  filename = [bundle pathForResource: @"SOGoDefaults" ofType: @"plist"];
-  if (filename
-      && [[NSFileManager defaultManager] fileExistsAtPath: filename])
+  fm = [NSFileManager defaultManager];
+  if ([fm fileExistsAtPath: filename])
     {
-      baseSOGoDefaults
-        = [[NSDictionary alloc] initWithContentsOfFile: filename];
-      if (baseSOGoDefaults)
+      fileAttrs = [fm fileAttributesAtPath: filename
+                              traverseLink: YES];
+      if (![fileAttrs objectForKey: @"NSFileSize"])
         {
-          [ud registerDefaults: baseSOGoDefaults];
-          [baseSOGoDefaults autorelease];
+          [logger errorWithFormat:
+                  @"Can't get file attributes from '%@'",
+                  filename];
+          exit(1);
+        }
+      if ([[fileAttrs objectForKey: @"NSFileSize"] intValue] == 0 )
+        {
+          [logger warnWithFormat:
+                  @"Empty file: '%@'. Skipping",
+                  filename];
         }
       else
-        [bundle errorWithFormat: @"Unable to deserialize SOGoDefaults.plist"];
+        {
+          newConfig = [NSDictionary dictionaryWithContentsOfFile: filename];
+          if (newConfig)
+              [defaultsDict addEntriesFromDictionary: newConfig];
+          else
+            {
+              [logger errorWithFormat:
+                      @"Cannot read configuration from '%@'. Aborting",
+                      filename];
+              exit(1);
+            }
+        }
     }
-  else
-    [bundle errorWithFormat: @"SOGoDefaults.plist not found"];
 }
 
 + (void) prepareUserDefaults
 {
-  NSString *redirectURL;
-  NSDictionary *domain;
+  /* Load settings from configuration files and
+   * enforce the following order of precedence.
+   * First match wins
+   *   1. Command line arguments
+   *   2. .GNUstepDefaults
+   *   3. /etc/sogo/{debconf,sogo}.conf
+   *   4. SOGoDefaults.plist
+   *
+   * The default standardUserDefaults search list is as follows:
+   *   GSPrimaryDomain
+   *   NSArgumentDomain (command line arguments)
+   *   applicationDomain (sogod)
+   *   NSGlobalDomain
+   *   GSConfigDomain
+   *   (languages)
+   *   NSRegistrationDomain
+   *
+   * We'll end up with this search list:
+   *   NSArgumentDomain (command line arguments)
+   *   sogodRuntimeDomain (config from all config files)
+   *   GSPrimaryDomain
+   *   NSGlobalDomain
+   *   GSConfigDomain
+   *   (languages)
+   *   NSRegistrationDomain (SOPE loads its defaults in this one)
+   */
+
+  NSDictionary *sogodDomain;
+  NSMutableDictionary *configFromFiles;
   NSUserDefaults *ud;
   SOGoStartupLogger *logger;
+  NSBundle *bundle;
+  NSString *confFiles[] = {@"/etc/sogo/debconf.conf",
+                           @"/etc/sogo/sogo.conf"};
+  NSString *filename, *redirectURL;
+  NSUInteger count;
 
   logger = [SOGoStartupLogger sharedLogger];
 
+  /* Load the configuration from the standard user default files */
   ud = [NSUserDefaults standardUserDefaults];
-  domain = [ud persistentDomainForName: @"sogod"];
-  if (![domain count])
-    {
-      domain = [ud persistentDomainForName: @"sogod-0.9"];
-      if ([domain count])
-	{
-	  [logger logWithFormat: @"migrating user defaults from sogod-0.9"];
-	  [ud setPersistentDomain: domain forName: @"sogod"];
-	  [ud removePersistentDomainForName: @"sogod-0.9"];
-	  [ud synchronize];
-	}
-      else
-        [logger warnWithFormat: @"No configuration found."
-                @" SOGo will not work properly."];
-    }
-  [self injectSOGoDefaults: ud];
 
+  /* Populate configFromFiles with default values from SOGoDefaults.plist */
+  configFromFiles = [NSMutableDictionary dictionaryWithCapacity:0];
+  bundle = [NSBundle bundleForClass: self];
+  filename = [bundle pathForResource: @"SOGoDefaults" ofType: @"plist"];
+  if (filename)
+    _injectConfigurationFromFile (configFromFiles, filename, logger);
+
+  /* Fill/Override configFromFiles values with configuration stored
+   *  in "/etc" */
+  for (count = 0; count < sizeof(confFiles)/sizeof(confFiles[0]); count++)
+    _injectConfigurationFromFile (configFromFiles, confFiles[count], logger);
+
+  /* This dance is required to let other appplications (sogo-tool) use
+   * options from the sogod domain while preserving the order of precedence
+   *  - remove the 'sogod' domain from the user defaults search list 
+   *  - Load the content of the sogod domain into configFromFiles
+   *    Thereby overriding values from the config files loaded above
+   */
+  [ud removeSuiteNamed: @"sogod"];
+  sogodDomain = [ud persistentDomainForName: @"sogod"];
+  if ([sogodDomain count])
+    [configFromFiles addEntriesFromDictionary: sogodDomain];
+
+  /* Add a volatile domain containing the config to the search list.
+   * The domain is added at the very front of the search list
+   */
+  [ud setVolatileDomain: configFromFiles
+                forName: @"sogodRuntimeDomain"];
+  [ud addSuiteNamed: @"sogodRuntimeDomain"];
+
+  /* NSArgumentsDomain goes back in front of the search list */
+  [ud addSuiteNamed: @"NSArgumentDomain"];
+
+  /* issue a warning if WOApplicationRedirectURL is used */
   redirectURL = [ud stringForKey: @"WOApplicationRedirectURL"];
   if (redirectURL)
     {
@@ -357,7 +426,15 @@ BootstrapNSUserDefaults ()
 
 - (NSArray *) supportedLanguages
 {
-  return [self stringArrayForKey: @"SOGoSupportedLanguages"];
+  static NSArray *supportedLanguages = nil;
+
+  if (!supportedLanguages)
+    {
+      supportedLanguages = [self stringArrayForKey: @"SOGoSupportedLanguages"];
+      [supportedLanguages retain];
+    }
+
+  return supportedLanguages;
 }
 
 - (BOOL) userCanChangePassword
@@ -393,6 +470,37 @@ BootstrapNSUserDefaults ()
 - (BOOL) CASLogoutEnabled
 {
   return [self boolForKey: @"SOGoCASLogoutEnabled"];
+}
+
+/* SAML2 support */
+- (NSString *) SAML2PrivateKeyLocation
+{
+  return [self stringForKey: @"SOGoSAML2PrivateKeyLocation"];
+}
+
+- (NSString *) SAML2CertificateLocation;
+{
+  return [self stringForKey: @"SOGoSAML2CertificateLocation"];
+}
+
+- (NSString *) SAML2IdpMetadataLocation
+{
+  return [self stringForKey: @"SOGoSAML2IdpMetadataLocation"];
+}
+
+- (NSString *) SAML2IdpPublicKeyLocation
+{
+  return [self stringForKey: @"SOGoSAML2IdpPublicKeyLocation"];
+}
+
+- (NSString *) SAML2IdpCertificateLocation
+{
+  return [self stringForKey: @"SOGoSAML2IdpCertificateLocation"];
+}
+
+- (BOOL) SAML2LogoutEnabled
+{
+  return [self boolForKey: @"SOGoSAML2LogoutEnabled"];
 }
 
 - (BOOL) enablePublicAccess

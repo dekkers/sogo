@@ -194,19 +194,20 @@ static NSArray *knownTimeZones;
                                        forDate: (NSCalendarDate *) aDate
 {
   NSArray *periods;
+  NSEnumerator *periodsList;
   iCalTimeZonePeriod *period;
-  NSCalendarDate *occurence;
+  NSCalendarDate *occurrence;
 
-  periods = [self childrenWithTag: pName];
-  if ([periods count])
-    {
-      period = (iCalTimeZonePeriod *) [periods objectAtIndex: 0];
-      occurence = [period occurenceForDate: aDate];
-    }
-  else
-    occurence = nil;
+  occurrence = nil;
 
-  return occurence;
+  periods = [[self childrenWithTag: pName]
+              sortedArrayUsingSelector: @selector (compare:)];
+  periodsList = [periods reverseObjectEnumerator];
+  while (!occurrence
+         && (period = (iCalTimeZonePeriod *) [periodsList nextObject]))
+    occurrence = [period occurrenceForDate: aDate];
+
+  return occurrence;
 }
 
 - (iCalTimeZonePeriod *) periodForDate: (NSCalendarDate *) date

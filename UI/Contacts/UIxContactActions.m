@@ -23,8 +23,10 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSString.h>
 
+#import <NGObjWeb/WOContext.h>
 #import <NGObjWeb/WODirectAction.h>
 #import <NGObjWeb/WORequest.h>
+#import <NGObjWeb/WOResponse.h>
 
 #import <NGCards/NGVCard.h>
 
@@ -128,6 +130,23 @@
 - (WOResponse *) unsetCategoryAction
 {
   return [self _setOrUnsetCategoryAction: NO];
+}
+
+// returns the raw content of the object
+- (WOResponse *) rawAction
+{
+  NSMutableString *content;
+  WOResponse *response;
+
+  content = [NSMutableString string];
+  response = [context response];
+
+  [content appendFormat: [[self clientObject] contentAsString]];
+  [response setHeader: @"text/plain; charset=utf-8" 
+            forKey: @"content-type"];
+  [response appendContentString: content];
+
+  return response;
 }
 
 @end

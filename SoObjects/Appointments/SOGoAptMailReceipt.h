@@ -1,8 +1,9 @@
 /* SOGoAptMailReceipt.h - this file is part of SOGo
  *
- * Copyright (C) 2009 Inverse inc.
+ * Copyright (C) 2009-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
+ *         Ludovic Marcotte <lmarcotte@inverse.ca>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,31 +28,30 @@
 
 @class NSArray;
 @class NSString;
-
 @class iCalPerson;
+
+#import <SOGo/SOGoConstants.h>
 
 @interface SOGoAptMailReceipt : SOGoAptMailNotification
 {
   NSString *originator;
-  NSArray *recipients;
+  NSArray *addedAttendees;
+  NSArray *deletedAttendees;
+  NSArray *updatedAttendees;
   iCalPerson *currentRecipient;
-  BOOL isSubject;
+  SOGoEventOperation operation;
+  NSString *calendarName;
 }
 
 - (void) setOriginator: (NSString *) newOriginator;
-- (void) setRecipients: (NSArray *) newRecipients;
+- (void) setAddedAttendees: (NSArray *) theAttendees;
+- (void) setDeletedAttendees: (NSArray *) theAttendees;
+- (void) setUpdatedAttendees: (NSArray *) theAttendees;
+- (void) setOperation: (SOGoEventOperation) theOperation;
+- (void) setCalendarName: (NSString *) theCalendarName;
 
-@end
-
-@interface SOGoAptMailInvitationReceipt : SOGoAptMailReceipt
-
-@end
-
-@interface SOGoAptMailUpdateReceipt : SOGoAptMailReceipt
-
-@end
-
-@interface SOGoAptMailDeletionReceipt : SOGoAptMailReceipt
+- (NSString *) aptSummary;
+- (NSString *) calendarName;
 
 @end
 

@@ -134,15 +134,16 @@ static int cssEscapingCount;
     start--;
   start++;
 
+  length = [self length];
   // In [UIxMailPartTextViewer flatContentAsString], we first escape HTML entities and then
   // add URLs. Therefore, the brackets (inequality signs <>) have been encoded at this point.
-  if ([[self substringWithRange: NSMakeRange (start, 4)] compare: @"&lt;"] == NSOrderedSame)
+  if (length > (start + 4)
+      && [[self substringWithRange: NSMakeRange (start, 4)] compare: @"&lt;"] == NSOrderedSame)
     start += 4;
 
-  length = [self length] - start;
-  workRange = NSMakeRange (start, length);
+  length -= start;
   workRange = [self rangeOfCharacterFromSet: urlAfterEndingChars
-		    options: NSLiteralSearch range: workRange];
+		    options: NSLiteralSearch range: NSMakeRange (start, length)];
   if (workRange.location != NSNotFound)
     length = workRange.location - start;
   while
@@ -259,7 +260,6 @@ static int cssEscapingCount;
   [representation replaceString: @"\\" withString: @"\\\\"];
   [representation replaceString: @"\"" withString: @"\\\""];
   [representation replaceString: @"/" withString: @"\\/"];
-  [representation replaceString: @"\b" withString: @"\\b"];
   [representation replaceString: @"\f" withString: @"\\f"];
   [representation replaceString: @"\n" withString: @"\\n"];
   [representation replaceString: @"\r" withString: @"\\r"];
@@ -270,7 +270,33 @@ static int cssEscapingCount;
 
 - (NSString *) jsonRepresentation
 {
-  return [self doubleQuotedString];
+  static char thisCharCode[28];
+  static NSString *controlCharString = nil;
+  static NSCharacterSet *controlCharSet = nil;
+  NSString *cleanedString;
+  int i;
+
+  if (!controlCharSet)
+    {
+      // Create an array of chars for all control characters between 0x00 and 0x1F,
+      // apart from \t, \n, \f and \r (0x08, 0x09, 0x0A, 0x0C and 0x0D)
+      for (i = 0x00; i <= 0x08; i++) {
+        thisCharCode[i] = i;
+      }
+      thisCharCode[9] = 0x0B;
+      for (i = 0x0E; i <= 0x1F; i++) {
+        thisCharCode[i - 4] = i;
+      }
+      controlCharString = [NSString stringWithCString: thisCharCode length: 28];
+      controlCharSet = [NSCharacterSet characterSetWithCharactersInString: controlCharString];
+      [controlCharSet retain];
+    }
+
+  // Escape double quotes and remove control characters
+  cleanedString = [[[self doubleQuotedString] componentsSeparatedByCharactersInSet: controlCharSet]
+                              componentsJoinedByString: @""];
+
+  return cleanedString;
 }
 
 - (void) _setupCSSEscaping
@@ -558,6 +584,24 @@ static int cssEscapingCount;
     }
 
   return count;
+}
+
+- (NSString *) stringByReplacingPrefix: (NSString *) oldPrefix
+                            withPrefix: (NSString *) newPrefix
+{
+  NSUInteger oldPrefixLength;
+  NSString *newString;
+
+  if (![self hasPrefix: oldPrefix])
+    [NSException raise: NSInvalidArgumentException
+                 format: @"string does not have the specified prefix"];
+
+  oldPrefixLength = [oldPrefix length];
+  newString = [NSString stringWithFormat: @"%@%@",
+                        newPrefix,
+                        [self substringFromIndex: oldPrefixLength]];
+  
+  return newString;
 }
 
 - (NSString *) encryptWithKey: (NSString *) theKey

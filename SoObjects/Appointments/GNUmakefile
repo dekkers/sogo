@@ -9,6 +9,7 @@ Appointments_PRINCIPAL_CLASS = SOGoAppointmentsProduct
 Appointments_OBJC_FILES = \
 	Product.m			\
 	NSArray+Appointments.m		\
+	iCalCalendar+SOGo.m 	\
 	iCalEntityObject+SOGo.m 	\
 	iCalRepeatableEntityObject+SOGo.m	\
 	iCalEvent+SOGo.m	 	\
@@ -52,13 +53,13 @@ Appointments_RESOURCE_FILES +=		\
 	\
 	MSExchangeFreeBusySOAPRequest.wo
 
-Appointments_LANGUAGES = BrazilianPortuguese Catalan Czech Danish Dutch English French German Hungarian Icelandic Italian NorwegianBokmal NorwegianNynorsk Polish Russian SpanishSpain SpanishArgentina Swedish Ukrainian Welsh
+Appointments_LANGUAGES = BrazilianPortuguese Catalan Czech Danish Dutch English Finnish French German Hungarian Icelandic Italian NorwegianBokmal NorwegianNynorsk Polish Russian Slovak SpanishSpain SpanishArgentina Swedish Ukrainian Welsh
 
 Appointments_LOCALIZED_RESOURCE_FILES = Localizable.strings
 
 ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
 ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
-ADDITIONAL_LDFLAGS += -lcurl
+ADDITIONAL_LDFLAGS += -Wl,--no-as-needed -lcurl
 
 -include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/wobundle.make

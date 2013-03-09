@@ -107,7 +107,7 @@ function updateEventFromDragging(controller, eventCells, eventDelta) {
         var eventCell = eventCells[0];
         // log("  time: " + eventCell.recurrenceTime);
         // log("  exception: " + eventCell.isException);
-        
+
         if (eventCell.recurrenceTime && !eventCell.isException)
             _editRecurrenceDialog(eventCell, "confirmAdjustment", params);
         else {
@@ -214,7 +214,7 @@ function deleteEvent() {
         var nodes = listOfSelection.getSelectedRows();
         if (nodes.length > 0) {
             var label = "";
-            if (listOfSelection == $("tasksList"))
+            if (listOfSelection.parentNode == $("tasksList"))
                 label = _("taskDeleteConfirmation");
             else
                 label = _("eventDeleteConfirmation");
@@ -241,8 +241,11 @@ function deleteEvent() {
                         }
                         if (sortedNodes[calendar].indexOf(nodes[i].cname) < 0) {
                             sortedNodes[calendar].push(nodes[i].cname);
-                            if (nodes[i].tagName == 'TR')
-                                events.push(nodes[i].down('td').allTextContent()); // extract the first column only
+                            if (nodes[i].tagName == 'TR') {
+                                var cell = nodes[i].down('td span');
+                                var title = cell.allTextContent();
+                                events.push(title); // extract the first column only
+                            }
                             else
                                 events.push(nodes[i].allTextContent());
                         }
@@ -254,12 +257,11 @@ function deleteEvent() {
                 }
                 if (i > 0) {
                     var p = createElement("p", null, ["list"]);
-                    var str = "";
                     if (Prototype.Browser.IE)
-                        str = label.formatted('<br><br> - <b>' + events.join('</b><br> - <b>') + '</b><br><br>');
+                        label = label.formatted('<br><br> - <b>' + events.join('</b><br> - <b>') + '</b><br><br>');
                     else
-                        str = label.formatted('<ul><li>' + events.join('<li>') + '</ul>');
-                    p.innerHTML = str;
+                        label = label.formatted('<ul><li>' + events.join('<li>') + '</ul>');
+                    p.innerHTML = label;
                     showConfirmDialog(_("Warning"), p, deleteEventFromListConfirm, deleteEventCancel);
                 }
                 else
@@ -305,7 +307,7 @@ function deleteEvent() {
                     }
                 }
             }
-            
+
             for (i = 0; i < calendars.length; i++) {
                 calendarsOfEventsToDelete.push(calendars[i]);
                 eventsToDelete.push(sortedNodes[calendars[i]]);
@@ -345,7 +347,7 @@ function deleteEventFromViewConfirm() {
         document.deleteEventAjaxRequest.aborted = true;
         document.deleteEventAjaxRequest.abort();
     }
-    
+
     selectedCalendarCell = null;
     _batchDeleteEvents();
     disposeDialog();
@@ -412,6 +414,18 @@ function copyEventCallback(http) {
         else
             showAlertDialog(_("EventCopyError"));
     }
+}
+
+function onMenuRawEvent(event) {
+    if (selectedCalendarCell.length != 1) {
+      return;
+    }
+
+    var calendar = selectedCalendarCell[0].calendar;
+    var cname = selectedCalendarCell[0].cname;
+
+    var url = ApplicationBaseURL + calendar + "/" + cname + "/raw";
+    openGenericWindow(url);
 }
 
 function modifyEvent(sender, modification, parameters) {
@@ -532,7 +546,7 @@ function _deleteEventFromTables(calendar, cname, occurenceTime) {
         if (occurences) {
             var occurence = occurences.first();
             var ownerIsOrganizer = occurence[19];
-            
+
             // Delete event from events list
             var table = $("eventsList");
             var rows = table.tBodies[0].rows;
@@ -576,7 +590,7 @@ function _deleteCalendarEventCache(calendar, cname, occurenceTime) {
         if (occurences)
             ownerIsOrganizer = occurences[0][19];
     }
-    
+
     for (var otherCalendar in calendarEvents) {
         if (calendarEvents[otherCalendar]) {
             var occurences = calendarEvents[otherCalendar][cname];
@@ -685,9 +699,10 @@ function onViewEventCallback(http) {
             var cellDimensions = cell.getDimensions();
             var div = $("eventDialog");
             var divDimensions = div.getDimensions();
+            var viewPosition = $("calendarView").cumulativeOffset();
             var view;
-            var left = cellPosition[0];
-            var top = cellPosition[1];
+            var left;
+            var top = cellPosition[1] - 5;
 
             if (currentView != "monthview") {
                 view = $("daysView");
@@ -708,14 +723,13 @@ function onViewEventCallback(http) {
                 top -= cell.up("DIV.day").scrollTop;
             }
 
-            if (left > parseInt(window.width()*0.75)) {
-                left = left - divDimensions["width"] + 10;
+            left = cellPosition[0] + cellDimensions["width"] - parseInt(cellDimensions["width"]/3);
+            if (left + divDimensions["width"] > window.width()) {
+                left = cellPosition[0] - divDimensions["width"] + 10;
                 div.removeClassName("left");
                 div.addClassName("right");
             }
             else {
-                //log (" left = " + left + " + " + cellDimensions.width + " - " + parseInt(cellDimensions["width"]/3));
-                left = left + cellDimensions["width"] - parseInt(cellDimensions["width"]/3);
                 div.removeClassName("right");
                 div.addClassName("left");
             }
@@ -906,8 +920,8 @@ function eventsListCallback(http) {
 
         var rows = table.select("TBODY TR");
         rows.each(function(e) {
-                e.remove();
-            });
+            e.remove();
+        });
 
         if (http.responseText.length > 0) {
             var data = http.responseText.evalJSON(true);
@@ -915,13 +929,14 @@ function eventsListCallback(http) {
                 var row = createElement("tr");
                 table.tBodies[0].appendChild(row);
                 row.addClassName("eventRow");
+                var calendar = escape(data[i][1]);
                 var rTime = data[i][16];
                 var id = escape(data[i][1] + "-" + data[i][0]);
                 if (rTime)
                     id += "-" + escape(rTime);
                 row.setAttribute("id", id);
                 row.cname = escape(data[i][0]);
-                row.calendar = escape(data[i][1]);
+                row.calendar = calendar;
                 if (rTime)
                     row.recurrenceTime = escape(rTime);
                 row.isException = data[i][17];
@@ -937,12 +952,16 @@ function eventsListCallback(http) {
                 if (data[i][3] != null)
                     // Status is defined -- event is readable
                     row.observe("dblclick", editDoubleClickedEvent);
-                row.attachMenu("eventsListMenu");
 
                 var td = createElement("td");
                 row.appendChild(td);
                 td.observe("mousedown", listRowMouseDownHandler, true);
-                td.appendChild(document.createTextNode(data[i][4])); // title
+                var colorDiv = createElement("div", false, "colorBox calendarFolder" + calendar);
+                td.appendChild(colorDiv);
+                colorDiv.update('OO');
+                var span = createElement("span");
+                td.appendChild(span);
+                span.update(data[i][4]); // title
 
                 td = createElement("td");
                 row.appendChild(td);
@@ -966,8 +985,8 @@ function eventsListCallback(http) {
                 td.appendChild(document.createTextNode(data[i][2])); // calendar
             }
 
-            if (sorting["attribute"] && sorting["attribute"].length > 0) {
-                var sortHeader = $(sorting["attribute"] + "Header");
+            if (sorting["event-header"] && sorting["event-header"].length > 0) {
+                var sortHeader = $(sorting["event-header"]);
 
                 if (sortHeader) {
                     var sortImages = $(table.tHead).select(".sortImage");
@@ -977,10 +996,10 @@ function eventsListCallback(http) {
 
                     var sortImage = createElement("img", "messageSortImage", "sortImage");
                     sortHeader.insertBefore(sortImage, sortHeader.firstChild);
-                    if (sorting["ascending"])
-                        sortImage.src = ResourcesURL + "/arrow-down.png";
-                    else
+                    if (sorting["event-ascending"])
                         sortImage.src = ResourcesURL + "/arrow-up.png";
+                    else
+                        sortImage.src = ResourcesURL + "/arrow-down.png";
                 }
             }
         }
@@ -990,55 +1009,125 @@ function eventsListCallback(http) {
 }
 
 function tasksListCallback(http) {
-    var div = $("tasksListView");
-
     if (http.readyState == 4
         && http.status == 200) {
+        var div = $("tasksListView");
         document.tasksListAjaxRequest = null;
-        var list = $("tasksList");
+        var table = $("tasksList");
+        lastClickedRow = -1; // from generic.js
+
+        var rows = table.select("TBODY TR");
+        rows.each(function(e) {
+            e.remove();
+        });
 
         if (http.responseText.length > 0) {
             var data = http.responseText.evalJSON(true);
-            
-            list.previousScroll = list.scrollTop;
-            while (list.childNodes.length)
-                list.removeChild(list.childNodes[0]);
+
+            // [0] Task ID
+            // [1] Calendar ID
+            // [2] Calendar name
+            // [3] Status (0, 1 = completed, 2)
+            // [4] Title
+            // [5] Due date (int)
+            // [6] Classification (0 = public, 1, = private, 2 = confidential)
+            // [7] Location
+            // [8] Category
+            // [9] Editable?
+            // [10] Erasable?
+            // [11] Priority (0, 1 = important, 9 = low)
+            // [12] Status CSS class (duelater, completed, etc)
+            // (13) Due date (formatted)
 
             for (var i = 0; i < data.length; i++) {
-                var listItem = createElement("li");
-                list.appendChild(listItem);
-                listItem.on("dblclick", editDoubleClickedEvent);
+                var row = createElement("tr");
+                table.tBodies[0].appendChild(row);
+
+                row.on("dblclick", editDoubleClickedEvent);
 
                 var calendar = escape(data[i][1]);
                 var cname = escape(data[i][0]);
-                listItem.setAttribute("id", calendar + "-" + cname);
+                row.setAttribute("id", calendar + "-" + cname);
                 //listItem.addClassName(data[i][5]); // Classification
-                listItem.addClassName(data[i][9]); // status (duelater, completed, etc)
-                listItem.calendar = calendar;
-                listItem.addClassName("calendarFolder" + calendar);
-                listItem.cname = cname;
-                listItem.erasable = data[i][7] || IsSuperUser;
+                row.addClassName(data[i][12]); // status
+                row.calendar = calendar;
+                row.cname = cname;
+                row.erasable = data[i][10] || IsSuperUser;
+                if (parseInt(data[i][11]) == 1) {
+                  row.addClassName("important");
+                }
+                else if (parseInt(data[i][11]) == 9) {
+                  row.addClassName("low");
+                }
+
+                var cell = createElement("td");
+                row.appendChild(cell);
                 var input = createElement("input");
                 input.setAttribute("type", "checkbox");
-                if (parseInt(data[i][6]) == 0) // editable?
-                  input.setAttribute("disabled", true);
-                if (parseInt(data[i][8]) == 1) {
-                  listItem.addClassName("important");
-                }
-                listItem.appendChild(input);
-                input.observe("click", updateTaskStatus, true);
+                cell.appendChild(input);
                 input.setAttribute("value", "1");
-                if (data[i][2] == 1)
+                if (parseInt(data[i][9]) == 0) // editable?
+                    input.setAttribute("disabled", true);
+                input.addClassName("checkBox");
+                if (parseInt(data[i][3]) == 1) // completed?
                     input.setAttribute("checked", "checked");
-                $(input).addClassName("checkBox");
+                input.observe("click", updateTaskStatus, true);
 
+                cell = createElement("td");
+                row.appendChild(cell);
+                if (data[i][11] != null) {
+                    cell.update(_("prio_" + data[i][11])); // Priority
+                }
+                else {
+                    cell.update(""); // Priority
+                }
+
+                cell = createElement("td");
+                row.appendChild(cell);
+                var colorDiv = createElement("div", false, "colorBox calendarFolder" + calendar);
+                cell.appendChild(colorDiv);
+                colorDiv.update('OO');
                 var t = new Element ("span");
-                t.update(data[i][3]);
-                listItem.appendChild (t);
+                cell.appendChild(t);
+                t.update(data[i][4]); // title
+
+                cell = createElement("td");
+                row.appendChild(cell);
+                if (data[i][13])
+                    cell.update(data[i][13]); // end date
+
+                cell = createElement("td");
+                row.appendChild(cell);
+                cell.update(data[i][7]); // location
+
+                cell = createElement("td");
+                row.appendChild(cell);
+                cell.update(data[i][8]); // category
+
+                cell = createElement("td");
+                row.appendChild(cell);
+                cell.update(data[i][2]); // calendar name
             }
 
-            list.scrollTop = list.previousScroll;
+            table.scrollTop = table.previousScroll;
 
+            if (sorting["task-attribute"] && sorting["task-attribute"].length > 0) {
+                var sortHeader = $(sorting["task-header"]);
+
+                if (sortHeader) {
+                    var sortImages = $(table.tHead).select(".sortImage");
+                    $(sortImages).each(function(item) {
+                            item.remove();
+                        });
+
+                    var sortImage = createElement("img", "messageSortImage", "sortImage");
+                    sortHeader.insertBefore(sortImage, sortHeader.firstChild);
+                    if (sorting["task-ascending"])
+                        sortImage.src = ResourcesURL + "/arrow-up.png";
+                    else
+                        sortImage.src = ResourcesURL + "/arrow-down.png";
+                }
+            }
             if (http.callbackData) {
                 var selectedNodesId = http.callbackData;
                 for (var i = 0; i < selectedNodesId.length; i++) {
@@ -1097,7 +1186,7 @@ function changeDateSelectorDisplay(day, keepCurrentDay) {
 
     if (!keepCurrentDay)
         currentDay = day;
-    
+
     var month = day.substr(0, 6);
     if (cachedDateSelectors[month]) {
         //       log ("restoring cached selector for month: " + month);
@@ -1218,14 +1307,12 @@ function onCalendarReload() {
 }
 
 function reloadWebCalendars() {
-    var hasWebCalendars = false;
-
     var remaining = [];
     var refreshOperations = { "remaining": remaining };
     if (UserSettings['Calendar']
         && UserSettings['Calendar']['WebCalendars']) {
         var webCalendars = UserSettings['Calendar']['WebCalendars'];
-        
+
         var folders = $("calendarList");
         var calendarNodes = folders.childNodesWithTag("li");
         for (var i = 0; i < calendarNodes.length; i++) {
@@ -1388,12 +1475,12 @@ function scrollDayView(scrollEvent) {
                 var eventBlocks = selectCalendarEvent(eventRow.calendar, eventRow.cname, eventRow.recurrenceTime);
                 if (eventBlocks) {
                     var firstEvent = eventBlocks.first();
-                    
+
                     if (currentView == "monthview")
                         contentView = firstEvent.up("DIV.day");
                     else
                         contentView = $("daysView");
-                    
+
                     // Don't scroll to an all-day event
                     if (typeof eventRow.hour != "undefined") {
                         var top = firstEvent.cumulativeOffset()[1] - contentView.scrollTop;
@@ -1568,7 +1655,7 @@ function resetCategoriesStyles() {
                 selectors[selectors.length] = 'DIV.' + categoriesStyles.get(category);
             }
         });
-    
+
         if (selectors.length > 0) {
             if (categoriesStyleSheet.styleSheet && categoriesStyleSheet.styleSheet.addRule) {
                 // IE
@@ -1666,7 +1753,7 @@ function newBaseEventDIV(eventRep, event, eventText) {
         innerDiv.addClassName(categoryStyle);
     }
     eventCell.observe("contextmenu", onMenuCurrentView);
-    
+
     if (event[3] == null) {
         // Status field is not defined -- user can't read event
         eventCell.observe("selectstart", listRowMouseDownHandler);
@@ -1846,14 +1933,14 @@ function adjustCalendarHeaderDIV() {
         styleElement.type = "text/css";
         var selectors = ["DIV#calendarHeader DIV.dayLabels",
                          "DIV#calendarHeader DIV.days"];
-        var rule = ("{ right: " + delta + "px; }");
+        var rule = ("right: " + delta + "px");
         if (styleElement.styleSheet && styleElement.styleSheet.addRule) {
             // IE
             styleElement.styleSheet.addRule(selectors[0], rule);
             styleElement.styleSheet.addRule(selectors[1], rule);
         } else {
             // Mozilla + Firefox
-            var styleText = selectors.join(",") + " " + rule;
+            var styleText = selectors.join(",") + " { " + rule + "; }";
             styleElement.appendChild(document.createTextNode(styleText));
         }
         document.getElementsByTagName("head")[0].appendChild(styleElement);
@@ -1898,7 +1985,9 @@ function calendarDisplayCallback(http) {
                              loadNextView,
                              "-",
                              deleteEvent,
-                             copyEventToPersonalCalendar);
+                             copyEventToPersonalCalendar,
+                             onMenuRawEvent
+                            );
         var observer;
         if (currentView == 'dayview') {
             observer = $("daysView");
@@ -1917,7 +2006,7 @@ function calendarDisplayCallback(http) {
             contentView = $("daysView");
             contentView.observe("scroll", onBodyClickHandler);
             attachDragControllers($("calendarHeader"));
- 
+
             // Create a clone of the contextual menu for the all-day
             // events area
             var allDayViewMenu = Element.clone($("currentViewMenu"), true);
@@ -1982,7 +2071,7 @@ function onEventsSelectionChange() {
     tasksList.addClassName("_unfocused");
     deselectAll(tasksList);
 
-    var rows = $(this.tBodies[0]).getSelectedNodes();
+    var rows = $(this).getSelectedNodes();
     if (rows.length == 1) {
         var row = rows[0];
         changeCalendarDisplay( { "day": row.day,
@@ -2045,40 +2134,53 @@ function _loadTasksHref(href) {
 }
 
 function onHeaderClick(event) {
-    var headerId = this.getAttribute("id");
     var newSortAttribute;
-    if (headerId == "titleHeader")
-        newSortAttribute = "title";
-    else if (headerId == "startHeader")
-        newSortAttribute = "start";
-    else if (headerId == "endHeader")
-        newSortAttribute = "end";
-    else if (headerId == "locationHeader")
-        newSortAttribute = "location";
-    else if (headerId == "calendarNameHeader")
-        newSortAttribute = "calendarName";
-    else
-        newSortAttribute = "start";
+    var headerId;
 
-    if (sorting["attribute"] == newSortAttribute)
-        sorting["ascending"] = !sorting["ascending"];
-    else {
-        sorting["attribute"] = newSortAttribute;
-        sorting["ascending"] = true;
+    headerId = this.getAttribute("id");
+
+    if (headerId.startsWith('event'))
+    {
+        // This is needed to get the dom object and flip the triangle
+        sorting["event-header"] = headerId;
+        // Take away the 'events' and 'Header' and lowercase the result
+        newSortAttribute = headerId.sub("Header", "").sub("event", "").toLowerCase();
+        if (sorting["event-attribute"] == newSortAttribute)
+            sorting["event-ascending"] = !sorting["event-ascending"];
+        else
+            sorting["event-ascending"] = true;
+        sorting["event-attribute"] = newSortAttribute;
+        refreshEvents();
     }
-    refreshEvents();
+    else // Tasks
+    {
+        // This is needed to get the dom object and flip the triangle
+        sorting["task-header"] = headerId;
+        // Take away the 'tasks' and 'Header' and lowercase the result
+        newSortAttribute = headerId.sub("Header", "").sub("task", "").toLowerCase();
+        if (sorting["task-attribute"] == newSortAttribute)
+            sorting["task-ascending"] = !sorting["task-ascending"];
+        else
+            sorting["task-ascending"] = true;
+        sorting["task-attribute"] = newSortAttribute;
+        refreshTasks();
+    }
 
     Event.stop(event);
 }
 
-function refreshCurrentFolder() {
-    refreshEvents();
+function refreshCurrentFolder(id) {
+    if (id == 'tasks')
+        refreshTasks();
+    else
+        refreshEvents();
 }
 
 /* refreshes the "unifinder" list */
 function refreshEvents() {
     var titleSearch;
-    var value = search["value"];
+    var value = search["events"]["value"];
+
     if (value && value.length)
         titleSearch = "&search=" + escape(value.utf8encode());
     else
@@ -2086,23 +2188,31 @@ function refreshEvents() {
 
     refreshAlarms();
 
-    return _loadEventHref("eventslist?asc=" + sorting["ascending"]
-                          + "&sort=" + sorting["attribute"]
+    return _loadEventHref("eventslist?asc=" + sorting["event-ascending"]
+                          + "&sort=" + sorting["event-attribute"]
                           + "&day=" + currentDay
                           + titleSearch
                           + "&filterpopup=" + listFilter);
 }
 
 function refreshTasks(setUserDefault) {
-    var url = "taskslist?show-completed=" + showCompletedTasks;
-    /* TODO: the logic behind this should be reimplemented properly:
-       the "taskslist" method should save the status when the 'show-completed'
-       is set to true and revert to the current status when that parameter is
-       NOT passed via the url. */
+    var titleSearch;
+    var value = search["tasks"]["value"];
+
+    if (value && value.length)
+        titleSearch = "&search=" + escape(value.utf8encode());
+    else
+        titleSearch = "";
+
     if (setUserDefault == 1)
-      url += "&setud=1";
+      titleSearch += "&setud=1";
+
     refreshAlarms();
-    return _loadTasksHref(url);
+
+    return _loadTasksHref("taskslist?show-completed=" + showCompletedTasks
+                          + "&asc=" + sorting["task-ascending"]
+                          + "&sort=" + sorting["task-attribute"]
+                          + titleSearch);
 }
 
 function refreshEventsAndDisplay() {
@@ -2234,7 +2344,7 @@ function onSelectAll(event) {
         }
         for (var i = 0; i < selectedBlocks.length; i++)
             selectedBlocks[i].selectElement();
-    
+
         selectedCalendarCell = selectedBlocks;
     }
 
@@ -2275,7 +2385,7 @@ function onCalendarSelectEvent(event, willShowContextualMenu) {
                 alreadySelected = true;
                 break;
             }
-    
+
     if ((isMac() && event.metaKey == 1) || (!isMac() && event.ctrlKey == 1)) {
         // If meta or ctrl key is pressed, inverse the selection
         if (alreadySelected) {
@@ -2395,7 +2505,7 @@ function onShowCompletedTasks(event) {
 
 function updateTaskStatus(event) {
     var newStatus = (this.checked ? 1 : 0);
-    _updateTaskCompletion (this.parentNode, newStatus);
+    _updateTaskCompletion (this.up("tr"), newStatus);
     return false;
 }
 
@@ -2529,7 +2639,7 @@ function onCalendarsMenuPrepareVisibility() {
             deleteCalendarOption.update(_("Delete Calendar"));
         else
             deleteCalendarOption.update(_("Unsubscribe Calendar"));
-            
+
         return true;
     }
     return false;
@@ -2539,9 +2649,11 @@ function onMenuCurrentViewPrepareVisibility() {
     var options = $(this).down("ul");
     var deleteOption = options.down("li", 6);
     var copyOption = options.down("li", 7);
+    var rawOption = options.down("li", 8);
     if (!selectedCalendarCell) {
         deleteOption.addClassName("disabled");
         copyOption.addClassName("disabled");
+        rawOption.addClassName("disabled");
     }
     else {
         deleteOption.removeClassName("disabled");
@@ -2550,11 +2662,29 @@ function onMenuCurrentViewPrepareVisibility() {
             copyOption.addClassName("disabled");
         else
             copyOption.removeClassName("disabled");
+	if (selectedCalendarCell.length == 1) {
+	    // show raw content is only allowed for single event
+            rawOption.removeClassName("disabled");
+        }
+	else
+            rawOption.addClassName("disabled");
     }
 
     return true;
 }
 
+function onTasksListMenuPrepareVisibility() {
+    var options = $(this).down("ul");
+    var rawOption = options.down("li", 6);
+
+    var selectedTasks = $$("#tasksList ._selected");
+    if (selectedTasks.length == 1)
+        rawOption.removeClassName("disabled");
+    else
+        rawOption.addClassName("disabled");
+
+    return true;
+}
 function getMenus() {
     var menus = {};
 
@@ -2578,14 +2708,20 @@ function getMenus() {
                                        onCalendarNew, onCalendarRemove,
                                        "-", onCalendarExport, onCalendarImport,
                                        null, "-", null, "-", onMenuSharing);
-    menus["searchMenu"] = new Array(setSearchCriteria);
+    menus["eventSearchMenu"] = new Array(setSearchCriteria);
 
     menus["tasksListMenu"] = new Array (editEvent, newTask, "-",
-                                        marksTasksAsCompleted, deleteEvent);
+                                        marksTasksAsCompleted, deleteEvent, "-",
+					onMenuRawTask);
+    menus["taskSearchMenu"] = new Array(setSearchCriteria);
 
     var calendarsMenu = $("calendarsMenu");
     if (calendarsMenu)
         calendarsMenu.prepareVisibility = onCalendarsMenuPrepareVisibility;
+
+    var tasksListMenu = $("tasksListMenu");
+    if (tasksListMenu)
+        tasksListMenu.prepareVisibility = onTasksListMenuPrepareVisibility;
 
     return menus;
 }
@@ -2595,7 +2731,7 @@ function newTask () {
 }
 
 function marksTasksAsCompleted () {
-    var selectedTasks = $$("UL#tasksList LI._selected");
+    var selectedTasks = $$("#tasksList ._selected");
 
     for (var i = 0; i < selectedTasks.length; i++) {
         var task = selectedTasks[i];
@@ -2611,6 +2747,17 @@ function _updateTaskCompletion (task, value) {
 
     return false;
 }
+
+function onMenuRawTask(event) {
+    var selectedTasks = $$("#tasksList ._selected");
+    if (selectedTasks.length != 1) {
+      return;
+    }
+
+    var url = ApplicationBaseURL + selectedTasks[0].calendar  + "/" + selectedTasks[0].cname + "/raw"
+    openGenericWindow(url);
+}
+
 
 function onMenuSharing(event) {
     if ($(this).hasClassName("disabled"))
@@ -2653,7 +2800,7 @@ function configureDragHandles() {
     handle = $("rightDragHandle");
     if (handle) {
         handle.addInterface(SOGoDragHandlesInterface);
-        handle.upperBlock = $("eventsListView");
+        handle.upperBlock = $("schedulerTabs");
         handle.lowerBlock = $("calendarView");
     }
 }
@@ -2697,8 +2844,8 @@ function onCalendarModify(event) {
     var owner = selected.getAttribute("owner");
     var url = ApplicationBaseURL + calendarID + "/properties";
     var windowID = sanitizeWindowName(calendarID + " properties");
-    var width = 310;
-    var height = 294;
+    var width = 410;
+    var height = 410;
     var isWebCalendar = false;
     if (UserSettings['Calendar']
         && UserSettings['Calendar']['WebCalendars']) {
@@ -2709,7 +2856,7 @@ function onCalendarModify(event) {
         }
     }
     if (Prototype.Browser.IE) height += 10;
-    
+
     if (owner == UserLogin) {
         height += 20;
     }
@@ -2769,8 +2916,8 @@ function onCalendarWebAddConfirm() {
     disposeDialog();
     var calendarUrl = this.value;
     if (calendarUrl) {
-        var url = ApplicationBaseURL + "/addWebCalendar"
-        var parameters = "url=" + calendarUrl;
+        var url = ApplicationBaseURL + "/addWebCalendar";
+        var parameters = "url=" + encodeURIComponent(calendarUrl);
         triggerAjaxRequest(url, addWebCalendarCallback, calendarUrl, parameters,
                            { "Content-type": "application/x-www-form-urlencoded" });
     }
@@ -2943,21 +3090,15 @@ function appendStyleElement(folderPath, color) {
         var fgColor = getContrastingTextColor(color);
         var styleElement = document.createElement("style");
         styleElement.type = "text/css";
-        var selectors = [
-                         'DIV.calendarFolder' + folderPath.substr(1),
-                         'LI.calendarFolder' + folderPath.substr(1),
-                         'UL#calendarList DIV.calendarFolder' + folderPath.substr(1)
-                         ];
-        var rules = [
-                     ' { background-color: ' + color + ' !important;' + ' color: ' + fgColor + ' !important; }',
-                     ' { background-color: ' + color + ' !important;' + ' color: ' + fgColor + ' !important; }',
-                     ' { color: ' + color + ' !important; }'
-                     ];
-        for (var i = 0; i < rules.length; i++)
-            if (styleElement.styleSheet && styleElement.styleSheet.addRule)
-                styleElement.styleSheet.addRule(selectors[i], rules[i]); // IE
-            else
-                styleElement.appendChild(document.createTextNode(selectors[i] + rules[i])); // Mozilla + Safari
+
+        var styles = ' .calendarFolder' + folderPath.substr(1)
+            + ' { background-color: ' + color + ' !important;' + ' color: ' + fgColor + ' !important; }'
+            + ' div.colorBox.calendarFolder' + folderPath.substr(1)
+            + ' { color: ' + color + ' !important; }';
+
+        if (styleElement.styleSheet) styleElement.styleSheet.cssText = styles; // IE
+        else styleElement.appendChild(document.createTextNode(styles));        // Mozilla + Webkit
+
         document.getElementsByTagName("head")[0].appendChild(styleElement);
     }
 }
@@ -3053,22 +3194,27 @@ function deletePersonalCalendarCallback(http) {
 }
 
 function configureLists() {
+    // TASK LIST
     var list = $("tasksList");
     list.multiselect = true;
-    list.on("mousedown", onTasksSelectionChange);
-    list.on("selectstart", listRowMouseDownHandler);
-    list.attachMenu("tasksListMenu");
+    configureSortableTableHeaders(list);
+    TableKit.Resizable.init(list, {'trueResize' : true, 'keepWidth' : true});
+    list.down("tbody").on("mousedown", onTasksSelectionChange);
+    list.down("tbody").on("selectstart", listRowMouseDownHandler);
+    list.down("tbody").attachMenu("tasksListMenu");
 
     var input = $("showHideCompletedTasks");
     input.observe("click", onShowCompletedTasks);
     if (showCompletedTasks)
       input.checked = true;
 
+    // EVENT LIST
     list = $("eventsList");
     list.multiselect = true;
     configureSortableTableHeaders(list);
     TableKit.Resizable.init(list, {'trueResize' : true, 'keepWidth' : true});
-    list.observe("mousedown", onEventsSelectionChange);
+    list.down("tbody").on("mousedown", onEventsSelectionChange);
+    list.down("tbody").attachMenu("eventsListMenu");
 }
 
 function initDateSelectorEvents() {
@@ -3096,23 +3242,23 @@ function onWindowResize(event) {
         handle.adjust();
 
     if (!$(document.body).hasClassName("popup"))
-        drawNowLine ();
+        drawNowLine();
 }
 
-function drawNowLine () {
+function drawNowLine() {
   var d = new Date();
   var hours = d.getHours();
   var minutes = d.getMinutes();
 
   if (currentView == "dayview") {
-    var today = new Date ();
-    var m = parseInt(today.getMonth ()) + 1;
-    var d = today.getDate ();
+    var today = new Date();
+    var m = parseInt(today.getMonth()) + 1;
+    var d = today.getDate();
     if (m < 10)
       m = "0" + m;
     if (d < 10)
       d = "0" + d;
-    var day = today.getFullYear () + "" + m + "" + d;
+    var day = today.getFullYear() + "" + m + "" + d;
     var targets = $$("DIV#daysView DIV.days DIV.day[day=" + day
                      + "] DIV.clickableHourCell");
   }
@@ -3125,12 +3271,12 @@ function drawNowLine () {
     if (target) {
       var div = $("nowLineDisplay");
       if (!div)
-        div = new Element ("div", {'id': 'nowLineDisplay'});
+        div = new Element("div", {'id': 'nowLineDisplay'});
 
-      div.style.top = parseInt (((minutes * target.offsetHeight) / 60) - 1) + "px";
-      target.appendChild (div);
+      div.style.top = parseInt(((minutes * target.offsetHeight) / 60) - 1) + "px";
+      target.appendChild(div);
 
-      setTimeout ("drawNowLine ();", 60000); // 1 min.
+      setTimeout("drawNowLine ();", 60000); // 1 min.
     }
   }
 }
@@ -3170,9 +3316,22 @@ function onDocumentKeydown(event) {
     }
 }
 
+function saveTabState(event) {
+    var tab = $(event).memo;
+
+    var url =  ApplicationBaseURL + "saveSelectedList";
+    var params = "list=" + tab;
+    triggerAjaxRequest(url, null, null, params,
+                       { "Content-type": "application/x-www-form-urlencoded" });
+}
+
 function initScheduler() {
-    sorting["attribute"] = "start";
-    sorting["ascending"] = true;
+    sorting["event-header"] = "";
+    sorting["task-header"] = "";
+    sorting["event-attribute"] = "start";
+    sorting["task-attribute"] = "end";
+    sorting["event-ascending"] = true;
+    sorting["task-ascending"] = true;
 
     if (!$(document.body).hasClassName("popup")) {
         var node = $("filterpopup");
@@ -3181,6 +3340,7 @@ function initScheduler() {
         var tabsContainer = $("schedulerTabs");
         var controller = new SOGoTabsController();
         controller.attachToTabsContainer(tabsContainer);
+        tabsContainer.on("tabs:click", saveTabState);
 
         if (UserSettings['ShowCompletedTasks']) {
             showCompletedTasks = parseInt(UserSettings['ShowCompletedTasks']);
@@ -3204,4 +3364,4 @@ function initScheduler() {
     Event.observe(window, "resize", onWindowResize);
 }
 
-document.observe("dom:loaded", initScheduler);
+document.observe("generic:loaded", initScheduler);

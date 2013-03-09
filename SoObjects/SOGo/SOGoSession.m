@@ -26,7 +26,10 @@
 
 #include "SOGoCache.h"
 
+#import <NGObjWeb/WOCookie.h>
+
 #import <Foundation/NSArray.h>
+#import <Foundation/NSCalendarDate.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSDictionary.h>
 

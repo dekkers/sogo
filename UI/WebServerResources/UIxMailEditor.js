@@ -104,6 +104,13 @@ function insertContact(inputNode, contactName, contactEmail) {
     inputNode.value = value;
 }
 
+function updateWindowTitleFromSubject(event) {
+    if (this.value) {
+        document.title = this.value;
+    }else{
+        document.title = '(' + _("Untitled") + ')';
+    }
+}
 
 /* mail editor */
 
@@ -114,7 +121,7 @@ function onValidate(onSuccess) {
             showAlertDialog(_("error_missingrecipients"));
         }
         else if (document.pageform.subject.value == "") {
-            showConfirmDialog(_("Warning"), _("error_missingsubject"), onValidateDone.bind(this, onSuccess), null, _("Send anyway"), _("Cancel"));
+            showConfirmDialog(_("Warning"), _("error_missingsubject"), onValidateDone.bind(this, onSuccess), null, _("Send Anyway"), _("Cancel"));
         }
         else {
             onValidateDone(onSuccess);
@@ -123,6 +130,10 @@ function onValidate(onSuccess) {
 }
 
 function onValidateDone(onSuccess) {
+    // Create "blocking" div to avoid double-clicking on send button
+    var safetyNet = createElement("div", "javascriptSafetyNet");
+    $('pageContent').insert({top: safetyNet});
+
     var input = currentAttachmentInput();
     if (input)
         input.parentNode.removeChild(input);
@@ -130,16 +141,16 @@ function onValidateDone(onSuccess) {
     var toolbar = document.getElementById("toolbar");
     if (!document.busyAnim)
         document.busyAnim = startAnimation(toolbar);
-    
+
     var lastRow = $("lastRow");
     lastRow.down("select").name = "popup_last";
-    
+
     window.shouldPreserve = true;
-    
+
     document.pageform.action = "send";
-    
+
     AIM.submit($(document.pageform), {'onComplete' : onPostComplete});
-    
+
     if (typeof onSuccess == 'function')
         onSuccess();
 
@@ -159,7 +170,7 @@ function onPostComplete(response) {
                 p = window.opener;
             if (p && p.refreshMessage)
                 p.refreshMessage(jsonResponse["sourceFolder"],
-                                 jsonResponse["messageID"]);            
+                                 jsonResponse["messageID"]);
             onCloseButtonClick();
         }
         else {
@@ -170,6 +181,8 @@ function onPostComplete(response) {
                 progressImage.parentNode.removeChild(progressImage);
             }
             showAlertDialog(jsonResponse["message"]);
+            // Remove "blocking" div
+            onFinalLoadHandler(); // from generic.js
         }
     }
     else {
@@ -338,6 +351,49 @@ function onTextMouseDown(event) {
     }
 }
 
+function onHTMLFocus(event) {
+    if (MailEditor.textFirstFocus) {
+        var s = event.editor.getSelection();
+        var selected_ranges = s.getRanges();
+        var children = event.editor.document.getBody().getChildren();
+        var node;
+        var caretAtTop = (UserDefaults["SOGoMailReplyPlacement"] == "above")
+            || !mailIsReply; // for forwards, place caret at top unconditionally
+
+        if (caretAtTop) {
+            node = children.getItem(0);
+        }
+        else {
+            // Search for signature starting from bottom
+            node = children.getItem(children.count() - 1);
+            while (true) {
+                var x = node.getPrevious();
+                if (x == null) {
+                    break;
+                }
+                if (x.getText() == '--') {
+                    node = x.getPrevious().getPrevious();
+                    break;
+                }
+                node = x;
+            }
+        }
+
+        s.selectElement(node);
+
+        // Place the caret
+        if (caretAtTop)
+            s.scrollIntoView(); // top
+        selected_ranges = s.getRanges();
+        selected_ranges[0].collapse(true);
+        s.selectRanges(selected_ranges);
+        if (!caretAtTop)
+            s.scrollIntoView(); // bottom
+
+        MailEditor.textFirstFocus = false;
+    }
+}
+
 function initAddresses() {
     var addressList = $("addressList");
     var i = 1;
@@ -382,51 +438,67 @@ function initMailEditor() {
 
     var textarea = $("text");
   
-    var textContent = textarea.getValue();
-    if (hasSignature()) {
-        var sigLimit = textContent.lastIndexOf("--");
-        if (sigLimit > -1)
-            MailEditor.signatureLength = (textContent.length - sigLimit);
-    }
-    if (UserDefaults["SOGoMailReplyPlacement"] != "above") {
-        textarea.scrollTop = textarea.scrollHeight;
-    }
-    textarea.observe("focus", onTextFocus);
-    //textarea.observe("mousedown", onTextMouseDown);
-    textarea.observe("keydown", onTextKeyDown);
-
-    if (Prototype.Browser.IE) {
-        var ieEvents = [ "click", "select", "keyup" ];
-        for (var i = 0; i < ieEvents.length; i++)
-            textarea.observe(ieEvents[i], onTextIEUpdateCursorPos, false);
-    }
-
     initAddresses();
 
-    var focusField = (mailIsReply ? textarea : $("addr_0"));
-    focusField.focus();
+    var focusField = textarea;
+    if (!mailIsReply) {
+        focusField = $("addr_0");
+        focusField.focus();
+    }
 
     initializePriorityMenu();
 
     configureDragHandle();
 
+    // Set current subject as window title if not set, use '(Untitled)'
+    if (document.pageform.subject.value == "")
+        document.title = '(' + _("Untitled") + ')';
+    else
+        document.title = _(document.pageform.subject.value);
+
+    // Change the window title when typing the subject
+    $$("div#subjectRow input").first().on("keyup", updateWindowTitleFromSubject);
+
     var composeMode = UserDefaults["SOGoMailComposeMessageType"];
     if (composeMode == "html") {
+        // HTML mode
         CKEDITOR.replace('text',
                          {
-                             toolbar :
-                             [['Bold', 'Italic', '-', 'NumberedList', 
-                               'BulletedList', '-', 'Link', 'Unlink', 'Image', 
-                               'JustifyLeft','JustifyCenter','JustifyRight',
-                               'JustifyBlock','Font','FontSize','-','TextColor',
-                               'BGColor','-','SpellChecker','Scayt']
-                             ],
                              language : localeCode,
 			     scayt_sLang : localeCode
                           }
                          );
+        CKEDITOR.on('instanceReady', function(event) {
+                if (focusField == textarea)
+                    // CKEditor reports being ready but it's still not focusable;
+                    // we wait for a few more milliseconds
+                    setTimeout("CKEDITOR.instances.text.focus()", 500);
+            });
+        CKEDITOR.instances.text.on('focus', onHTMLFocus);
+    }
+    else {
+        // Plain text mode
+        var textContent = textarea.getValue();
+        if (hasSignature()) {
+            var sigLimit = textContent.lastIndexOf("--");
+            if (sigLimit > -1)
+                MailEditor.signatureLength = (textContent.length - sigLimit);
+        }
+        if (UserDefaults["SOGoMailReplyPlacement"] != "above") {
+            textarea.scrollTop = textarea.scrollHeight;
+        }
+        textarea.observe("focus", onTextFocus);
+        //textarea.observe("mousedown", onTextMouseDown);
+        textarea.observe("keydown", onTextKeyDown);
+
+        if (Prototype.Browser.IE) {
+            var ieEvents = [ "click", "select", "keyup" ];
+            for (var i = 0; i < ieEvents.length; i++)
+                textarea.observe(ieEvents[i], onTextIEUpdateCursorPos, false);
+        }
+
         if (focusField == textarea)
-            focusCKEditor();
+            textarea.focus();
     }
 
     $("contactFolder").observe("change", onContactFolderChange);
@@ -435,15 +507,6 @@ function initMailEditor() {
     Event.observe(window, "beforeunload", onMailEditorClose);
     
     onWindowResize.defer();
-}
-
-function focusCKEditor(event) {
-    if (CKEDITOR.status != 'basic_ready')
-        setTimeout("focusCKEditor()", 100);
-    else
-        // CKEditor reports being ready but it's still not focusable;
-        // we wait for a few more milliseconds
-        setTimeout("CKEDITOR.instances.text.focus()", 500);
 }
 
 function initializePriorityMenu() {
@@ -609,7 +672,7 @@ function onWindowResize(event) {
 
     // Resize address fields
     var addresslist = $('addressList');
-    addresslist.setStyle({ width: ($(window).width() - attachmentswidth - 10) + 'px' });
+    addresslist.setStyle({ width: (totalwidth - attachmentswidth - 10) + 'px' });
 
     // Set textarea position
     var hr = headerarea.select("hr").first();

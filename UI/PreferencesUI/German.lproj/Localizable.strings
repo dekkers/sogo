@@ -61,32 +61,31 @@
 "shortDateFmt_7" = "%d. %b. %y";
 "shortDateFmt_8" = "%e. %b. %y";
 
-"shortDateFmt_9" = "";
-"shortDateFmt_10" = "";
-"shortDateFmt_11" = "";
+"shortDateFmt_9" = "%y-%m-%d";
+"shortDateFmt_10" = "%y/%m/%d";
+"shortDateFmt_11" = "%y.%m.%d";
 
-"shortDateFmt_12" = "";
-"shortDateFmt_13" = "";
-"shortDateFmt_14" = "";
+"shortDateFmt_12" = "%Y-%m-%d";
+"shortDateFmt_13" = "%Y/%m/%d";
+"shortDateFmt_14" = "%Y.%m.%d";
 
 "shortDateFmt_15" = "";
-
+   
 "longDateFmt_0" = "%A, %d. %B %Y";
 "longDateFmt_1" = "%A, %e. %B %Y";
 "longDateFmt_2" = "%a. %d. %B %Y";
 "longDateFmt_3" = "%a. %e. %B %Y";
-"longDateFmt_4" = "%A, %d. %b. %Y";
-"longDateFmt_5" = "%A, %e. %b. %Y";
-"longDateFmt_6" = "%a. %d. %b. %Y";
-"longDateFmt_7" = "%a. %e. %b. %Y";
-"longDateFmt_8" = "%d. %B %Y";
-"longDateFmt_9" = "%e. %B %Y";
-
+"longDateFmt_4" = "";
+"longDateFmt_5" = "";
+"longDateFmt_6" = "";
+"longDateFmt_7" = "";
+"longDateFmt_8" = "";
+"longDateFmt_9" = "";
 "longDateFmt_10" = "";
 
 "timeFmt_0" = "%H:%M";
 "timeFmt_1" = "%Hh:%Mm";
-"timeFmt_2" = "%Hh %Mm";
+"timeFmt_2" = "";
 "timeFmt_3" = "";
 "timeFmt_4" = "";
 
@@ -142,6 +141,7 @@
 "messageforward_inline" = "Eingebunden";
 "messageforward_attached" = "Als Anhang";
 
+"When replying to a message:" = "Wenn auf eine Nachricht geantwortet wird: ";
 "replyplacement_above" = "Antwort oberhalb des Zitates beginnen";
 "replyplacement_below" = "Antwort unterhalb des Zitates beginnen";
 "And place my signature" = "Und setze meine Signatur";
@@ -150,22 +150,31 @@
 "Compose messages in" = "Nachrichten verfassen in";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Reintext";
+"Display remote inline images" = "Entfernte eingebettete Bilder anzeigen";
+"displayremoteinlineimages_never" = "Niemals";
+"displayremoteinlineimages_always" = "Immer";
 
 /* IMAP Accounts */
 "New Mail Account" = "Neues E-Mail-Konto";
 
 "Server Name:" = "Servername:";
 "Port:" = "Port:";
+"Encryption:" = "Verschlüsselung:";
+"None" = "Keine";
 "User Name:" = "Benutzername:";
 "Password:" = "Passwort:";
 
 "Full Name:" = "Name:";
 "Email:" = "E-Mail-Adresse:";
+"Reply To Email:" = "\"Antworten An\" E-Mail-Adresse (Reply-To):";
 "Signature:" = "Signatur:";
 "(Click to create)" = "(Klick zum Erstellen)";
 
 "Signature" = "Signatur";
 "Please enter your signature below:" = "Bitte fügen Sie die Signatur hier ein:";
+
+"Please specify a valid sender address." = "Bitte geben Sie eine gültige Absenderadresse an.";
+"Please specify a valid reply-to address." = "Bitte geben Sie eine gültige \"Antworten An\"-Adresse (Reply-To) an.";
 
 /* Additional Parameters */
 "Additional Parameters" = "Zusätzliche Einstellungen";
@@ -200,14 +209,18 @@
 "Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Slovensky";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
@@ -239,6 +252,7 @@
 "match any of the following rules:" = "mit einer der folgenden Regeln übereinstimmen:";
 "match all messages" = "mit allen Nachrichten übereinstimmen";
 "Perform these actions:" = "Führe folgende Aktionen aus:";
+"Untitled Filter" = "Namenloser Filter";
 
 "Subject" = "Betreff";
 "From" = "Von";
@@ -279,6 +293,7 @@
 "Label 4" = "Label 4";
 "Label 5" = "Label 5";
 
+"The password was changed successfully." = "Das Passwort wurde erfolgreich geändert.";
 "Password must not be empty." = "Das Passwort darf nicht leer sein.";
 "The passwords do not match. Please try again." = "Die Passwörter stimmen nicht überein. Bitte versuchen Sie es noch einmal.";
 "Password change failed" = "Passwortänderung fehlgeschlagen.";

@@ -12,7 +12,7 @@
 "Reply All"   = "Válasz mindenkinek";
 "Print"       = "Nyomtatás";
 "Stop"        = "Leállítás";
-"Write"       = "Írás";
+"Write"       = "Levélírás";
 
 "Send" = "Küldés";
 "Contacts" = "Kapcsolatok";
@@ -79,7 +79,7 @@
 "Remove this folder" = "Mappa törlése";
 "Erase mails from this folder" = "Üzenetek törlése a mappából";
 "Expunge this folder" = "Mappa megjelölése töröltként";
-"Archive This Folder" = "Archive This Folder";
+"Archive This Folder" = "Mappa archiválása";
 "Modify the acl of this folder" = "Mappa jogosultságainak szerkesztése";
 
 "Saved Messages.zip" = "Messages.zip elmentve";
@@ -283,11 +283,14 @@
 = "Az üzeneteket nem lehetett a szemétkosárba helyezni. Kívánja őket közvetlenül törölni?";
 
 /* Message editing */
-"error_validationfailed" = "Az ellenőrzés végrehatása nem sikerült";
 "error_missingsubject" = "Az üzenet tárgya hiányzik";
 "error_missingrecipients" = "Nincsenek címzettek megadva";
+"Send Anyway" = "Így küldöm el";
 
 /* Message sending */
 "cannot send message: (smtp) all recipients discarded" = "Az üzenetet nem lehetett elküldeni: az összes címzett érvénytelen.";
 "cannot send message (smtp) - recipients discarded:" = "Az üzenetet nem lehetett elküldeni: az alábbi címzettek érvénytelenek:";
 "cannot send message: (smtp) error when connecting" = "Az üzenetet nem lehetett elküldeni: hiba az SMTP kiszolgálóhoz történő csatlakozáskor.";
+
+"Name" = "Név";
+"Email" = "Email";

@@ -34,9 +34,9 @@
     SOGoLoginModule = "Mail";
     SOGoLanguage = "English";
     SOGoSupportedLanguages = ( "Catalan", "Czech", "Dutch", "Danish", "Welsh", "English",
-                               "SpanishSpain", "SpanishArgentina", "French", "German",
+                               "SpanishSpain", "SpanishArgentina", "Finnish", "French", "German",
                                "Icelandic", "Italian", "Hungarian", "BrazilianPortuguese",
-                               "NorwegianBokmal", "NorwegianNynorsk", "Polish", "Russian",
+                               "NorwegianBokmal", "NorwegianNynorsk", "Polish", "Russian", "Slovak",
                                "Ukrainian", "Swedish" );
 
     SOGoTimeZone = "UTC";
@@ -70,4 +70,6 @@
 
     SOGoReminderEnabled = YES;
     SOGoRemindWithASound = YES;
+
+    SOGoSearchMinimumWordLength = 2;
 }

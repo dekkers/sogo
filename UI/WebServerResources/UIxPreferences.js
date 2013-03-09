@@ -17,6 +17,19 @@ function savePreferences(sender) {
         serializeContactsCategories();
     }
 
+    if (typeof mailCustomFromEnabled !== "undefined" && !emailRE.test($("email").value)) {
+        showAlertDialog(_("Please specify a valid sender address."));
+        sendForm = false;
+    }
+
+    if ($("replyTo")) {
+        var replyTo = $("replyTo").value;
+        if (!replyTo.blank() && !emailRE.test(replyTo)) {
+            showAlertDialog(_("Please specify a valid reply-to address."));
+            sendForm = false;
+        }
+    }
+
     if ($("dayStartTime")) {
         var start = $("dayStartTime");
         var selectedStart = parseInt(start.options[start.selectedIndex].value);
@@ -40,9 +53,9 @@ function savePreferences(sender) {
 	}
         if ($("enableVacationEndDate") && $("enableVacationEndDate").checked) {
             var e = $("vacationEndDate_date");
-            var endDate = e.calendar.prs_date(e.value);
+            var endDate = e.inputAsDate();
             var now = new Date();
-            if (endDate.getTime() < now.getTime()) {
+            if (isNaN(endDate.getTime()) || endDate.getTime() < now.getTime()) {
                 showAlertDialog(_("End date of your auto reply must be in the future."));
                 sendForm = false;
             }
@@ -63,16 +76,12 @@ function savePreferences(sender) {
         $("sieveFilters").setValue(Object.toJSON(jsonFilters));
     }
 
-    saveMailAccounts();
-
-    if (sendForm)
+    if (sendForm) {
+        saveMailAccounts();
         $("mainForm").submit();
+    }
 
     return false;
-}
-
-function onAdjustTime(event) {
-    // unconditionally called from skycalendar.html
 }
 
 function prototypeIfyFilters() {
@@ -120,10 +129,10 @@ function _setupEvents() {
     // We check for non-null elements as replyPlacementList and composeMessagesType
     // might not be present if ModulesConstraints disable those elements
     if ($("replyPlacementList"))
-    	$("replyPlacementList").observe("change", onReplyPlacementListChange);
+        $("replyPlacementList").on("change", onReplyPlacementListChange);
 
     if ($("composeMessagesType"))
-    	$("composeMessagesType").observe("change", onComposeMessagesTypeChange);
+        $("composeMessagesType").on("change", onComposeMessagesTypeChange);
 
     // Note: we also monitor changes to the calendar categories.
     // See functions endEditable and onColorPickerChoice.
@@ -198,25 +207,10 @@ function initPreferences() {
         $("contactsCategoryDelete").observe("click", onContactsCategoryDelete);
     }
 
-    // Disable placement (after) if composing in HTML
-    var button = $("composeMessagesType");
-    if (button) {
-        if (button.value == 1) {
-            $("replyPlacementList").value = 0;
-            $("replyPlacementList").disabled = true;
-        }
+    if ($("replyPlacementList"))
         onReplyPlacementListChange();
-        button.on("change", function(event) {
-            if (this.value == 0)
-                $("replyPlacementList").disabled = false;
-            else {
-                $("replyPlacementList").value = 0;
-                $("replyPlacementList").disabled = true;
-            }
-        });
-    }
 
-    button = $("addDefaultEmailAddresses");
+    var button = $("addDefaultEmailAddresses");
     if (button)
         button.observe("click", addDefaultEmailAddresses);
 
@@ -225,12 +219,14 @@ function initPreferences() {
         button.observe("click", onChangePasswordClick);
 
     initSieveFilters();
-    initMailAccounts();
+    if ($('mailOptionsView'))
+        initMailAccounts();
 
     button = $("enableVacationEndDate");
     if (button) {
-        assignCalendar('vacationEndDate_date');
-        button.on("change", function(event) {
+        jQuery("#vacationEndDate_date").closest(".date").datepicker(
+            { autoclose: true, position: 'above', weekStart: $('weekStartDay').getValue() });
+        button.on("click", function(event) {
             if (this.checked)
                 $("vacationEndDate_date").enable();
             else
@@ -540,11 +536,10 @@ function onMailIdentitySignatureClick(event) {
             var label = _("Please enter your signature below:");
             var fields = createElement("p");
             fields.appendChild(createElement("textarea", "signature"));
-            fields.appendChild(createElement("br"));
             fields.appendChild(createButton("okBtn", _("OK"),
                                             onMailIdentitySignatureOK));
             fields.appendChild(createButton("cancelBtn", _("Cancel"),
-                                            disposeDialog.bind(document.body, dialogId)));
+                                            disposeDialog));
             var dialog = createDialog(dialogId,
                                       _("Signature"),
                                       label,
@@ -579,33 +574,31 @@ function onMailIdentitySignatureClick(event) {
         else
             area.value = "";
 
-
-        dialog.show();
         $("bgDialogDiv").show();
-        if (CKEDITOR.instances["signature"])
+        if (Prototype.Browser.IE)
+            jQuery('#bgDialogDiv').css('opacity', 0.4);
+        jQuery(dialog).fadeIn('fast', function() {
+            if (CKEDITOR.instances["signature"])
                 focusCKEditor();
-        else
-            area.focus();
+            else
+                area.focus();
+        });
         Event.stop(event);
     }
 }
 
 function focusCKEditor() {
-    if (CKEDITOR.status != 'basic_ready')
+    if (CKEDITOR.status != 'loaded')
         setTimeout("focusCKEditor()", 100);
     else
-        // CKEditor reports being ready but it's still not focusable;
-        // we wait for a few more milliseconds
-        setTimeout("CKEDITOR.instances.signature.focus()", 500);
+        CKEDITOR.instances.signature.focus()
 }
 
 function hideSignature() {
-    if (CKEDITOR.status != 'basic_ready')
+    if (CKEDITOR.status != 'loaded')
         setTimeout("hideSignature()", 100);
     else
-        // CKEditor reports being ready but it's not;
-        // we wait for a few more milliseconds
-        setTimeout('disposeDialog("signatureDialog")', 200);
+        disposeDialog("signatureDialog");
 }
 
 function onMailIdentitySignatureOK(event) {
@@ -1021,13 +1014,14 @@ function serializeContactsCategories() {
 
 
 function onReplyPlacementListChange() {
-    // above = 0
     if ($("replyPlacementList").value == 0) {
-        $("signaturePlacementList").disabled=false;
+        // Reply placement is above quote, signature can be place before of after quote
+        $("signaturePlacementList").disabled = false;
     }
     else {
-        $("signaturePlacementList").value=1;
-        $("signaturePlacementList").disabled=true;
+        // Reply placement is bellow quote, signature is unconditionally placed after quote
+        $("signaturePlacementList").value = 1;
+        $("signaturePlacementList").disabled = true;
     }
 }
 

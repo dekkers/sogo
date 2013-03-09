@@ -87,6 +87,7 @@
 "timeFmt_1" = "%H.%M";
 "timeFmt_2" = "";
 "timeFmt_3" = "";
+"timeFmt_4" = "";
 
 /* calendar */
 "Week begins on :" = "Semana empieza por: ";
@@ -140,6 +141,7 @@
 "messageforward_inline" = "Incorporado";
 "messageforward_attached" = "Como adjunto";
 
+"When replying to a message:" = "Cuando se contesta a un mensaje:";
 "replyplacement_above" = "Empieza mi respuesta sobre el texto";
 "replyplacement_below" = "Empieza mi respuesta bajo el texto";
 "And place my signature" = "Y añade mi firma";
@@ -148,22 +150,31 @@
 "Compose messages in" = "Redactar el mensaje en";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Texto plano";
+"Display remote inline images" = "Enseña imágenes remotas de forma integrada";
+"displayremoteinlineimages_never" = "Nunca";
+"displayremoteinlineimages_always" = "Siempre";
 
 /* IMAP Accounts */
 "New Mail Account" = "Nueva Cuenta de Correo";
 
 "Server Name:" = "Nombre de Servidor:";
 "Port:" = "Puerto:";
+"Encryption:" = "Cifrado:";
+"None" = "Ninguno";
 "User Name:" = "Nombre de usuario:";
 "Password:" = "Contraseña:";
 
 "Full Name:" = "Nombre Completo:";
 "Email:" = "Correo Electrónico:";
+"Reply To Email:" = "Correo electronico para responder:";
 "Signature:" = "Firma:";
 "(Click to create)" = "(Click para crear)";
 
 "Signature" = "Firma";
 "Please enter your signature below:" = "Por favor, ponga su firma abajo:";
+
+"Please specify a valid sender address." = "Por favor, especifica una dirección de correo electrónico valida para el remitente.";
+"Please specify a valid reply-to address." = "Por favor, especifica una dirección de correo electrónico valida para responder.";
 
 /* Additional Parameters */
 "Additional Parameters" = "Parámetros Adicionales";
@@ -198,14 +209,18 @@
 "Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Eslovaquia";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
@@ -237,6 +252,7 @@
 "match any of the following rules:" = "cumplen algunas de las reglas siguientes:";
 "match all messages" = "cumplen todos los mensajes";
 "Perform these actions:" = "Realiza estas acciones:";
+"Untitled Filter" = "Filtro sin titulo";
 
 "Subject" = "Asunto";
 "From" = "De";
@@ -277,6 +293,7 @@
 "Label 4" = "Etiqueta 4";
 "Label 5" = "Etiqueta 5";
 
+"The password was changed successfully." = "La contraseña se ha cambiado correctamente.";
 "Password must not be empty." = "La contraseña no puede estar vacía.";
 "The passwords do not match. Please try again." = "Las contraseñas no coinciden. Por favor, inténtalo de nuevo.";
 "Password change failed" = "Cambio de contraseña fallido";

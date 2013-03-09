@@ -1,6 +1,6 @@
 /* MAPIStoreMailVolatileMessage.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -51,22 +51,26 @@
 #import <Mailer/NSString+Mail.h>
 
 #import "MAPIStoreAttachment.h"
+#import "MAPIStoreAttachmentTable.h"
 #import "MAPIStoreContext.h"
 #import "MAPIStoreMailFolder.h"
 #import "MAPIStoreMIME.h"
 #import "MAPIStoreMapping.h"
 #import "MAPIStoreSamDBUtils.h"
 #import "MAPIStoreTypes.h"
+#import "MAPIStoreUserContext.h"
 #import "NSData+MAPIStore.h"
 #import "NSObject+MAPIStore.h"
 #import "NSString+MAPIStore.h"
-#import "SOGoMAPIVolatileMessage.h"
+#import "SOGoMAPIObject.h"
 
 #import "MAPIStoreMailVolatileMessage.h"
 
 #undef DEBUG
 #include <mapistore/mapistore.h>
 #include <mapistore/mapistore_errors.h>
+
+static Class NSNumberK = Nil;
 
 static NSString *recTypes[] = { @"orig", @"to", @"cc", @"bcc" };
 
@@ -242,6 +246,85 @@ static NSString *recTypes[] = { @"orig", @"to", @"cc", @"bcc" };
 
 @implementation MAPIStoreMailVolatileMessage
 
++ (void) initialize
+{
+  NSNumberK = [NSNumber class];
+}
+
+- (id) initWithSOGoObject: (id) newSOGoObject
+              inContainer: (MAPIStoreObject *) newContainer
+{
+  if ((self = [super initWithSOGoObject: newSOGoObject
+                            inContainer: newContainer]))
+    {
+      ASSIGN (properties, [sogoObject properties]);
+    }
+
+  return self;
+}
+
+- (void) addProperties: (NSDictionary *) newProperties
+{
+  [super addProperties: newProperties];
+  [sogoObject adjustLastModified];
+}
+
+- (BOOL) canGetProperty: (enum MAPITAGS) propTag
+{
+  return ([super canGetProperty: propTag]
+          || [properties objectForKey: MAPIPropertyKey (propTag)] != nil);
+}
+
+- (uint64_t) objectVersion
+{
+  NSNumber *version;
+
+  version = [properties objectForKey: @"version"];
+
+  return (version
+          ? exchange_globcnt ([version unsignedLongLongValue])
+          : ULLONG_MAX);
+}
+
+- (int) getPidTagMessageClass: (void **) data inMemCtx: (TALLOC_CTX *) memCtx
+{
+  *data = [@"IPM.Note" asUnicodeInMemCtx: memCtx];
+
+  return MAPISTORE_SUCCESS;
+}
+
+- (int) getPidTagChangeKey: (void **) data inMemCtx: (TALLOC_CTX *) memCtx
+{
+  NSData *changeKey;
+  int rc;
+
+  changeKey = [properties objectForKey: MAPIPropertyKey (PR_CHANGE_KEY)];
+  if (changeKey)
+    {
+      *data = [changeKey asBinaryInMemCtx: memCtx];
+      rc = MAPISTORE_SUCCESS;
+    }
+  else
+    rc = [super getPidTagChangeKey: data inMemCtx: memCtx];
+
+  return rc;
+}
+
+- (NSDate *) creationTime
+{
+  return [sogoObject creationDate];
+}
+
+- (NSDate *) lastModificationTime
+{
+  return [sogoObject lastModified];
+}
+
+- (id) lookupAttachment: (NSString *) childKey
+{
+  return [attachmentParts objectForKey: childKey];
+}
+
 - (void) getMessageData: (struct mapistore_message **) dataPtr
                inMemCtx: (TALLOC_CTX *) memCtx
 {
@@ -258,9 +341,11 @@ static NSString *recTypes[] = { @"orig", @"to", @"cc", @"bcc" };
 
   samCtx = [[self context] connectionInfo]->sam_ctx;
 
-  [super getMessageData: &msgData inMemCtx: memCtx];
+  // [super getMessageData: &msgData inMemCtx: memCtx];
 
-  allRecipients = [[sogoObject properties] objectForKey: @"recipients"];
+  msgData = talloc_zero (memCtx, struct mapistore_message);
+
+  allRecipients = [properties objectForKey: @"recipients"];
   msgData->columns = set_SPropTagArray (msgData, 9,
                                         PR_OBJECT_TYPE,
                                         PR_DISPLAY_TYPE,
@@ -448,7 +533,7 @@ QuoteSpecials (NSString *address)
 
 static inline void
 FillMessageHeadersFromProperties (NGMutableHashMap *headers,
-                                  NSDictionary *mailProperties,
+                                  NSDictionary *mailProperties, BOOL withBcc,
                                   struct mapistore_connection_info *connInfo)
 {
   NSMutableString *subject;
@@ -456,7 +541,7 @@ FillMessageHeadersFromProperties (NGMutableHashMap *headers,
   NSArray *list;
   NSCalendarDate *date;
   NSDictionary *recipients;
-  NSUInteger count;
+  NSUInteger type, bccLimit;
   SOGoUser *activeUser;
 
   activeUser
@@ -471,12 +556,21 @@ FillMessageHeadersFromProperties (NGMutableHashMap *headers,
   recipients = [mailProperties objectForKey: @"recipients"];
   if (recipients)
     {
-      for (count = 1; count < 3; count++)
+      if (withBcc)
+        bccLimit = MAPI_BCC;
+      else
+        bccLimit = MAPI_CC;
+      bccLimit++;
+      for (type = MAPI_TO; type < bccLimit; type++)
 	{
-	  recId = recTypes[count];
+	  recId = recTypes[type];
 	  list = MakeRecipientsList ([recipients objectForKey: recId]);
           [headers setObjects: list forKey: recId];
 	}
+
+      list = MakeRecipientsList ([recipients objectForKey: @"orig"]);
+      if ([list count])
+        [headers setObjects: list forKey: @"from"];
     }
   else
     NSLog (@"message without recipients");
@@ -660,9 +754,11 @@ MakeTextPartBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
   return textBody;
 }
 
+// static id
+// MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
+//                  NSString **contentType)
 static id
-MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
-                 NSString **contentType)
+MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts, NSString **contentType)
 {
   id messageBody, textBody;
   NSString *textContentType;
@@ -705,24 +801,21 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
   return messageBody;
 }
 
-- (NGMimeMessage *) _generateMessage
+- (NGMimeMessage *) _generateMessageWithBcc: (BOOL) withBcc
 {
-  NSDictionary *mailProperties;
   NSString *contentType;
   NGMimeMessage *message;  
   NGMutableHashMap *headers;
   id messageBody;
 
-  mailProperties = [sogoObject properties];
-
   headers = [[NGMutableHashMap alloc] initWithCapacity: 16];
-  FillMessageHeadersFromProperties (headers, mailProperties,
+  FillMessageHeadersFromProperties (headers, properties, withBcc,
                                     [[self context] connectionInfo]);
   message = [[NGMimeMessage alloc] initWithHeader: headers];
   [message autorelease];
   [headers release];
 
-  messageBody = MakeMessageBody (mailProperties, attachmentParts, &contentType);
+  messageBody = MakeMessageBody (properties, attachmentParts, &contentType);
   if (messageBody)
     {
       [headers setObject: contentType forKey: @"content-type"];
@@ -737,36 +830,12 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
   NGMimeMessage *message;
   NGMimeMessageGenerator *generator;
   NSData *messageData;
-  NSMutableData *cleanedMessage;
-  NSRange r1, r2;
 
   /* mime message generation */
   generator = [NGMimeMessageGenerator new];
-  message = [self _generateMessage];
+  message = [self _generateMessageWithBcc: withBcc];
   messageData = [generator generateMimeFromPart: message];
   [generator release];
-
-  if (!withBcc)
-    {
-      cleanedMessage = [messageData mutableCopy];
-      [cleanedMessage autorelease];
-      r1 = [cleanedMessage rangeOfCString: "\r\n\r\n"];
-      r1 = [cleanedMessage rangeOfCString: "\r\nbcc: "
-                                  options: 0
-                                    range: NSMakeRange(0,r1.location-1)];
-      if (r1.location != NSNotFound)
-        {
-          // We search for the first \r\n AFTER the Bcc: header and
-          // replace the whole thing with \r\n.
-          r2 = [cleanedMessage rangeOfCString: "\r\n"
-                                      options: 0
-                                        range: NSMakeRange(NSMaxRange(r1)+1,[cleanedMessage length]-NSMaxRange(r1)-1)];
-          [cleanedMessage replaceBytesInRange: NSMakeRange(r1.location, NSMaxRange(r2)-r1.location)
-                                    withBytes: "\r\n"
-                                       length: 2];
-        }
-      messageData = cleanedMessage;
-    }
 
   // [messageData writeToFile: @"/tmp/mimegen.eml" atomically: NO];
 
@@ -775,29 +844,27 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
 
 - (int) submitWithFlags: (enum SubmitFlags) flags
 {
-  NSDictionary *mailProperties, *recipients;
+  NSDictionary *recipients;
   NSData *messageData;
   NSMutableArray *recipientEmails;
   NSArray *list;
   NSString *recId, *from, *msgClass;
   NSUInteger count;
   SOGoUser *activeUser;
-  // SOGoMailFolder *sentFolder;
   SOGoDomainDefaults *dd;
   NSException *error;
-  MAPIStoreMapping *mapping;
+  WOContext *woContext;
+  id <SOGoAuthenticator> authenticator;
 
-  mailProperties = [sogoObject properties];
-  msgClass = [mailProperties objectForKey: MAPIPropertyKey (PidTagMessageClass)];
+  msgClass = [properties objectForKey: MAPIPropertyKey (PidTagMessageClass)];
   if ([msgClass isEqualToString: @"IPM.Note"]) /* we skip invitation replies */
     {
       /* send mail */
 
       messageData = [self _generateMailDataWithBcc: NO];
       
-      mailProperties = [sogoObject properties];
       recipientEmails = [NSMutableArray arrayWithCapacity: 32];
-      recipients = [mailProperties objectForKey: @"recipients"];
+      recipients = [properties objectForKey: @"recipients"];
       for (count = 0; count < 3; count++)
         {
           recId = recTypes[count];
@@ -812,18 +879,23 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
       [self logWithFormat: @"recipients: %@", recipientEmails];
       dd = [activeUser domainDefaults];
       from = [[activeUser allEmails] objectAtIndex: 0];
+
+      woContext = [[self userContext] woContext];
+      authenticator = [sogoObject authenticatorInContext: woContext];
       error = [[SOGoMailer mailerWithDomainDefaults: dd]
-                sendMailData: messageData
-                toRecipients: recipientEmails
-                      sender: from];
+                       sendMailData: messageData
+                       toRecipients: recipientEmails
+                             sender: from
+                  withAuthenticator: authenticator
+                          inContext: woContext];
       if (error)
         [self logWithFormat: @"an error occurred: '%@'", error];
 
-      mapping = [self mapping];
-      [mapping unregisterURLWithID: [self objectId]];
-      [self setIsNew: NO];
-      [properties removeAllObjects];
-      [[self container] cleanupCaches];
+      // mapping = [self mapping];
+      // [mapping unregisterURLWithID: [self objectId]];
+      // [self setIsNew: NO];
+      // [properties removeAllObjects];
+      [(MAPIStoreMailFolder *) [self container] cleanupCaches];
     }
   else
     [self logWithFormat: @"skipping submit of message with class '%@'",
@@ -834,7 +906,7 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
 
 - (void) save
 {
-  NSString *folderName, *flag, *newIdString;
+  NSString *folderName, *flag, *newIdString, *messageKey;
   NSData *changeKey, *messageData;
   NGImap4Connection *connection;
   NGImap4Client *client;
@@ -858,23 +930,27 @@ MakeMessageBody (NSDictionary *mailProperties, NSDictionary *attachmentParts,
       responseResult = [[result objectForKey: @"RawResponse"]
                          objectForKey: @"ResponseResult"];
       flag = [responseResult objectForKey: @"flag"];
+
       newIdString = [[flag componentsSeparatedByString: @" "]
                       objectAtIndex: 2];
-      mid = [self objectId];
       mapping = [self mapping];
+      mid = [self objectId];
       [mapping unregisterURLWithID: mid];
-      [sogoObject setNameInContainer: [NSString stringWithFormat: @"%@.eml", newIdString]];
-      [mapping registerURL: [self url] withID: mid];
-    }
+      // [sogoObject setNameInContainer: ];
 
-  /* synchronise the cache and update the change key with the one provided by
-     the client */
-  [(MAPIStoreMailFolder *) container synchroniseCache];
-  changeKey = [[sogoObject properties]
-                objectForKey: MAPIPropertyKey (PR_CHANGE_KEY)];
-  if (changeKey)
-    [(MAPIStoreMailFolder *) container
-        setChangeKey: changeKey forMessageWithKey: [self nameInContainer]];
+      messageKey = [NSString stringWithFormat: @"%@.eml", newIdString];
+      [sogoObject setNameInContainer: messageKey];
+      [mapping registerURL: [self url] withID: mid];
+
+      /* synchronise the cache and update the change key with the one provided
+         by the client */
+      [(MAPIStoreMailFolder *) container synchroniseCache];
+      changeKey = [properties objectForKey: MAPIPropertyKey (PR_CHANGE_KEY)];
+      if (changeKey)
+        [(MAPIStoreMailFolder *) container
+                setChangeKey: changeKey
+           forMessageWithKey: messageKey];
+    }
 }
 
 @end

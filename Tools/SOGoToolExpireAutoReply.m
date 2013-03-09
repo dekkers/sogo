@@ -22,9 +22,11 @@
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSCalendarDate.h>
+#import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSUserDefaults.h>
 #import <Foundation/NSValue.h>
 
 #import <GDLAccess/EOAdaptorChannel.h>
@@ -63,10 +65,12 @@
 
 - (void) usage
 {
-  fprintf (stderr, "expire-autoreply authname:authpassword\n\n"
-	   "       authname       administrator username of the Sieve server\n"
-	   "       authpassword   administrator password of the Sieve server\n\n"
-           "The expire-autoreply action should be configured as a daily cronjob.\n");
+  fprintf (stderr, "expire-autoreply -p credentialFile\n\n"
+     "  -p credentialFile    Specify the file containing the sieve admin credentials\n"
+     "                       The file should contain a single line:\n"
+     "                         username:password\n"
+     "\n"
+     "The expire-autoreply action should be configured as a daily cronjob.\n");
 }
 
 - (BOOL) removeAutoReplyForLogin: (NSString *) theLogin
@@ -123,12 +127,20 @@
   now = [[NSCalendarDate calendarDate] timeIntervalSince1970];
   sd = [SOGoSystemDefaults sharedSystemDefaults];
   profileURL = [sd profileURL];
-  if (profileURL)
+  if (!profileURL)
+    {
+      NSLog(@"Couldn't obtain the profileURL. (Hint: SOGoProfileURL)");
+    }
+  else
     {
       tableURL = [[NSURL alloc] initWithString: profileURL];
       cm = [GCSChannelManager defaultChannelManager];
       channel = [cm acquireOpenChannelForURL: tableURL];
-      if (channel)
+      if (!channel)
+        {
+          NSLog(@"Couldn't acquire channel for profileURL");
+        }
+      else
         {
           sql = [NSString stringWithFormat: @"SELECT c_uid, c_defaults FROM %@",
                           [tableURL gcsTableName]];
@@ -166,29 +178,61 @@
     }
 }
 
-
 - (BOOL) run
 {
+  NSData *credsData;
   NSRange r;
-  NSString *creds, *authname, *authpwd;
+  NSString *creds, *credsFile, *authname, *authpwd;
   BOOL rc;
   int max;
   
-  max = [arguments count];
+  max = [sanitizedArguments count];
+  creds = nil;
+  authname = nil;
+  authpwd = nil;
   rc = NO;
+
+  credsFile = [[NSUserDefaults standardUserDefaults] stringForKey: @"p"];
+  if (credsFile)
+    {
+      credsData = [NSData dataWithContentsOfFile: credsFile];
+      if (credsData == nil)
+        {
+          NSLog(@"Error reading credential file '%@'", credsFile);
+          return NO;
+        }
+      creds = [[NSString alloc] initWithData: credsData
+                                    encoding: NSUTF8StringEncoding];
+      [creds autorelease];
+      creds = [creds stringByTrimmingCharactersInSet: 
+                 [NSCharacterSet characterSetWithCharactersInString: @"\r\n"]];
+    }
 
   if (max > 0)
     {
-      creds = [arguments objectAtIndex: 0];
-      r = [creds rangeOfString: @":"];
-      if (r.location != NSNotFound)
-        {
-          authname = [creds substringToIndex: r.location];
-          authpwd = [creds substringFromIndex: r.location+1];
-          [self expireAutoReplyWithUsername: authname andPassword: authpwd];
-          rc = YES;
-        }
+      /* assume we got the creds directly on the cli */
+      creds = [sanitizedArguments objectAtIndex: 0];
     }
+
+  if (creds)
+   {
+     r = [creds rangeOfString: @":"];
+     if (r.location == NSNotFound)
+      {
+        NSLog(@"Invalid credential string format (user:pass)");
+      }
+     else
+      {
+        authname = [creds substringToIndex: r.location];
+        authpwd = [creds substringFromIndex: r.location+1];
+      }
+   }
+
+  if (authname && authpwd)
+   {
+     [self expireAutoReplyWithUsername: authname andPassword: authpwd];
+     rc = YES;
+   }
 
   if (!rc)
     [self usage];

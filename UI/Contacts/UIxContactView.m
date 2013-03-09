@@ -30,6 +30,9 @@
 #import <NGCards/NSArray+NGCards.h>
 #import <NGExtensions/NSString+Ext.h>
 
+#import <SOGo/NSCalendarDate+SOGo.h>
+#import <SOGo/SOGoDateFormatter.h>
+#import <SOGo/SOGoUser.h>
 #import <Contacts/SOGoContactObject.h>
 
 #import "UIxContactView.h"
@@ -73,10 +76,10 @@
         value = [NSString stringWithFormat: @"<a href=\"%@:%@\">%@</a>", url, value, value];
 
       if (label)
-        [cardString appendFormat: @"%@&nbsp;%@<br />\n",
+        [cardString appendFormat: @"<dt>%@</dt><dd>%@</dd>\n",
                     [self labelForKey: label], value];
       else
-        [cardString appendFormat: @"%@<br />\n", value];
+        [cardString appendFormat: @"<dt></dt><dd>%@</dd>\n", value];
     }
 
   return cardString;
@@ -154,12 +157,14 @@
                value: mailTo];
 }
 
-- (NSString *) secondaryEmail
+- (NSArray *) secondaryEmails
 {
   NSString *email, *fn, *mailTo;
   NSMutableArray *emails;
+  NSMutableArray *secondaryEmails;
 
   emails = [NSMutableArray array];
+  secondaryEmails = [NSMutableArray array];
   mailTo = nil;
 
   [emails addObjectsFromArray: [card childrenWithTag: @"email"]];
@@ -185,6 +190,7 @@
 	{
 	  email = [[emails objectAtIndex: i] flattenedValuesForKey: @""];
 
+          // skip primary email
 	  if ([email caseInsensitiveCompare: [card preferredEMail]] != NSOrderedSame)
 	    {
               fn = [card fn];
@@ -193,13 +199,19 @@
 	      mailTo = [NSString stringWithFormat: @"<a href=\"mailto:%@\""
 				 @" onclick=\"return openMailTo('%@ <%@>');\">"
 				 @"%@</a>", email, fn, email, email];
-	      break;
+              [secondaryEmails addObject: [self _cardStringWithLabel: nil
+                                       value: mailTo]];
 	    }
 	}
     }
+  else
+    {
+      [secondaryEmails addObject: [self _cardStringWithLabel: nil
+                                        value: mailTo]];
+    }
 
-  return [self _cardStringWithLabel: @"Additional Email:"
-               value: mailTo];
+
+  return secondaryEmails;
 }
 
 - (NSString *) screenName
@@ -566,7 +578,7 @@
   data = [NSMutableString string];
   [data appendString: city];
   if ([city length] > 0 && [prov length] > 0)
-    [data appendString: @", "];
+    [data appendString: @" "];
   [data appendString: prov];
 
   return [self _cardStringWithLabel: nil value: data];
@@ -583,7 +595,7 @@
   data = [NSMutableString string];
   [data appendString: postalCode];
   if ([postalCode length] > 0 && [country length] > 0)
-    [data appendFormat: @", ", country];
+    [data appendFormat: @" ", country];
   [data appendString: country];
 
   return [self _cardStringWithLabel: nil value: data];
@@ -603,7 +615,23 @@
 
 - (NSString *) bday
 {
-  return [self _cardStringWithLabel: @"Birthday:" value: [card bday]];
+  NSString *bday, *value;
+  NSCalendarDate *date;
+  SOGoDateFormatter *dateFormatter;
+
+  bday = [card bday];
+  if (bday)
+    {
+      // Expected format of BDAY is YYYY[-]MM[-]DD
+      value = [bday stringByReplacingString: @"-" withString: @""];
+      date = [NSCalendarDate dateFromShortDateString: value
+                                  andShortTimeString: nil
+                                          inTimeZone: nil];
+      dateFormatter = [[[self context] activeUser] dateFormatterInContext: context];
+      bday = [dateFormatter formattedDate: date];
+    }
+
+  return [self _cardStringWithLabel: @"Birthday:" value: bday];
 }
 
 - (NSString *) tz

@@ -1,6 +1,6 @@
 /* MAPIStoreMailMessage.h - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -69,6 +69,10 @@
               inMemCtx: (TALLOC_CTX *) memCtx;
 - (int) getPidTagDisplayBcc: (void **) data
                inMemCtx: (TALLOC_CTX *) memCtx;
+
+/* batch-mode helpers */
+- (NSString *) bodyContentPartKey;
+- (void) setBodyContentFromRawData: (NSData *) rawContent;
 
 @end
 

@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Zondag";
-"Monday" = "Maandag";
-"Tuesday" = "Dinsdag";
-"Wednesday" = "Woensdag";
-"Thursday" = "Donderdag";
-"Friday" = "Vrijdag";
-"Saturday" = "Zaterdag";
 "DayOfTheMonth" = "Dag van de maand";
-
-"Sun" = "Zo";
-"Mon" = "Ma";
-"Tue" = "Di";
-"Wed" = "Wo";
-"Thu" = "Do";
-"Fri" = "Vr";
-"Sat" = "Za";
-
-"a2_Sunday" = "Zo";
-"a2_Monday" = "Ma";
-"a2_Tuesday" = "Di";
-"a2_Wednesday" = "Wo";
-"a2_Thursday" = "Do";
-"a2_Friday" = "Vr";
-"a2_Saturday" = "Za";
-
 "dayLabelFormat" = "%d/%m/%Y";
 "today" = "vandaag";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "deze maand";
-
-"January" = "Januari";
-"February" = "Februari";
-"March" = "Maart";
-"April" = "April";
-"May" = "Mei";
-"June" = "Juni";
-"July" = "Juli";
-"August" = "Augustus";
-"September" = "September";
-"October" = "Oktober";
-"November" = "November";
-"December" = "December";
-
-"a3_January" = "Jan";
-"a3_February" = "Feb";
-"a3_March" = "Maa";
-"a3_April" = "Apr";
-"a3_May" = "Mei";
-"a3_June" = "Jun";
-"a3_July" = "Jul";
-"a3_August" = "Aug";
-"a3_September" = "Sep";
-"a3_October" = "Okt";
-"a3_November" = "Nov";
-"a3_December" = "Dec";
 
 "Previous Month" = "Vorige maand";
 "Next Month" = "Volgende maand";
@@ -110,6 +60,7 @@
 "Import Events" = "Gebeurtenissen importeren";
 "Select an iCalendar file (.ics)." = "Selecteer een iCalendar-bestand (.ics).";
 "Upload" = "Uploaden";
+"Uploading" = "Uploaden";
 "Publish Calendar..." = "Agenda publiceren...";
 "Reload Remote Calendars" = "Externe agenda herladen";
 "Properties" = "Instellingen";
@@ -409,8 +360,8 @@
 "Choose a Reminder Action" = "Kies een herinneringsactie";
 "Show an Alert" = "Toon een waarschuwing";
 "Send an E-mail" = "Stuur een E-mail";
-"Email Organizer" = "Email organisator";
-"Email Attendees" = "Email deelnemers";
+"Email Organizer" = "E-mail organisator";
+"Email Attendees" = "E-mail deelnemers";
 
 "zoom_400" = "400%";
 "zoom_200" = "200%";
@@ -429,6 +380,7 @@ validate_invalid_startdate = "Ongeldige begindatum!";
 validate_invalid_enddate   = "Ongeldige einddatum!";
 validate_endbeforestart    = "Het einde is voor de begindatum.";
 
+"Events" = "Afspraken";
 "Tasks" = "Taken";
 "Show completed tasks" = "Voltooide taken weergeven";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "Het einde is voor de begindatum.";
 "Title" = "Titel";
 "Start" = "Begin";
 "End" = "Eind";
+"Due Date" = "Verloopdatum";
 "Location" = "Plaats";
+
 "(Private Event)" = "(Privé-afspraak)";
 
 vevent_class0 = "(Publieke afspraak)";
 vevent_class1 = "(Privé-afspraak)";
 vevent_class2 = "(Vertrouwelijke afspraak)";
+
+"Priority" = "Prioriteit";
+"Category" = "Categorie";
 
 vtodo_class0 = "(Publieke taak)";
 vtodo_class1 = "(Privétaak)";
@@ -535,6 +492,11 @@ vtodo_class2 = "(Vertrouwelijke taak)";
 "Display" = "Tonen";
 "Show alarms" = "Alarmen tonen";
 "Show tasks" = "Taken tonen";
+
+"Notifications" = "Notificaties";
+"Receive a mail when I modify my calendar" = "Ontvang een e-mail als ik mijn agenda verander";
+"Receive a mail when someone else modifies my calendar" = "Ontvang een e-mail als iemand anders mijn agenda verandert";
+"When I modify my calendar, send a mail to:" = "Als ik mijn agenda verader, stuur een e-mail naar:";
 
 "Links to this Calendar" = "Koppelingen naar deze agenda";
 "Authenticated User Access" = "Toegang voor geauthenticeerde gebruikers";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Vertrouwelijke taak)";
 "Delete Task" = "Taak verwijderen";
 "Delete Event" = "Afspraak verwijderen";
 "Copy event to my calendar" = "Kopieer gebeurtenis naar mijn agenda";
+"View Raw Source" = "Bekijk broncode";
 
 "Subscribe to a web calendar..." = "Abonneren op een web-agenda...";
 "URL of the Calendar" = "URL van de Agenda";

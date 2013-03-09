@@ -67,8 +67,7 @@
   fprintf (stderr, "expire-sessions [nbMinutes]\n\n"
 	   "       nbMinutes       Number of minutes of inactivity after which a user session will be expired\n"
 	   "\n"
-	   "The SOGoSessionExpireMinutes user default will be used if nbMinutes is not specified\n"
-           "The expire-sessions action should be configured as a cronjob.\n");
+     "The expire-sessions action should be configured as a cronjob.\n");
 }
 
 - (BOOL) expireUserSessionOlderThan: (int) nbMinutes
@@ -109,7 +108,7 @@
     return rc=NO;
   }
 
-  sql = [NSString stringWithFormat: @"SELECT count(*) FROM %@ WHERE c_lastseen <= %d;",
+  sql = [NSString stringWithFormat: @"SELECT count(*) FROM %@ WHERE c_lastseen <= %d",
                         [tableURL gcsTableName], oldest];
   ex = [channel evaluateExpressionX: sql]; 
   if (ex)
@@ -129,7 +128,7 @@
     if (verbose)
       NSLog(@"Will be removing %d sessions", sessionsToDelete);
     [channel cancelFetch];
-    sql = [NSString stringWithFormat: @"DELETE FROM %@ WHERE c_lastseen <= %d;",
+    sql = [NSString stringWithFormat: @"DELETE FROM %@ WHERE c_lastseen <= %d",
                         [tableURL gcsTableName], oldest];
     if (verbose)
       NSLog(@"Removing sessions older than %d minute(s)", nbMinutes);

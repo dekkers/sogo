@@ -30,6 +30,7 @@
 "Disable auto reply on" = "Desativar resposta automática em";
 "Please specify your message and your email addresses for which you want to enable auto reply."
 = "Favor especificar a sua mensagem e seus endereços de e-mail para o qual você deseja ativar resposta automática.";
+"Your vacation message must not end with a single dot on a line." = "Sua mensagem de férias não deve terminar com um ponto único em uma linha.";
 "End date of your auto reply must be in the future."
 = "A data final da resposta automática deve estar no futuro.";
 
@@ -86,6 +87,7 @@
 "timeFmt_1" = "%H:%M";
 "timeFmt_2" = "";
 "timeFmt_3" = "";
+"timeFmt_4" = "";
 
 /* calendar */
 "Week begins on :" = "A Semana começa em :";
@@ -139,6 +141,7 @@
 "messageforward_inline" = "No corpo da mensagem";
 "messageforward_attached" = "Como anexo";
 
+"When replying to a message:" = "Ao responder a uma mensagem:";
 "replyplacement_above" = "Começar minha resposta acima das citações";
 "replyplacement_below" = "Começar minha resposta abaixo das citações";
 "And place my signature" = "E colocar minha assinatura";
@@ -147,22 +150,31 @@
 "Compose messages in" = "Escrever mensagens em";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Texto puro";
+"Display remote inline images" = "Exibir imagens remotas";
+"displayremoteinlineimages_never" = "Nunca";
+"displayremoteinlineimages_always" = "Sempre";
 
 /* IMAP Accounts */
 "New Mail Account" = "Nova conta de e-mail";
 
 "Server Name:" = "Nome do Servidor:";
 "Port:" = "Porta:";
+"Encryption:" = "Encriptação:";
+"None" = "Nenhum";
 "User Name:" = "Nome do Usuário:";
 "Password:" = "Senha:";
 
 "Full Name:" = "Nome Compelto:";
 "Email:" = "E-mail:";
+"Reply To Email:" = "Responder para o Email:";
 "Signature:" = "Assinatura:";
 "(Click to create)" = "(Click para criar)";
 
 "Signature" = "Assinatura";
 "Please enter your signature below:" = "Por favor, digite sua assinatura abaixo:";
+
+"Please specify a valid sender address." = "Por favor, especifique um endereço de email válido.";
+"Please specify a valid reply-to address." = "Por favor,especifique um endereço de resposta válido.";
 
 /* Additional Parameters */
 "Additional Parameters" = "Parâmetros Adicionais";
@@ -173,11 +185,11 @@
 "Change" = "Alterar";
 
 /* Event+task classifications */
-"Default events classification :" = "Default events classification :";
-"Default tasks classification :" = "Default tasks classification :";
-"PUBLIC_item" = "Public";
-"CONFIDENTIAL_item" = "Confidential";
-"PRIVATE_item" = "Private";
+"Default events classification :" = "Classificação padrão do compromisso:";
+"Default tasks classification :" = "Classificação padrão da tarefa:";
+"PUBLIC_item" = "Público";
+"CONFIDENTIAL_item" = "Confidencial";
+"PRIVATE_item" = "Particular";
 
 /* Event+task categories */
 "category_none" = "Nenhum";
@@ -194,17 +206,21 @@
 "choose" = "Escolha ...";
 "Catalan" = "Català";
 "Czech" = "Česky";
-"DanishDenmark" = "Dansk (Danmark)";
+"Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk bokmål";
 "NorwegianNynorsk" = "Norsk nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Eslovaco";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentina)";
 "Swedish" = "Svenska";
@@ -236,6 +252,7 @@
 "match any of the following rules:" = "corresponde a nenhuma das seguintes regras:";
 "match all messages" = "corresponder a todas as mensagens";
 "Perform these actions:" = "Realizar essas ações:";
+"Untitled Filter" = "Filtro sem título";
 
 "Subject" = "Assunto";
 "From" = "De";
@@ -276,6 +293,7 @@
 "Label 4" = "Rótulo 4";
 "Label 5" = "Rótulo 5";
 
+"The password was changed successfully." = "Senha alterada com sucesso.";
 "Password must not be empty." = "Le mot de passe ne doit pas être vide.";
 "The passwords do not match. Please try again." = "Les mots de passe ne sont pas identiques. Essayez de nouveau.";
 "Password change failed" = "Échec au changement";

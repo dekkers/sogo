@@ -21,6 +21,7 @@
  */
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSError.h>
 #import <Foundation/NSFileManager.h>
 #import <Foundation/NSString.h>
@@ -346,31 +347,38 @@ typedef enum SOGoToolRestoreMode {
 - (BOOL) restoreRecords: (NSArray *) records
                ofFolder: (GCSFolder *) gcsFolder
 {
+  NSAutoreleasePool *pool;
   NSDictionary *existingRecords, *currentRecord;
   NSString *cName, *cContent;
-  NSException *ex;
-
-  int count, max, version;
+  int count, max;
+  unsigned int version;
   BOOL rc;
 
   if (records)
     {
+      existingRecords = [self fetchExistingRecordsFromFolder: gcsFolder];
+      pool = [[NSAutoreleasePool alloc] init];
       version = 0;
       rc = YES;
-      existingRecords = [self fetchExistingRecordsFromFolder: gcsFolder];
       max = [records count];
       for (count = 0; count < max; count++)
         {
+          if (count > 0 && count%100 == 0)
+            {
+              DESTROY(pool);
+              pool = [[NSAutoreleasePool alloc] init];
+            }
           currentRecord = [records objectAtIndex: count];
           cName = [currentRecord objectForKey: @"c_name"];
           if (![existingRecords objectForKey: cName])
             {
               NSLog (@"restoring record '%@'", cName);
               cContent = [currentRecord objectForKey: @"c_content"];
-              ex = [gcsFolder writeContent: cContent toName: cName
-                               baseVersion: &version];
+              [gcsFolder writeContent: cContent toName: cName
+                          baseVersion: &version];
             }
         }
+      DESTROY(pool);
     }
   else
     {
@@ -521,7 +529,7 @@ typedef enum SOGoToolRestoreMode {
   if (tables)
     {
       NSLog (@"Restorable folders:");
-      folderPrefixLen = 8 + [userID length];
+      folderPrefixLen = 1 + [userID length];
       tableKeys = [[tables allKeys] objectEnumerator];
       while ((key = [tableKeys nextObject]))
         {

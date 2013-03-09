@@ -1,6 +1,6 @@
 /* SOGoMailer.m - this file is part of SOGo
  *
- * Copyright (C) 2007-2010 Inverse inc.
+ * Copyright (C) 2007-2013 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -33,8 +33,11 @@
 #import <NGStreams/NGInternetSocketAddress.h>
 
 #import "NSString+Utilities.h"
+#import "SOGoAuthenticator.h"
 #import "SOGoDomainDefaults.h"
 #import "SOGoSystemDefaults.h"
+#import "SOGoUser.h"
+#import "SOGoUserManager.h"
 
 #import "SOGoMailer.h"
 
@@ -51,6 +54,8 @@
     {
       ASSIGN (mailingMechanism, [dd mailingMechanism]);
       ASSIGN (smtpServer, [dd smtpServer]);
+      ASSIGN (authenticationType,
+              [[dd smtpAuthenticationType] lowercaseString]);
     }
 
   return self;
@@ -62,6 +67,7 @@
     {
       mailingMechanism = nil;
       smtpServer = nil;
+      authenticationType = nil;
     }
 
   return self;
@@ -71,6 +77,7 @@
 {
   [mailingMechanism release];
   [smtpServer release];
+  [authenticationType release];
   [super dealloc];
 }
 
@@ -112,19 +119,21 @@
 - (NSException *) _smtpSendData: (NSData *) mailData
 		   toRecipients: (NSArray *) recipients
 			 sender: (NSString *) sender
+              withAuthenticator: (id <SOGoAuthenticator>) authenticator
+                      inContext: (WOContext *) woContext
 {
+  NSString *currentTo, *host, *login, *password;
   NGInternetSocketAddress *addr;
-  NSString *currentTo, *host;
   NSMutableArray *toErrors;
   NSEnumerator *addresses; 
   NGSmtpClient *client;
   NSException *result;
   NSRange r;
-
   unsigned int port;
 
   client = [NGSmtpClient smtpClient];
   host = smtpServer;
+  result = nil;
   port = 25;
 
   // We check if there is a port specified in the smtpServer ivar value
@@ -142,36 +151,60 @@
   NS_DURING
     {
       [client connectToAddress: addr];
-      if ([client mailFrom: sender])
-	{
-	  toErrors = [NSMutableArray array];
-	  addresses = [recipients objectEnumerator];
-	  currentTo = [addresses nextObject];
-	  while (currentTo)
-	    {
-	      if (![client recipientTo: [currentTo pureEMailAddress]])
-		{
-		  [self logWithFormat: @"error with recipient '%@'", currentTo];
-		  [toErrors addObject: [currentTo pureEMailAddress]];
-		}
-	      currentTo = [addresses nextObject];
-	    }
-	  if ([toErrors count] == [recipients count])
-	    result = [NSException exceptionWithHTTPStatus: 500
-				  reason: @"cannot send message:"
-				  @" (smtp) all recipients discarded"];
-	  else if ([toErrors count] > 0)
-	    result = [NSException exceptionWithHTTPStatus: 500
-				  reason: [NSString stringWithFormat: 
-						      @"cannot send message (smtp) - recipients discarded:\n%@",
-						    [toErrors componentsJoinedByString: @", "]]];
-	  else
-	    result = [self _sendMailData: mailData withClient: client];
-	}
-      else
+      if ([authenticationType isEqualToString: @"plain"])
+        {
+          login = [[SOGoUserManager sharedUserManager]
+                     getExternalLoginForUID: [[authenticator userInContext: woContext] loginInDomain]
+                                   inDomain: [[authenticator userInContext: woContext] domain]];
+
+          password = [authenticator passwordInContext: woContext];
+          if ([login length] == 0
+              || [login isEqualToString: @"anonymous"]
+              || ![client plainAuthenticateUser: login
+                                   withPassword: password])
+            result = [NSException
+                           exceptionWithHTTPStatus: 500
+                                            reason: @"cannot send message:"
+                       @" (smtp) authentication failure"];
+        }
+      else if (authenticationType)
         result = [NSException
                    exceptionWithHTTPStatus: 500
-                                    reason: @"cannot send message: (smtp) originator not accepted"];
+                   reason: @"cannot send message:"
+                   @" unsupported authentication method"];
+      if (!result)
+        {
+          if ([client mailFrom: sender])
+            {
+              toErrors = [NSMutableArray array];
+              addresses = [recipients objectEnumerator];
+              currentTo = [addresses nextObject];
+              while (currentTo)
+                {
+                  if (![client recipientTo: [currentTo pureEMailAddress]])
+                    {
+                      [self logWithFormat: @"error with recipient '%@'", currentTo];
+                      [toErrors addObject: [currentTo pureEMailAddress]];
+                    }
+                  currentTo = [addresses nextObject];
+                }
+              if ([toErrors count] == [recipients count])
+                result = [NSException exceptionWithHTTPStatus: 500
+                                                       reason: @"cannot send message:"
+                                      @" (smtp) all recipients discarded"];
+              else if ([toErrors count] > 0)
+                result = [NSException exceptionWithHTTPStatus: 500
+                                                       reason: [NSString stringWithFormat: 
+                                                                           @"cannot send message (smtp) - recipients discarded:\n%@",
+                                                                         [toErrors componentsJoinedByString: @", "]]];
+              else
+                result = [self _sendMailData: mailData withClient: client];
+            }
+          else
+            result = [NSException
+                       exceptionWithHTTPStatus: 500
+                                        reason: @"cannot send message: (smtp) originator not accepted"];
+        }
       [client quit];
       [client disconnect];
     }
@@ -190,6 +223,8 @@
 - (NSException *) sendMailData: (NSData *) data
 		  toRecipients: (NSArray *) recipients
 			sender: (NSString *) sender
+             withAuthenticator: (id <SOGoAuthenticator>) authenticator
+                     inContext: (WOContext *) woContext
 {
   NSException *result;
 
@@ -209,8 +244,10 @@
 			   sender: [sender pureEMailAddress]];
 	  else
 	    result = [self _smtpSendData: data
-			   toRecipients: recipients
-			   sender: [sender pureEMailAddress]];
+                            toRecipients: recipients
+                                  sender: [sender pureEMailAddress]
+                       withAuthenticator: authenticator
+                               inContext: woContext];
 	}
     }
 
@@ -220,6 +257,8 @@
 - (NSException *) sendMimePart: (id <NGMimePart>) part
 		  toRecipients: (NSArray *) recipients
 			sender: (NSString *) sender
+             withAuthenticator: (id <SOGoAuthenticator>) authenticator
+                     inContext: (WOContext *) woContext
 {
   NSData *mailData;
 
@@ -228,12 +267,16 @@
 
   return [self sendMailData: mailData
 	       toRecipients: recipients
-	       sender: sender];
+                     sender: sender
+          withAuthenticator: authenticator
+                  inContext: woContext];
 }
 
 - (NSException *) sendMailAtPath: (NSString *) filename
 		    toRecipients: (NSArray *) recipients
 			  sender: (NSString *) sender
+               withAuthenticator: (id <SOGoAuthenticator>) authenticator
+                       inContext: (WOContext *) woContext
 {
   NSException *result;
   NSData *mailData;
@@ -242,13 +285,15 @@
   if ([mailData length] > 0)
     result = [self sendMailData: mailData
 		   toRecipients: recipients
-		   sender: sender];
+                         sender: sender
+              withAuthenticator: authenticator
+                      inContext: woContext];
   else
     result = [NSException exceptionWithHTTPStatus: 500
 			  reason: @"cannot send message: no data"
 			  @" (missing or empty file?)"];
 
-  return nil;
+  return result;
 }
 
 @end

@@ -171,8 +171,15 @@
   return [self stringArrayForKey: @"SOGoContactsDefaultRoles"];
 }
 
-- (BOOL) forceIMAPLoginWithEmail
+//
+// In v2.0.4, SOGoForceIMAPLoginWithEmail was renamed to SOGoForceExternalLoginWithEmail
+// but we keep backward compatbility for now with previous versions.
+//
+- (BOOL) forceExternalLoginWithEmail
 {
+  if ([self stringForKey: @"SOGoForceExternalLoginWithEmail"])
+    return [self boolForKey: @"SOGoForceExternalLoginWithEmail"];
+
   return [self boolForKey: @"SOGoForceIMAPLoginWithEmail"];
 }
 
@@ -205,7 +212,7 @@
       mailingMechanism = nil;
     }
 
-  return mailingMechanism;
+  return [mailingMechanism lowercaseString];
 }
 
 - (NSArray *) mailPollingIntervals
@@ -216,6 +223,11 @@
 - (NSString *) smtpServer
 {
   return [self stringForKey: @"SOGoSMTPServer"];
+}
+
+- (NSString *) smtpAuthenticationType
+{
+  return [[self stringForKey: @"SOGoSMTPAuthenticationType"] lowercaseString];
 }
 
 - (NSString *) mailSpoolPath
@@ -317,6 +329,21 @@
 - (BOOL) hideSystemEMail
 {
   return [self boolForKey: @"SOGoHideSystemEMail"];
+}
+
+- (int) searchMinimumWordLength
+{
+  return [self integerForKey: @"SOGoSearchMinimumWordLength"];
+}
+
+- (BOOL) notifyOnPersonalModifications
+{
+  return [self boolForKey: @"SOGoNotifyOnPersonalModifications"];
+}
+
+- (BOOL) notifyOnExternalModifications
+{
+  return [self boolForKey: @"SOGoNotifyOnExternalModifications"];
 }
 
 @end

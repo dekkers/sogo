@@ -1,6 +1,6 @@
 /* MAPIStoreMailFolder.h - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -36,16 +36,17 @@
 
 @interface MAPIStoreMailFolder : MAPIStoreFolder
 {
-  SOGoMAPIFSMessage *versionsMessage;
+  SOGoMAPIDBMessage *versionsMessage;
+  NSMutableDictionary *bodyData;
 }
 
 - (BOOL) ensureFolderExists;
 
 /* synchronisation & versioning */
 - (BOOL) synchroniseCache;
-- (NSNumber *) modseqFromMessageChangeNumber: (NSNumber *) changeNum;
-- (NSNumber *) messageUIDFromMessageKey: (NSString *) messageKey;
-- (NSNumber *) changeNumberForMessageUID: (NSNumber *) messageUid;
+- (NSNumber *) modseqFromMessageChangeNumber: (NSString *) changeNum;
+- (NSString *) messageUIDFromMessageKey: (NSString *) messageKey;
+- (NSString *) changeNumberForMessageUID: (NSString *) messageUid;
 - (void) setChangeKey: (NSData *) changeKey
     forMessageWithKey: (NSString *) messageKey;
 - (NSData *) changeKeyForMessageWithKey: (NSString *) messageKey;

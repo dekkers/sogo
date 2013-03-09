@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2007-2012 Inverse inc.
+  Copyright (C) 2007-2013 Inverse inc.
   Copyright (C) 2004-2005 SKYRIX Software AG
 
   This file is part of SOGo.
@@ -20,6 +20,7 @@
   02111-1307, USA.
 */
 
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSCalendarDate.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSEnumerator.h>
@@ -98,6 +99,7 @@
 @implementation SOGoAppointmentFolder
 
 static NSNumber *sharedYes = nil;
+static iCalEvent *iCalEventK = nil;
 
 + (void) initialize
 {
@@ -108,6 +110,8 @@ static NSNumber *sharedYes = nil;
       didInit = YES;
       sharedYes = [[NSNumber numberWithBool: YES] retain];
       [iCalEntityObject initializeSOGoExtensions];
+
+      iCalEventK  = [iCalEvent class];
     }
 }
 
@@ -434,6 +438,84 @@ static NSNumber *sharedYes = nil;
                     inCategory: @"FreeBusyExclusions"];
 }
 
+- (BOOL) _notificationValueForKey: (NSString *) theKey
+                 defaultDomainKey: (NSString *) theDomainKey
+{
+  SOGoUser *ownerUser;
+  NSNumber *notify;
+  
+  ownerUser = [SOGoUser userWithLogin: self->owner];
+  notify = [self folderPropertyValueInCategory: theKey
+				       forUser: ownerUser];
+
+  if (!notify && theDomainKey)
+    notify = [NSNumber numberWithBool: [[[context activeUser] domainDefaults]
+					 boolForKey: theDomainKey]];
+
+  return [notify boolValue];
+}
+
+//
+// We MUST keep the 'NO' value here, because we will always
+// fallback to the domain defaults otherwise.
+//
+- (void) _setNotificationValue: (BOOL) b
+                        forKey: (NSString *) theKey
+{
+  [self setFolderPropertyValue: [NSNumber numberWithBool: b]
+		    inCategory: theKey];
+}
+
+- (BOOL) notifyOnPersonalModifications
+{
+  return [self _notificationValueForKey: @"NotifyOnPersonalModifications"
+		       defaultDomainKey: @"SOGoNotifyOnPersonalModifications"];
+}
+
+- (void) setNotifyOnPersonalModifications: (BOOL) b
+{
+  [self _setNotificationValue: b  forKey: @"NotifyOnPersonalModifications"];
+}
+
+- (BOOL) notifyOnExternalModifications
+{
+  return [self _notificationValueForKey: @"NotifyOnExternalModifications"
+		       defaultDomainKey: @"SOGoNotifyOnExternalModifications"];
+}
+
+- (void) setNotifyOnExternalModifications: (BOOL) b
+{
+  [self _setNotificationValue: b  forKey: @"NotifyOnExternalModifications"];
+}
+
+- (BOOL) notifyUserOnPersonalModifications
+{
+  return [self _notificationValueForKey: @"NotifyUserOnPersonalModifications"
+		       defaultDomainKey: nil];
+}
+
+- (void) setNotifyUserOnPersonalModifications: (BOOL) b
+{
+  [self _setNotificationValue: b  forKey: @"NotifyUserOnPersonalModifications"];
+  
+}
+
+- (NSString *) notifiedUserOnPersonalModifications
+{
+  SOGoUser *ownerUser;
+
+  ownerUser = [SOGoUser userWithLogin: self->owner];
+
+  return [self folderPropertyValueInCategory: @"NotifiedUserOnPersonalModifications"
+				     forUser: ownerUser];
+}
+
+- (void) setNotifiedUserOnPersonalModifications: (NSString *) theUser
+{
+  [self setFolderPropertyValue: theUser
+                    inCategory: @"NotifiedUserOnPersonalModifications"];
+}
+
 /* selection */
 
 - (NSArray *) calendarUIDs 
@@ -619,8 +701,10 @@ static NSNumber *sharedYes = nil;
   unsigned int count;
   NSCalendarDate *date;
   NSNumber *dateValue;
+  BOOL isAllDay;
   unsigned int offset;
 
+  isAllDay = [[theRecord objectForKey: @"c_isallday"] boolValue];
   record = [[theRecord mutableCopy] autorelease];
   for (count = 0; count < 2; count++)
     {
@@ -631,7 +715,7 @@ static NSNumber *sharedYes = nil;
 	  if (date)
 	    {
 	      [date setTimeZone: timeZone];
-	      if ([[theRecord objectForKey: @"c_isallday"] boolValue])
+              if (isAllDay)
 		{
 		  // Since there's no timezone associated to all-day events,
 		  // their time must be adjusted for the user's timezone.
@@ -710,6 +794,15 @@ static NSNumber *sharedYes = nil;
   [record setObject: date forKey: @"startDate"];
   dateSecs = [NSNumber numberWithInt: [date timeIntervalSince1970]];
   [record setObject: dateSecs forKey: @"c_startdate"];
+
+  if ([[record valueForKey: @"c_isallday"] boolValue])
+    {
+      // Refer to all-day recurrence id by their GMT-based start date
+      date = [theCycle startDate];
+      secondsOffsetFromGMT = (int) [[date timeZone] secondsFromGMTForDate: date];
+      date = [date dateByAddingYears: 0 months: 0 days: 0 hours: 0 minutes: 0 seconds: secondsOffsetFromGMT];
+      dateSecs = [NSNumber numberWithInt: [date timeIntervalSince1970]];
+    }
   [record setObject: dateSecs forKey: @"c_recurrence_id"];
 
   date = [theCycle endDate];
@@ -773,18 +866,23 @@ static NSNumber *sharedYes = nil;
 firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
 		       fromRow: (NSDictionary *) row
 		      forRange: (NGCalendarDateRange *) dateRange
-                  withTimeZone: (NSTimeZone *) tz
+                      withTimeZone: (NSTimeZone *) tz
 		       toArray: (NSMutableArray *) ma
 {
-  NSCalendarDate *startDate, *recurrenceId;
+  NSCalendarDate *recurrenceId;
   NSMutableDictionary *newRecord;
   NSDictionary *oldRecord;
   NGCalendarDateRange *newRecordRange;
-  NSComparisonResult compare;
   int recordIndex, secondsOffsetFromGMT;
 
   newRecord = nil;
   recurrenceId = [component recurrenceId];
+
+  if (!recurrenceId)
+    {
+      [self errorWithFormat: @"ignored component with an empty EXCEPTION-ID"];
+      return;
+    }
   
   if (tz)
     {
@@ -794,40 +892,32 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
       secondsOffsetFromGMT = [tz secondsFromGMTForDate: recurrenceId];
       recurrenceId = (NSCalendarDate *) [recurrenceId dateByAddingYears:0 months:0 days:0 hours:0 minutes:0
                                                                 seconds:-secondsOffsetFromGMT];
+      [recurrenceId setTimeZone: tz];
     }
 
-  compare = [[dateRange startDate] compare: recurrenceId];
-  if ((compare == NSOrderedAscending || compare == NSOrderedSame) &&
-      [[dateRange endDate] compare: recurrenceId] == NSOrderedDescending)
+  if ([dateRange containsDate: [component startDate]] ||
+      [dateRange containsDate: [component endDate]])
     {
       recordIndex = [self _indexOfRecordMatchingDate: recurrenceId
 					     inArray: ma];
       if (recordIndex > -1)
 	{
-	  startDate = [component startDate];
-	  if ([dateRange containsDate: startDate])
-	    {
-	      newRecord = [self fixupRecord: [component quickRecord]];
-	      [newRecord setObject: [NSNumber numberWithInt: 1]
-			    forKey: @"c_iscycle"];
-	      oldRecord = [ma objectAtIndex: recordIndex];
-	      [newRecord setObject: [oldRecord objectForKey: @"c_recurrence_id"]
-			    forKey: @"c_recurrence_id"];
-//              [newRecord setObject: [NSNumber numberWithInt: [recurrenceId timeIntervalSince1970]]
-//			    forKey: @"c_recurrence_id"];
+          newRecord = [self fixupRecord: [component quickRecord]];
+          [newRecord setObject: [NSNumber numberWithInt: 1]
+                        forKey: @"c_iscycle"];
+          oldRecord = [ma objectAtIndex: recordIndex];
+          [newRecord setObject: [oldRecord objectForKey: @"c_recurrence_id"]
+                        forKey: @"c_recurrence_id"];
 
-	      // The first instance date is added to the dictionary so it can
-	      // be used by UIxCalListingActions to compute the DST offset.
-	      [newRecord setObject: [fir startDate] forKey: @"cycleStartDate"];
+          // The first instance date is added to the dictionary so it can
+          // be used by UIxCalListingActions to compute the DST offset.
+          [newRecord setObject: [fir startDate] forKey: @"cycleStartDate"];
 	      
-	      // We identified the record as an exception.
-	      [newRecord setObject: [NSNumber numberWithInt: 1]
-			    forKey: @"isException"];
-	      
-	      [ma replaceObjectAtIndex: recordIndex withObject: newRecord];
-	    }
-	  else
-	    [ma removeObjectAtIndex: recordIndex];
+          // We identified the record as an exception.
+          [newRecord setObject: [NSNumber numberWithInt: 1]
+                        forKey: @"isException"];
+
+          [ma replaceObjectAtIndex: recordIndex withObject: newRecord];
 	}
       else
 	[self errorWithFormat:
@@ -927,7 +1017,9 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
   rules = [cycleinfo objectForKey: @"rules"];
   exRules = [cycleinfo objectForKey: @"exRules"];
   exDates = [cycleinfo objectForKey: @"exDates"];
-  eventTimeZone = allDayTimeZone = tz = nil;
+  eventTimeZone = nil;
+  allDayTimeZone = nil;
+  tz = nil;
 
   row = [self fixupRecord: theRecord];
   [row removeObjectForKey: @"c_cycleinfo"];
@@ -945,14 +1037,7 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
 	      // Retrieve the range of the first/master event
 	      component = [components objectAtIndex: 0];
               dtstart = (iCalDateTime *) [component uniqueChildWithTag: @"dtstart"];
-              firstStartDate = [[[[dtstart valuesForKey: @""]
-                                   lastObject]
-                                  lastObject]
-                                 asCalendarDate];
-              firstEndDate = [firstStartDate addTimeInterval: [component occurenceInterval]];
-              
-              firstRange = [NGCalendarDateRange calendarDateRangeWithStartDate: firstStartDate
-                                                                       endDate: firstEndDate];
+              firstRange = [component firstOccurenceRange]; // ignores timezone
 
               eventTimeZone = [dtstart timeZone];
               if (eventTimeZone)
@@ -984,7 +1069,9 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
                     }
                 }
 
-              tz = eventTimeZone? eventTimeZone : allDayTimeZone;
+#warning this code is ugly: we should not mix objects with different types as\
+  it reduces readability
+              tz = eventTimeZone ? eventTimeZone : allDayTimeZone;
               if (tz)
                 {
                   // Adjust the exception dates
@@ -1394,7 +1481,7 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
   [filter setObject: textMatch forKey: propName];
 }
 
-- (NSDictionary *) _parseCalendarFilter: (DOMElement *) filterElement
+- (NSDictionary *) _parseCalendarFilter: (id <DOMElement>) filterElement
 {
   NSMutableDictionary *filterData;
   id <DOMElement> parentNode;
@@ -1449,10 +1536,10 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
   return rc;
 }
 
-- (NSArray *) _parseCalendarFilters: (DOMElement *) parentNode
+- (NSArray *) _parseCalendarFilters: (id <DOMElement>) parentNode
 {
   id <DOMNodeList> children;
-  DOMElement *element;
+  id <DOMElement>element;
   NSMutableArray *filters;
   NSDictionary *filter;
   unsigned int count, max;
@@ -1707,7 +1794,7 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
 {
   WOResponse *r;
   id <DOMDocument> document;
-  DOMElement *documentElement, *propElement;
+  id <DOMElement> documentElement, propElement;
 
   r = [context response];
   [r prepareDAVResponse];
@@ -1715,9 +1802,9 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
                 @" xmlns:C=\"urn:ietf:params:xml:ns:caldav\">"];
 
   document = [[context request] contentAsDOMDocument];
-  documentElement = (DOMElement *) [document documentElement];
-  propElement = [documentElement firstElementWithTag: @"prop"
-                                         inNamespace: XMLNS_WEBDAV];
+  documentElement = (id <DOMElement>) [document documentElement];
+  propElement = [(NGDOMNodeWithChildren *) documentElement
+                    firstElementWithTag: @"prop" inNamespace: XMLNS_WEBDAV];
 
   [self _appendComponentProperties: [self parseDAVRequestedProperties: propElement]
                    matchingFilters: [self _parseCalendarFilters: documentElement]
@@ -2172,33 +2259,101 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
 
 - (NSString *) davCalendarShowAlarms
 {
-  NSString *boolean;
-
-  if ([self showCalendarAlarms])
-    boolean = @"true";
-  else
-    boolean = @"false";
-
-  return boolean;
+  return [self davBooleanForResult: [self showCalendarAlarms]];
 }
 
 - (NSException *) setDavCalendarShowAlarms: (id) newBoolean
 {
   NSException *error;
 
-  error = nil;
-
-  if ([newBoolean isEqualToString: @"true"]
-      || [newBoolean isEqualToString: @"1"])
-    [self setShowCalendarAlarms: YES];
-  else if ([newBoolean isEqualToString: @"false"]
-           || [newBoolean isEqualToString: @"0"])
-    [self setShowCalendarAlarms: NO];
+  if ([self isValidDAVBoolean: newBoolean])
+    {
+      [self setShowCalendarAlarms: [self resultForDAVBoolean: newBoolean]];
+      error = nil;
+    }
   else
     error = [NSException exceptionWithHTTPStatus: 400
                                           reason: @"Bad boolean value."];
 
   return error;
+}
+
+- (NSString *) davNotifyOnPersonalModifications
+{
+  return [self davBooleanForResult: [self notifyOnPersonalModifications]];
+}
+
+- (NSException *) setDavNotifyOnPersonalModifications: (NSString *) newBoolean
+{
+  NSException *error;
+
+  if ([self isValidDAVBoolean: newBoolean])
+    {
+      [self setNotifyOnPersonalModifications:
+              [self resultForDAVBoolean: newBoolean]];
+      error = nil;
+    }
+  else
+    error = [NSException exceptionWithHTTPStatus: 400
+                                          reason: @"Bad boolean value."];
+
+  return error;
+}
+
+- (NSString *) davNotifyOnExternalModifications
+{
+  return [self davBooleanForResult: [self notifyOnExternalModifications]];
+}
+
+- (NSException *) setDavNotifyOnExternalModifications: (NSString *) newBoolean
+{
+  NSException *error;
+
+  if ([self isValidDAVBoolean: newBoolean])
+    {
+      [self setNotifyOnExternalModifications:
+              [self resultForDAVBoolean: newBoolean]];
+      error = nil;
+    }
+  else
+    error = [NSException exceptionWithHTTPStatus: 400
+                                          reason: @"Bad boolean value."];
+
+  return error;
+}
+
+- (NSString *) davNotifyUserOnPersonalModifications
+{
+  return [self davBooleanForResult: [self notifyUserOnPersonalModifications]];
+}
+
+- (NSException *) setDavNotifyUserOnPersonalModifications: (NSString *) newBoolean
+{
+  NSException *error;
+
+  if ([self isValidDAVBoolean: newBoolean])
+    {
+      [self setNotifyUserOnPersonalModifications:
+              [self resultForDAVBoolean: newBoolean]];
+      error = nil;
+    }
+  else
+    error = [NSException exceptionWithHTTPStatus: 400
+                                          reason: @"Bad boolean value."];
+
+  return error;
+}
+
+- (NSString *) davNotifiedUserOnPersonalModifications
+{
+  return [self notifiedUserOnPersonalModifications];
+}
+
+- (NSException *) setDavNotifiedUserOnPersonalModifications: (NSString *) theUser
+{
+  [self setNotifiedUserOnPersonalModifications: theUser];
+
+  return nil;
 }
 
 /* vevent UID handling */
@@ -2730,11 +2885,26 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
                       timezone: (iCalTimeZone *) timezone
 {
   SOGoAppointmentObject *object;
-  NSString *uid;
   NSMutableString *content;
+  NSString *uid;
 
   uid =  [self globallyUniqueObjectId];
   [event setUid: uid];
+
+  // We first look if there's an event with the same UID in our calendar. If not,
+  // let's reuse what is in the event, otherwise generate a new GUID and use it.
+  uid = [event uid];
+
+  object = [self lookupName: uid
+                  inContext: context
+                    acquire: NO];
+ 
+  if (object && ![object isKindOfClass: [NSException class]])
+    {
+      uid = [self globallyUniqueObjectId];
+      [event setUid: uid];
+    }
+
   object = [SOGoAppointmentObject objectWithName: uid
                                     inContainer: self];
   [object setIsNew: YES];
@@ -2762,9 +2932,10 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
   iCalTimeZone *timezone;
   iCalCalendar *masterCalendar;
   iCalEvent *event;
+  NSAutoreleasePool *pool;
 
   int imported, count, i;
-  
+
   imported = 0;
 
   if (calendar)
@@ -2788,8 +2959,17 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
       // [components addObjectsFromArray: [calendar journals]];
       // [components addObjectsFromArray: [calendar freeBusys]];
       count = [components count];
+
+      pool = [[NSAutoreleasePool alloc] init];
+
       for (i = 0; i < count; i++)
         {
+          if (i % 10 == 0)
+            {
+              DESTROY(pool);
+              pool = [[NSAutoreleasePool alloc] init];
+            }
+          
           timezone = nil;
           element = [components objectAtIndex: i];
           // Use the timezone of the start date.
@@ -2799,7 +2979,42 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
               tzId = [startDate value: 0 ofAttribute: @"tzid"];
               if ([tzId length])
                 timezone = [timezones valueForKey: tzId];
-              if ([element isKindOfClass: [iCalEvent class]])
+	      else
+		{
+		  // If the start date is a "floating time", let's use the user's timezone
+		  // during the import for both the start and end dates.
+		  NSString *s;
+		  
+		  s = [[startDate valuesAtIndex: 0 forKey: @""] objectAtIndex: 0];
+		  
+		  if ([element isKindOfClass: iCalEventK] &&
+		      ![(iCalEvent *)element isAllDay] &&
+		      ![s hasSuffix: @"Z"] &&
+		      ![s hasSuffix: @"z"])
+		    {
+		      iCalDateTime *endDate;
+		      int delta;
+		      
+		      timezone = [iCalTimeZone timeZoneForName: [[[self->context activeUser] userDefaults] timeZoneName]];
+		      [calendar addTimeZone: timezone];
+	
+		      delta = [[timezone periodForDate: [startDate dateTime]] secondsOffsetFromGMT];
+		      event = (iCalEvent *)element;
+		  
+		      [event setStartDate: [[event startDate] dateByAddingYears: 0  months: 0  days: 0  hours: 0  minutes: 0  seconds: -delta]];
+		      [startDate setTimeZone: timezone];
+
+		      endDate = (iCalDateTime *) [element uniqueChildWithTag: @"dtend"];
+		      
+		      if (endDate)
+			{
+			  [event setEndDate: [[event endDate] dateByAddingYears: 0  months: 0  days: 0  hours: 0  minutes: 0  seconds: -delta]];
+			  [endDate setTimeZone: timezone];
+			}
+		    }
+		}
+	      
+              if ([element isKindOfClass: iCalEventK])
                 {
                   event = (iCalEvent *)element;
                   if (![event hasEndDate] && ![event hasDuration])
@@ -2834,7 +3049,7 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
                                                                    acquire: NO];
                           if (master)
                             {
-                              // Associate the occurrence to the master event
+                              // Associate the occurrence to the master event and skip the actual import process
                               masterCalendar = [master calendar: NO secure: NO];
                               [masterCalendar addToEvents: event];
                               if (timezone)
@@ -2856,6 +3071,8 @@ firstInstanceCalendarDateRange: (NGCalendarDateRange *) fir
                       forKey: originalUid];
             }
         }
+      
+      DESTROY(pool);
     }
   
   return imported;

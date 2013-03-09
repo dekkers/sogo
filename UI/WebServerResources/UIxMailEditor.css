@@ -1,21 +1,11 @@
 /* CSS for compose panel */
 
 DIV#leftPanel
-{ position: absolute;
-  top: 52px;
-  left: 0px;
-  width: 15em;
-  bottom: 0px;
-  overflow: hidden; }
+{ top: 52px; }
 
 DIV#rightPanel
-{ position: absolute;
-  top: 48px;
-  left: 0em;
-  right: 0px;
-  bottom: 0px;
-  margin-left: 5px;
-  overflow: hidden; }
+{ top: 48px;
+  left: 0em; }
 
 DIV#hiddenDragHandle
 { cursor: e-resize;
@@ -157,11 +147,12 @@ UL#attachments
   margin: 0px;
   padding: 0px;
   height: 100%;
-  border-bottom: 1px solid #fff;
-  border-right: 1px solid #fff;
-  border-top: 2px solid #222;
-  border-left: 2px solid #222;
-  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  border-right: 1px solid #eee;
+  border-top: 1px solid #222;
+  border-left: 1px solid #222;
+  background-color: #CCDDEC;
+  background-image: url("input_bg.gif");
   -moz-border-top-colors: #9c9a94 #000 transparent;
   -moz-border-left-colors: #9c9a94 #000 transparent;
   list-style-type: none;
@@ -200,7 +191,7 @@ DIV#contactsSearch LABEL
 SELECT#contactFolder
 { margin-bottom: 5px; }
 
-INPUT#searchValue
+INPUT[name="search"]
 { position: absolute;
   top: 6.2em;
   left: 5px;

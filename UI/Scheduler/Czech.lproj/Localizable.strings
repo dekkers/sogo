@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Neděle";
-"Monday" = "Pondělí";
-"Tuesday" = "Úterý";
-"Wednesday" = "Středa";
-"Thursday" = "Čtvrtek";
-"Friday" = "Pátek";
-"Saturday" = "Sobota";
 "DayOfTheMonth" = "DayOfTheMonth";
-
-"Sun" = "Ne";
-"Mon" = "Po";
-"Tue" = "Út";
-"Wed" = "St";
-"Thu" = "čt";
-"Fri" = "Pá";
-"Sat" = "So";
-
-"a2_Sunday" = "Ne";
-"a2_Monday" = "Po";
-"a2_Tuesday" = "Út";
-"a2_Wednesday" = "St";
-"a2_Thursday" = "Čt";
-"a2_Friday" = "Pá";
-"a2_Saturday" = "So";
-
 "dayLabelFormat" = "%d/%m/%Y";
 "today" = "Dnes";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "tento měsíc";
-
-"January" = "Leden";
-"February" = "Únor";
-"March" = "Březen";
-"April" = "Duben";
-"May" = "Květen";
-"June" = "Červen";
-"July" = "Červenec";
-"August" = "Srpen";
-"September" = "Září";
-"October" = "Říjen";
-"November" = "Listopad";
-"December" = "Prosinec";
-
-"a3_January" = "Leden";
-"a3_February" = "Únor";
-"a3_March" = "Březen";
-"a3_April" = "Duben";
-"a3_May" = "Květen";
-"a3_June" = "Červen";
-"a3_July" = "Červenec";
-"a3_August" = "Srpen";
-"a3_September" = "Září";
-"a3_October" = "Říjen";
-"a3_November" = "Listopad";
-"a3_December" = "Prosinec";
 
 "Previous Month" = "Předchozí měsíc";
 "Next Month" = "Následující měsíc";
@@ -110,6 +60,7 @@
 "Import Events" = "Importovat události";
 "Select an iCalendar file (.ics)." = "Zvolte iCalendar soubor (*.ics).";
 "Upload" = "Nahrát";
+"Uploading" = "Nahrávání";
 "Publish Calendar..." = "Publikovat kalendář...";
 "Reload Remote Calendars" = "Aktualizovat vzdálené kalendáře";
 "Properties" = "Vlastnosti";
@@ -131,7 +82,8 @@
 
 /* acls */
 
-"User rights for:" = "Uživatelská práva pro:";
+"Access rights to" = "Přístupová práva k";
+"For user" = "Pro uživatele";
 
 "Any Authenticated User" = "Každý ověřený uživatel";
 "Public Access" = "Veřejný přístup";
@@ -159,7 +111,6 @@
 
 /* Button Titles */
 
-"New Calendar..." = "Nový kalendář...";
 "Subscribe to a Calendar..." = "Odebírat kalendář...";
 "Remove the selected Calendar" = "Smazat zvolený kalendář";
 
@@ -429,6 +380,7 @@ validate_invalid_startdate = "Chybné datum začátku!";
 validate_invalid_enddate   = "Chybné datum konce!";
 validate_endbeforestart    = "Zadané datum konce je před začátkem události.";
 
+"Events" = "Události";
 "Tasks" = "Úkoly";
 "Show completed tasks" = "Zobrazit dokončené úkoly";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "Zadané datum konce je před začátkem události.
 "Title" = "Název";
 "Start" = "Začátek";
 "End" = "Konec";
+"Due Date" = "Datum splnění";
 "Location" = "Místo";
+
 "(Private Event)" = "(Soukromá událost)";
 
 vevent_class0 = "(Veřejná událost)";
 vevent_class1 = "(Soukromá událost)";
 vevent_class2 = "(Důvěrná událost)";
+
+"Priority" = "Priorita";
+"Category" = "Kategorie";
 
 vtodo_class0 = "(Veřejný úkol)";
 vtodo_class1 = "(Soukromý úkol)";
@@ -535,6 +492,11 @@ vtodo_class2 = "(Důvěrný úkol)";
 "Display" = "Zobrazení";
 "Show alarms" = "Zobrazit připomenutí";
 "Show tasks" = "Zobrazit úkoly";
+
+"Notifications" = "Připomenutí";
+"Receive a mail when I modify my calendar" = "Obdržet zprávu když upravím svůj kalendář";
+"Receive a mail when someone else modifies my calendar" = "Obdržet zprávu když někdo jiný upraví můj kalendář";
+"When I modify my calendar, send a mail to:" = "Když upravím svůj kalendář, poslat zprávu na:";
 
 "Links to this Calendar" = "Odkazy na tento kalendář";
 "Authenticated User Access" = "Přístup pro ověřené uživatele";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Důvěrný úkol)";
 "Delete Task" = "Smazat úkol";
 "Delete Event" = "Smazat událost";
 "Copy event to my calendar" = "Copy event to my calendar";
+"View Raw Source" = "Zobrazit surový zdroj";
 
 "Subscribe to a web calendar..." = "Odebírat vzdálený kalendář na webu";
 "URL of the Calendar" = "Adresa vzdáleného kalendáře na webu";

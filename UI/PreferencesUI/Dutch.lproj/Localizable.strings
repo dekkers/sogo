@@ -85,7 +85,7 @@
 
 "timeFmt_0" = "%H:%M";
 "timeFmt_1" = "%H.%M";
-"timeFmt_2" = "%H h. %M";
+"timeFmt_2" = "";
 "timeFmt_3" = "";
 "timeFmt_4" = "";
 
@@ -106,7 +106,7 @@
 "firstWeekOfYear_FirstFullWeek" = "Eerste volledige week";
 
 /* Default Calendar */
-"Default calendar :" = "Standaard agenda";
+"Default calendar :" = "Standaardagenda:";
 "selectedCalendar" = "Geselecteerde agenda";
 "personalCalendar" = "Persoonlijke agenda";
 "firstCalendar" = "Eerste ingeschakelde agenda";
@@ -141,30 +141,40 @@
 "messageforward_inline" = "In het bericht";
 "messageforward_attached" = "Als bijlage";
 
-"replyplacement_above" = "Reactie boven orgineletekst";
-"replyplacement_below" = "Reactie onder orgineletekst";
+"When replying to a message:" = "Bij het beantwoorden van een bericht:";
+"replyplacement_above" = "Reactie boven orginele tekst";
+"replyplacement_below" = "Reactie onder orginele tekst";
 "And place my signature" = "Ondertekening plaatsen";
 "signatureplacement_above" = "boven orginele tekst";
 "signatureplacement_below" = "onder orginele tekst";
 "Compose messages in" = "Berichten opstellen in";
 "composemessagestype_html" = "HTML";
 "composemessagestype_text" = "Platte tekst";
+"Display remote inline images" = "Externe afbeeldingen tonen";
+"displayremoteinlineimages_never" = "Nooit";
+"displayremoteinlineimages_always" = "Altijd";
 
 /* IMAP Accounts */
 "New Mail Account" = "Nieuw mailaccount";
 
 "Server Name:" = "Servernaam:";
 "Port:" = "Poort:";
+"Encryption:" = "Encryptie:";
+"None" = "Geen";
 "User Name:" = "Gebruikersnaam:";
 "Password:" = "Wachtwoord:";
 
 "Full Name:" = "Naam:";
 "Email:" = "E-mail:";
+"Reply To Email:" = "Antwoord op e-mail:";
 "Signature:" = "Ondertekening:";
 "(Click to create)" = "(Klik om op te stellen)";
 
 "Signature" = "Ondertekening";
 "Please enter your signature below:" = "Stel de ondertekening hieronder op:";
+
+"Please specify a valid sender address." = "Geef alstublieft een geldig afzendadres aan.";
+"Please specify a valid reply-to address." = "Geef alstublieft een geldig antwoordadres aan.";
 
 /* Additional Parameters */
 "Additional Parameters" = "Extra Parameters";
@@ -192,21 +202,25 @@
 "Last" = "Laatst gebruikt";
 "Default module :" = "Standaardmodule:";
 
-"Language :" = "Taal :";
+"Language :" = "Taal:";
 "choose" = "Kies...";
 "Catalan" = "Català";
 "Czech" = "Česky";
 "Danish" = "Dansk (Danmark)";
 "Dutch" = "Nederlands";
 "English" = "English";
+"Finnish" = "Suomi";
 "French" = "Français";
 "German" = "Deutsch";
 "Hungarian" = "Magyar";
+"Icelandic" = "Íslenska";
 "Italian" = "Italiano";
 "NorwegianBokmal" = "Norsk Bokmål";
 "NorwegianNynorsk" = "Norsk Nynorsk";
 "BrazilianPortuguese" = "Português brasileiro";
+"Polish" = "Polski";
 "Russian" = "Русский";
+"Slovak" = "Slovensky";
 "SpanishSpain" = "Español (España)";
 "SpanishArgentina" = "Español (Argentinië)";
 "Swedish" = "Svenska";
@@ -238,6 +252,7 @@
 "match any of the following rules:" = "met een van de volgende regels overeenkomen:";
 "match all messages" = "met alle berichten overeenkomen";
 "Perform these actions:" = "Doe de volgende bewerkingen:";
+"Untitled Filter" = "Naamloos filter";
 
 "Subject" = "Onderwerp";
 "From" = "van";
@@ -278,6 +293,7 @@
 "Label 4" = "Label 4";
 "Label 5" = "Label 5";
 
+"The password was changed successfully." = "Het wachtwoord is met succes veranderd.";
 "Password must not be empty." = "Wachtwoord mag niet leeg zijn.";
 "The passwords do not match. Please try again." = "De wachtwoorden komen niet overeen. Probeer opnieuw.";
 "Password change failed" = "Wachtwoord wijzigen mislukt";

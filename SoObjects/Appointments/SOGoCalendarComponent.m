@@ -1,9 +1,10 @@
 /* SOGoCalendarComponent.m - this file is part of SOGo
  *
- * Copyright (C) 2006-2011 Inverse inc.
+ * Copyright (C) 2006-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Francis Lachapelle <flachapelle@inverse.ca>
+ *         Ludovic Marcotte <lmarcotte@inverse.ca>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,45 +270,11 @@
   return iCalString;
 }
 
-static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
-                                    NSString *recID)
+- (iCalRepeatableEntityObject *) lookupOccurrence: (NSString *) recID
 {
-  unsigned int seconds, recSeconds;
-  
-  seconds = [recID intValue];
-  recSeconds = [[occurence recurrenceId] timeIntervalSince1970];
+  [self subclassResponsibility: _cmd];
 
-  return (seconds == recSeconds);
-}
-
-- (iCalRepeatableEntityObject *) lookupOccurence: (NSString *) recID
-{
-  iCalRepeatableEntityObject *component, *occurence, *currentOccurence;
-  NSArray *occurences;
-  unsigned int count, max;
-
-  occurence = nil;
-
-  component = [self component: NO secure: NO];
-  if ([component hasRecurrenceRules])
-    {
-      occurences = [[self calendar: NO secure: NO] allObjects];
-      max = [occurences count];
-      count = 1; // skip master event
-      while (!occurence && count < max)
-	{
-	  currentOccurence = [occurences objectAtIndex: count];
-	  if (_occurenceHasID (currentOccurence, recID))
-	    occurence = currentOccurence;
-	  else
-	    count++;
-	}
-    }
-  else if (_occurenceHasID (component, recID))
-    /* The "master" event could be that occurrence. */
-    occurence = component;
-
-  return occurence;
+  return nil;
 }
 
 - (SOGoComponentOccurence *) occurence: (iCalRepeatableEntityObject *) component
@@ -323,6 +290,7 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   iCalCalendar *calendar;
   NSCalendarDate *recDate;
   NSTimeZone *timeZone;
+  iCalPerson *organizer;
 
   recDate = [NSCalendarDate dateWithTimeIntervalSince1970: [recID intValue]];
   masterOccurence = [self component: NO secure: NO];
@@ -332,11 +300,17 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   if ([masterOccurence doesOccurOnDate: recDate])
     {
       newOccurence = [masterOccurence mutableCopy];
+      organizer = [masterOccurence organizer];
       [newOccurence autorelease];
       [newOccurence removeAllRecurrenceRules];
       [newOccurence removeAllExceptionRules];
       [newOccurence removeAllExceptionDates];
-      [newOccurence setOrganizer: nil];
+
+      // It is important to set the organizer as some DAV clients (iCal
+      // and Thunderbird 10/Lightning 1.2) will prompt the event "edition"
+      // dialog instead of the event "invitation" (for accept/decline/tentative)
+      // if the organizer isn't found in a specific recurrence
+      [newOccurence setOrganizer: organizer];
       [newOccurence setRecurrenceId: recDate];
 
       calendar = [masterOccurence parent];
@@ -397,7 +371,7 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
       else if ([lookupName hasPrefix: @"occurence"])
 	{
 	  recID = [lookupName substringFromIndex: 9];
-	  occurence = [self lookupOccurence: recID];
+	  occurence = [self lookupOccurrence: recID];
 	  if (occurence)
             isNewOccurence = NO;
           else
@@ -516,19 +490,23 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 //
 // Returs "YES" if a a group was decomposed among attendees.
 //
+// It can also return yes if an attendee was found in the list
+// matching the organizer. In which case, it was removed.
+//
 - (BOOL) expandGroupsInEvent: (iCalEvent *) theEvent
 {
-  NSMutableArray *allAttendees;
-  NSEnumerator *enumerator;
   NSString *organizerEmail, *domain;
+  NSMutableArray *allAttendees;
   iCalPerson *currentAttendee;
+  NSEnumerator *enumerator;
   SOGoGroup *group;
-  BOOL doesIncludeGroup;
+
+  BOOL eventWasModified;
   unsigned int i;
 
   domain = [[context activeUser] domain];
   organizerEmail = [[theEvent organizer] rfc822Email];
-  doesIncludeGroup = NO;
+  eventWasModified = NO;
   allAttendees = [NSMutableArray arrayWithArray: [theEvent attendees]];
   enumerator = [[theEvent attendees] objectEnumerator];
   while ((currentAttendee = [enumerator nextObject]))
@@ -548,7 +526,7 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 	  for (i = 0; i < [members count]; i++)
 	    {
 	      user = [members objectAtIndex: i];
-	      doesIncludeGroup = YES;
+	      eventWasModified = YES;
 
 	      // If the organizer is part of the group, we skip it from
 	      // the addition to the attendees' list
@@ -565,12 +543,23 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 		[allAttendees addObject: person];
 	    }
 	}
-    }
+      else
+	{
+	  // We remove any attendees matching the organizer. Apple iCal will do that when
+	  // you invite someone. It'll add the organizer in the attendee list, which will
+	  // confuse itself!
+	  if ([[currentAttendee rfc822Email] caseInsensitiveCompare: organizerEmail] == NSOrderedSame)
+	    {
+	      [allAttendees removeObject: currentAttendee];
+	      eventWasModified = YES;
+	    }
+	}
+    } // while (currentAttendee ...
 
-  if (doesIncludeGroup)
+  if (eventWasModified)
     [theEvent setAttendees: allAttendees];
   
-  return doesIncludeGroup;
+  return eventWasModified;
 }
 
 - (void) _updateRecurrenceIDsWithEvent: (iCalRepeatableEntityObject*) newEvent
@@ -664,15 +653,16 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
     }
 }
 
-- (NSException *) saveComponent: (iCalRepeatableEntityObject *) newObject
+- (NSException *) saveCalendar: (iCalCalendar *) newCalendar
 {
-  NSString *newiCalString;
-
-  newiCalString = [[newObject parent] versitString];
-
-  [self saveContentString: newiCalString];
+  [self saveContentString: [newCalendar versitString]];
 
   return nil;
+}
+
+- (NSException *) saveComponent: (iCalRepeatableEntityObject *) newObject
+{
+  return [self saveCalendar: [newObject parent]];
 }
 
 /* raw saving */
@@ -735,7 +725,8 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   header = [NSString stringWithFormat: @"text/calendar; method=%@;"
                      @" charset=\"%@\"",
                      [(iCalCalendar *) [object parent] method], charset];
-  headerMap = [NGMutableHashMap hashMapWithCapacity: 1];
+  headerMap = [NGMutableHashMap hashMapWithCapacity: 3];
+  [headerMap setObject: @"urn:content-classes:calendarmessage"  forKey: @"Content-Class"];
   [headerMap setObject: header forKey: @"content-type"];
   [headerMap setObject: @"quoted-printable"
                 forKey: @"content-transfer-encoding"];
@@ -745,6 +736,9 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   return bodyPart;
 }
 
+//
+//
+//
 - (void) sendEMailUsingTemplateNamed: (NSString *) newPageName
 			   forObject: (iCalRepeatableEntityObject *) object
 		      previousObject: (iCalRepeatableEntityObject *) previousObject
@@ -774,17 +768,16 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
       if (count)
 	{
 	  /* sender */
-	  //currentUser = [context activeUser];
-	  //shortSenderEmail = [[currentUser allEmails] objectAtIndex: 0];
-	  //  senderEmail = [NSString stringWithFormat: @"%@ <%@>",
-	  //			  [ownerUser cn], shortSenderEmail];
 	  shortSenderEmail = [[object organizer] rfc822Email];
-	  if (![shortSenderEmail length])
-	    shortSenderEmail = [[previousObject organizer] rfc822Email];
-	  senderEmail = [[object organizer] mailAddress];
-// 	  NSLog (@"sending '%@' from %@",
-// 		 [(iCalCalendar *) [object parent] method], senderEmail);
-	  /* generate iCalString once */
+	  if ([shortSenderEmail length])
+            {
+              senderEmail = [[object organizer] mailAddress];
+            }
+          else
+            {
+              shortSenderEmail = [[previousObject organizer] rfc822Email];
+              senderEmail = [[previousObject organizer] mailAddress];
+            }
 
           /* calendar part */
           eventBodyPart = [self _bodyPartForICalObject: object];
@@ -793,7 +786,6 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 	  app = [WOApplication application];
 
 	  /* generate dynamic message content */
-
 	  for (i = 0; i < count; i++)
 	    {
 	      attendee = [attendees objectAtIndex: i];
@@ -854,8 +846,8 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 
 		  /* text part */
 		  headerMap = [NGMutableHashMap hashMapWithCapacity: 1];
-		  [headerMap setObject: @"text/plain; charset=\"UTF-8\""
-			     forKey: @"content-type"];
+		  [headerMap setObject: @"text/html; charset=utf-8"
+				forKey: @"content-type"];
 		  bodyPart = [NGMimeBodyPart bodyPartWithHeader: headerMap];
 		  [bodyPart setBody: [text dataUsingEncoding: NSUTF8StringEncoding]];
 
@@ -871,9 +863,12 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 
 		  /* send the damn thing */
 		  [[SOGoMailer mailerWithDomainDefaults: dd]
-		    sendMimePart: msg
-		    toRecipients: [NSArray arrayWithObject: email]
-		    sender: shortSenderEmail];
+		           sendMimePart: msg
+                           toRecipients: [NSArray arrayWithObject: email]
+                                 sender: shortSenderEmail
+                      withAuthenticator: [self
+                                           authenticatorInContext: context]
+                              inContext: context];
 		}
 	    }
 	}
@@ -936,8 +931,8 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
 
       /* text part */
       headerMap = [NGMutableHashMap hashMapWithCapacity: 1];
-      [headerMap setObject: @"text/plain; charset=utf-8"
-		 forKey: @"content-type"];
+      [headerMap setObject: @"text/html; charset=utf-8"
+		    forKey: @"content-type"];
       bodyPart = [NGMimeBodyPart bodyPartWithHeader: headerMap];
       bodyData = [[p getBody] dataUsingEncoding: NSUTF8StringEncoding];
       [bodyPart setBody: bodyData];
@@ -955,12 +950,17 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
       /* send the damn thing */
       email = [recipient rfc822Email];
       [[SOGoMailer mailerWithDomainDefaults: dd]
-	sendMimePart: msg
-	toRecipients: [NSArray arrayWithObject: email]
-	sender: [attendee rfc822Email]];
+	       sendMimePart: msg
+               toRecipients: [NSArray arrayWithObject: email]
+                     sender: [attendee rfc822Email]
+          withAuthenticator: [self authenticatorInContext: context]
+                  inContext: context];
     }
 }
 
+//
+//
+//
 - (void) sendResponseToOrganizer: (iCalRepeatableEntityObject *) newComponent
 			    from: (SOGoUser *) from
 {
@@ -979,76 +979,124 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
     }
 }
 
-- (void) sendReceiptEmailUsingTemplateNamed: (NSString *) template
-                                  forObject: (iCalRepeatableEntityObject *) object
-                                         to: (NSArray *) attendees
+//
+//
+//
+- (void) sendReceiptEmailForObject: (iCalRepeatableEntityObject *) object
+		    addedAttendees: (NSArray *) theAddedAttendees
+		  deletedAttendees: (NSArray *) theDeletedAttendees
+		  updatedAttendees: (NSArray *) theUpdatedAttendees
+			 operation: (SOGoEventOperation) theOperation
 {
-  NSString *pageName, *mailDate, *mailText, *fullSenderEmail, *senderEmail;
-  SOGoAptMailReceipt *page;
+  NSString *calendarName, *mailDate, *mailText, *fullSenderEmail, *senderEmail, *fullRecipientEmail, *recipientEmail;
+  NSDictionary *senderIdentity, *recipientIdentity;
+  id <SOGoAuthenticator> authenticator;
+  SOGoUser *currentUser, *ownerUser;
   NGMutableHashMap *headerMap;
-  NGMimeMessage *msg;
-  SOGoUser *currentUser;
+  SOGoAptMailReceipt *page;
   SOGoDomainDefaults *dd;
-  NSDictionary *identity;
+  NGMimeMessage *msg;
 
+  calendarName = [[self container] displayName];
+
+  // We must handle three cases here:
+  // - Receive a mail when I modify my calendar
+  // - Receive a mail when someone else modifies my calendar
+  // - When I modify my calendar, send a mail to: <foo@bar.com>
+
+  // We first built the template that we'll slightly adjust for our three use-cases
+  page = [[WOApplication application] pageWithName: @"SOGoAptMailReceipt"
+					 inContext: context];
+  [page setApt: (iCalEvent *) object];
+  [page setAddedAttendees: theAddedAttendees];
+  [page setDeletedAttendees: theDeletedAttendees];
+  [page setUpdatedAttendees: theUpdatedAttendees];
+  [page setOperation: theOperation];
+  [page setCalendarName: calendarName];
+  
   currentUser = [context activeUser];
-  if ([[currentUser userDefaults] appointmentSendEMailReceipts]
-      && [attendees count])
-    {
-      pageName = [NSString stringWithFormat: @"SOGoAptMail%@Receipt",
-                           template];
-      page = [[WOApplication application] pageWithName: pageName
-                                             inContext: context];
-      [page setApt: (iCalEvent *) object];
-      [page setRecipients: attendees];
+  senderIdentity = [currentUser primaryIdentity];
 
-      identity = [currentUser primaryIdentity];
+  dd = [currentUser domainDefaults];
 
-      /* construct message */
 #warning SOPE is just plain stupid here - if you change the case of keys, it will break the encoding of fields
-      headerMap = [NGMutableHashMap hashMapWithCapacity: 5];
-      fullSenderEmail = [identity keysWithFormat: @"%{fullName} <%{email}>"];
-      [headerMap setObject: fullSenderEmail forKey: @"from"];
-      [headerMap setObject: fullSenderEmail forKey: @"to"];
-      mailDate = [[NSCalendarDate date] rfc822DateString];
-      [headerMap setObject: mailDate forKey: @"date"];
-      [headerMap setObject: [page getSubject] forKey: @"subject"];
-      [headerMap setObject: @"1.0" forKey: @"MIME-Version"];
-      [headerMap setObject: @"text/plain; charset=utf-8"
-                    forKey: @"content-type"];
-      msg = [NGMimeMessage messageWithHeader: headerMap];
+  headerMap = [NGMutableHashMap hashMapWithCapacity: 5];
+  
+  // Sender can vary, base on whom modifies the actual event (owner vs. someone else)
+  senderEmail = [senderIdentity objectForKey: @"email"];
+  fullSenderEmail = [senderIdentity keysWithFormat: @"%{fullName} <%{email}>"];
+  [headerMap setObject: fullSenderEmail forKey: @"from"];
 
-      /* text part */
-      mailText = [page getBody];
-      [msg setBody: [mailText dataUsingEncoding: NSUTF8StringEncoding]];
+  // Recipient is fixed, which is the calendar owner
+  ownerUser = [SOGoUser userWithLogin: self->owner];
+  recipientIdentity = [ownerUser primaryIdentity];
+  recipientEmail = [recipientIdentity objectForKey: @"email"];
+  fullRecipientEmail = [recipientIdentity keysWithFormat: @"%{fullName} <%{email}>"];
+  
+  [headerMap setObject: fullRecipientEmail forKey: @"to"];
 
-      /* send the damn thing */
-      senderEmail = [identity objectForKey: @"email"];
-      dd = [currentUser domainDefaults];
+  mailDate = [[NSCalendarDate date] rfc822DateString];
+  [headerMap setObject: mailDate forKey: @"date"];
+  [headerMap setObject: [page getSubject] forKey: @"subject"];
+  [headerMap setObject: @"1.0" forKey: @"MIME-Version"];
+  [headerMap setObject: @"text/html; charset=utf-8"
+		forKey: @"content-type"];
+  msg = [NGMimeMessage messageWithHeader: headerMap];
+  
+  /* text part */
+  mailText = [page getBody];
+  [msg setBody: [mailText dataUsingEncoding: NSUTF8StringEncoding]];
+
+  authenticator = [self authenticatorInContext: context];
+  
+  if ([self->owner isEqualToString: [currentUser login]])
+    {
+      if ([[self container] notifyOnPersonalModifications])
+	{
+	  [[SOGoMailer mailerWithDomainDefaults: dd]
+		    sendMimePart: msg
+		    toRecipients: [NSArray arrayWithObject: recipientEmail]
+                          sender: senderEmail
+               withAuthenticator: authenticator
+                       inContext: context];
+	}
+      
+      if ([[self container] notifyUserOnPersonalModifications])
+	{
+	  id o;
+
+	  o = [headerMap objectForKey: @"to"];
+	  recipientEmail = [[self container] notifiedUserOnPersonalModifications];
+	  [headerMap setObject: recipientEmail forKey: @"to"];
+	  
+	  [[SOGoMailer mailerWithDomainDefaults: dd]
+		    sendMimePart: msg
+		    toRecipients: [NSArray arrayWithObject: recipientEmail]
+                          sender: senderEmail
+               withAuthenticator: authenticator
+                       inContext: context];
+
+	  [headerMap setObject: o forKey: @"to"];
+	}
+    }
+
+      
+  if ([[self container] notifyOnExternalModifications] &&
+      ![self->owner isEqualToString: [currentUser login]])
+    {
       [[SOGoMailer mailerWithDomainDefaults: dd]
 		    sendMimePart: msg
-		    toRecipients: [NSArray arrayWithObject: senderEmail]
-                          sender: senderEmail];
+		    toRecipients: [NSArray arrayWithObject: recipientEmail]
+                          sender: senderEmail
+               withAuthenticator: authenticator
+                       inContext: context];
     }
+
 }
 
-// - (BOOL) isOrganizerOrOwner: (SOGoUser *) user
-// {
-//   BOOL isOrganizerOrOwner;
-//   iCalRepeatableEntityObject *component;
-//   NSString *organizerEmail;
-
-//   component = [self component: NO];
-//   organizerEmail = [[component organizer] rfc822Email];
-//   if (component && [organizerEmail length] > 0)
-//     isOrganizerOrOwner = [user hasEmail: organizerEmail];
-//   else
-//     isOrganizerOrOwner
-//       = [[container ownerInContext: context] isEqualToString: [user login]];
-
-//   return isOrganizerOrOwner;
-// }
-
+//
+//
+//
 - (iCalPerson *) findParticipantWithUID: (NSString *) uid
 {
   iCalEntityObject *component;
@@ -1060,6 +1108,9 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   return [component userAsAttendee: user];
 }
 
+//
+//
+//
 - (iCalPerson *) iCalPersonWithUID: (NSString *) uid
 {
   iCalPerson *person;
@@ -1077,6 +1128,9 @@ static inline BOOL _occurenceHasID (iCalRepeatableEntityObject *occurence,
   return person;
 }
 
+//
+//
+//
 - (NSArray *) getUIDsForICalPersons: (NSArray *) iCalPersons
 {
   iCalPerson *currentPerson;

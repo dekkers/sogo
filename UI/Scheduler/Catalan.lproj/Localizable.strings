@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Diumenge";
-"Monday" = "Dilluns";
-"Tuesday" = "Dimarts";
-"Wednesday" = "Dimecres";
-"Thursday" = "Dijous";
-"Friday" = "Divendres";
-"Saturday" = "Dissabte";
 "DayOfTheMonth" = "Dia del mes";
-
-"Sun" = "dg";
-"Mon" = "dl";
-"Tue" = "dm";
-"Wed" = "dc";
-"Thu" = "dj";
-"Fri" = "dv";
-"Sat" = "ds";
-
-"a2_Sunday" = "dg";
-"a2_Monday" = "dl";
-"a2_Tuesday" = "dm";
-"a2_Wednesday" = "dc";
-"a2_Thursday" = "dj";
-"a2_Friday" = "dv";
-"a2_Saturday" = "ds";
-
 "dayLabelFormat" = "%d/%m/%Y";
 "today" = "Avui";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "Aquest mes";
-
-"January" = "gener";
-"February" = "febrer";
-"March" = "març";
-"April" = "abril";
-"May" = "maig";
-"June" = "juny";
-"July" = "juliol";
-"August" = "agost";
-"September" = "setembre";
-"October" = "octubre";
-"November" = "novembre";
-"December" = "desembre";
-
-"a3_January" = "gener";
-"a3_February" = "febrer";
-"a3_March" = "març";
-"a3_April" = "abril";
-"a3_May" = "maig";
-"a3_June" = "juny";
-"a3_July" = "juliol";
-"a3_August" = "agost";
-"a3_September" = "setembre";
-"a3_October" = "octubre";
-"a3_November" = "novembre";
-"a3_December" = "desembre";
 
 "Previous Month" = "Mes anterior";
 "Next Month" = "Mes següent";
@@ -110,6 +60,7 @@
 "Import Events" = "Importar esdeveniments";
 "Select an iCalendar file (.ics)." = "Seleccionar un fitxer iCalendar (.ics).";
 "Upload" = "Carregar";
+"Uploading" = "carregant ";
 "Publish Calendar..." = "Publicar calendari...";
 "Reload Remote Calendars" = "Actualitzar calendaris remots";
 "Properties" = "Propietats";
@@ -429,6 +380,7 @@ validate_invalid_startdate = "Data de començament incorrecta";
 validate_invalid_enddate   = "Data d'acabament incorrecta";
 validate_endbeforestart    = "La data/hora de començament és posterior a la d'acabament.";
 
+"Events" = "Esdeveniments";
 "Tasks" = "Tasques";
 "Show completed tasks" = "Mostrar tasques completades";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "La data/hora de començament és posterior a la d'
 "Title" = "Títol";
 "Start" = "Inici";
 "End" = "Final";
+"Due Date" = "Data límit";
 "Location" = "Lloc";
+
 "(Private Event)" = "(Esdeveniment privat)";
 
 vevent_class0 = "(Esdeveniment públic)";
 vevent_class1 = "(Esdeveniment privat)";
 vevent_class2 = "(Esdeveniment confidencial)";
+
+"Priority" = "Prioritat";
+"Category" = "Categoria";
 
 vtodo_class0 = "(Tasca pública)";
 vtodo_class1 = "(Tasca privada)";
@@ -535,6 +492,11 @@ vtodo_class2 = "(Tasca confidencial)";
 "Display" = "Mostra";
 "Show alarms" = "Mostra les alarmes";
 "Show tasks" = "Mostra les tasques";
+
+"Notifications" = "Notificacions";
+"Receive a mail when I modify my calendar" = "Rebre un correu de notificació quan modifique el meu calendari";
+"Receive a mail when someone else modifies my calendar" = "Rebre un correu de notificació quan altra persona modifique el meu calendari ";
+"When I modify my calendar, send a mail to:" = "Quan modifique el meu calendari, enviar un correu a: ";
 
 "Links to this Calendar" = "Enllaços a aquest calendari";
 "Authenticated User Access" = "Accés autenticat";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Tasca confidencial)";
 "Delete Task" = "Esborrar tasca";
 "Delete Event" = "Esorrar esdeveniment";
 "Copy event to my calendar" = "Copiar l'esdeveniment al meu calendari";
+"View Raw Source" = "Veure l'original";
 
 "Subscribe to a web calendar..." = "Subscriure's a un calendari web...";
 "URL of the Calendar" = "URL del calendari";

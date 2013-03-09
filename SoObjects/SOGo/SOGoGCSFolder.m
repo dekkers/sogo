@@ -1,7 +1,7 @@
 /* SOGoGCSFolder.m - this file is part of SOGo
  *
  * Copyright (C) 2004-2005 SKYRIX Software AG
- * Copyright (C) 2006-2010 Inverse inc.
+ * Copyright (C) 2006-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -645,7 +645,8 @@ static NSArray *childRecordFields = nil;
             {
               qualifier = [[EOAndQualifier alloc] initWithQualifiers:
                                                     aclQualifier,
-                                                  componentQualifier];
+                                                  componentQualifier,
+                                                  nil];
               [qualifier autorelease];
             }
           else
@@ -695,15 +696,6 @@ static NSArray *childRecordFields = nil;
     record = nil;
 
   return record;
-}
-
-- (BOOL) nameExistsInFolder: (NSString *) objectName
-{
-  NSDictionary *record;
-
-  record = [self _recordForObjectName: objectName];
-
-  return (record != nil);
 }
 
 - (void) removeChildRecordWithName: (NSString *) childName
@@ -843,7 +835,7 @@ static NSArray *childRecordFields = nil;
 - (BOOL) subscribeUserOrGroup: (NSString *) theIdentifier
 		     reallyDo: (BOOL) reallyDo
 {
-  NSMutableDictionary *moduleSettings;
+  NSMutableDictionary *moduleSettings, *folderShowAlarms;
   NSMutableArray *folderSubscription;
   NSString *subscriptionPointer;
   NSMutableArray *allUsers;
@@ -894,6 +886,8 @@ static NSArray *childRecordFields = nil;
       folderSubscription
         = [moduleSettings objectForKey: @"SubscribedFolders"];
       subscriptionPointer = [self folderReference];
+      
+      folderShowAlarms = [moduleSettings objectForKey: @"FolderShowAlarms"];
 
       if (reallyDo)
         {
@@ -905,14 +899,26 @@ static NSArray *childRecordFields = nil;
                                  forKey: @"SubscribedFolders"];
             }
 
+	  if (!(folderShowAlarms
+                && [folderShowAlarms isKindOfClass: [NSMutableDictionary class]]))
+            {
+              folderShowAlarms = [NSMutableDictionary dictionary];
+              [moduleSettings setObject: folderShowAlarms
+                                 forKey: @"FolderShowAlarms"];
+            }
+
           [folderSubscription addObjectUniquely: subscriptionPointer];
+	  
+	  // By default, we disable alarms on subscribed calendars
+	  [folderShowAlarms setObject: [NSNumber numberWithBool: NO]
+			       forKey: subscriptionPointer];
         }
       else
         {
           [self removeFolderSettings: moduleSettings
                        withReference: subscriptionPointer];
           [folderSubscription removeObject: subscriptionPointer];
-        
+	  [folderShowAlarms removeObjectForKey: subscriptionPointer];
 	}
 
       [us synchronize];
@@ -1049,12 +1055,12 @@ static NSArray *childRecordFields = nil;
   return davSQLFields;
 }
 
-- (NSDictionary *) parseDAVRequestedProperties: (DOMElement *) propElement
+- (NSDictionary *) parseDAVRequestedProperties: (id <DOMElement>) propElement
 {
   NSArray *properties;
   NSDictionary *sqlFieldsTable;
 
-  properties = [propElement flatPropertyNameOfSubElements];
+  properties = [(NGDOMNodeWithChildren *) propElement flatPropertyNameOfSubElements];
   sqlFieldsTable = [self _davSQLFieldsForProperties: properties];
 
   return sqlFieldsTable;
@@ -1339,7 +1345,7 @@ static NSArray *childRecordFields = nil;
 {
   WOResponse *r;
   id <DOMDocument> document;
-  DOMElement *documentElement, *propElement;
+  id <DOMElement> documentElement, propElement;
   NSString *syncToken;
   NSDictionary *properties;
   NSArray *records;
@@ -1348,13 +1354,16 @@ static NSArray *childRecordFields = nil;
   [r prepareDAVResponse];
 
   document = [[context request] contentAsDOMDocument];
-  documentElement = (DOMElement *) [document documentElement];
-  syncToken = [[documentElement firstElementWithTag: @"sync-token"
-                                        inNamespace: XMLNS_WEBDAV] textValue];
+  documentElement = [document documentElement];
+  syncToken = [(NGDOMNode *)
+                [(NGDOMNodeWithChildren *)
+                 documentElement firstElementWithTag: @"sync-token"
+                                         inNamespace: XMLNS_WEBDAV]
+                textValue];
   if ([self _isValidSyncToken: syncToken])
     {
-      propElement = [documentElement firstElementWithTag: @"prop"
-                                             inNamespace: XMLNS_WEBDAV];
+      propElement = [(NGDOMNodeWithChildren *) documentElement
+                       firstElementWithTag: @"prop" inNamespace: XMLNS_WEBDAV];
       properties = [self parseDAVRequestedProperties: propElement];
       records = [self _fetchSyncTokenFields: properties
                           matchingSyncToken: syncToken];
@@ -1550,7 +1559,7 @@ static NSArray *childRecordFields = nil;
 
   // If we still don't have ACLs defined for this particular resource,
   // let's go get the domain defaults, if any.
-  if (![acls count])
+  if (![acls count] && ![uid isEqualToString: @"anonymous"])
     {
       dd = [[context activeUser] domainDefaults];
       module = [container nameInContainer];
@@ -2097,7 +2106,7 @@ static NSArray *childRecordFields = nil;
 {
   WOResponse *r;
   id <DOMDocument> document;
-  DOMElement *documentElement, *propElement;
+  id <DOMElement> documentElement, propElement;
 
   r = [context response];
   [r prepareDAVResponse];
@@ -2105,9 +2114,10 @@ static NSArray *childRecordFields = nil;
        [NSString stringWithFormat: @"<D:multistatus xmlns:D=\"DAV:\""
                          @" xmlns:C=\"%@\">", namespace]];
   document = [[queryContext request] contentAsDOMDocument];
-  documentElement = (DOMElement *) [document documentElement];
-  propElement = [documentElement firstElementWithTag: @"prop"
-                                         inNamespace: @"DAV:"];
+  documentElement = [document documentElement];
+  propElement = [(NGDOMNodeWithChildren *)
+                  documentElement firstElementWithTag: @"prop"
+                                          inNamespace: @"DAV:"];
   [self _appendComponentProperties: [self parseDAVRequestedProperties: propElement]
                       matchingURLs: [documentElement getElementsByTagName: @"href"]
                         toResponse: r];

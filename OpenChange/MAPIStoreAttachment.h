@@ -1,6 +1,6 @@
 /* MAPIStoreAttachment.h - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -26,7 +26,7 @@
 #import "MAPIStoreObject.h"
 
 @class NSData;
-@class MAPIStoreAttachmentMessage;
+@class MAPIStoreEmbeddedMessage;
 
 @interface MAPIStoreAttachment : MAPIStoreObject
 {
@@ -36,17 +36,23 @@
 - (void) setAID: (uint32_t) newAID;
 - (uint32_t) AID;
 
-- (int) openEmbeddedMessage: (MAPIStoreAttachmentMessage **) messagePtr
+- (int) openEmbeddedMessage: (MAPIStoreEmbeddedMessage **) messagePtr
                     withMID: (uint64_t *) mid
            withMAPIStoreMsg: (struct mapistore_message **) mapistoreMsgPtr
                    inMemCtx: (TALLOC_CTX *) memCtx;
+- (int) createEmbeddedMessage: (MAPIStoreEmbeddedMessage **) messagePtr
+             withMAPIStoreMsg: (struct mapistore_message **) mapistoreMsgPtr
+                     inMemCtx: (TALLOC_CTX *) memCtx;
 
 /* helpers */
 - (NSData *) mimeAttachTag;
 
+/* move & copy operations */
+- (void) copyToAttachment: (MAPIStoreAttachment *) newAttachment  inMemCtx: (TALLOC_CTX *) memCtx;
+
 /* subclasses */
-- (MAPIStoreAttachmentMessage *) openEmbeddedMessage;
-- (MAPIStoreAttachmentMessage *) createEmbeddedMessage;
+- (MAPIStoreEmbeddedMessage *) openEmbeddedMessage;
+- (MAPIStoreEmbeddedMessage *) createEmbeddedMessage;
 
 @end
 

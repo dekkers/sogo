@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2007-2011 Inverse inc.
+  Copyright (C) 2007-2013 Inverse inc.
   Copyright (C) 2004-2005 SKYRIX Software AG
 
   This file is part of SOGo
@@ -28,6 +28,8 @@
 
 #import <NGObjWeb/NSException+HTTP.h>
 #import <NGObjWeb/WOContext+SoObjects.h>
+#import <NGObjWeb/WOResponse.h>
+#import <NGExtensions/NGCalendarDateRange.h>
 #import <NGExtensions/NSNull+misc.h>
 #import <NGExtensions/NSObject+Logs.h>
 #import <NGCards/iCalCalendar.h>
@@ -35,11 +37,13 @@
 #import <NGCards/iCalEvent.h>
 #import <NGCards/iCalEventChanges.h>
 #import <NGCards/iCalPerson.h>
+#import <NGCards/iCalRecurrenceCalculator.h>
 #import <NGCards/NSCalendarDate+NGCards.h>
 #import <SaxObjC/XMLNamespaces.h>
 
-#import <SOPE/NGCards/NSString+NGCards.h>
+#import <NGCards/NSString+NGCards.h>
 
+#import <SOGo/SOGoConstants.h>
 #import <SOGo/SOGoUserManager.h>
 #import <SOGo/NSArray+Utilities.h>
 #import <SOGo/NSDictionary+Utilities.h>
@@ -52,6 +56,7 @@
 #import <SOGo/SOGoWebDAVValue.h>
 #import <SOGo/WORequest+SOGo.h>
 
+#import "iCalCalendar+SOGo.h"
 #import "iCalEventChanges+SOGo.h"
 #import "iCalEntityObject+SOGo.h"
 #import "iCalPerson+SOGo.h"
@@ -102,7 +107,7 @@
                timeIntervalSinceDate: firstDate];
   if ([newOccurence isAllDay])
     {
-      nbrDays = ((float) abs (interval) / 86400) + 1;
+      nbrDays = ((float) abs (interval) / 86400);
       [newOccurence setAllDayWithStartDate: date
                                   duration: nbrDays];
     }
@@ -118,6 +123,12 @@
     }
   
   return newOccurence;
+}
+
+- (iCalRepeatableEntityObject *) lookupOccurrence: (NSString *) recID
+
+{
+  return [[self calendar: NO secure: NO] eventWithRecurrenceID: recID];
 }
 
 - (SOGoAppointmentObject *) _lookupEvent: (NSString *) eventUID
@@ -177,54 +188,37 @@
       SOGoAppointmentObject *attendeeObject;
       NSString *iCalString;
 
+      iCalString = nil;
       attendeeObject = [self _lookupEvent: [theEvent uid] forUID: theUID];
       
       // We must add an occurence to a non-existing event. We have
       // to handle this with care, as in the postCalDAVEventRequestTo:from:
       if ([attendeeObject isNew] && [theEvent recurrenceId])
 	{
-	  SOGoAppointmentObject *ownerObject;
-	  NSArray *attendees;
 	  iCalEvent *ownerEvent;
 	  iCalPerson *person;
 	  SOGoUser *user;
-	  BOOL found;
-	  int i;
 
 	  // We check if the attendee that was added to a single occurence is
 	  // present in the master component. If not, we add it with a participation
 	  // status set to "DECLINED".
-	  user = [SOGoUser userWithLogin: theUID];
-	  person = [iCalPerson elementWithTag: @"attendee"];
-	  [person setCn: [user cn]];
-	  [person setEmail: [[user allEmails] objectAtIndex: 0]];
-	  [person setParticipationStatus: iCalPersonPartStatDeclined];
-	  [person setRsvp: @"TRUE"];
-	  [person setRole: @"REQ-PARTICIPANT"];
-	  
-	  ownerObject = [self _lookupEvent: [theEvent uid] forUID: theOwner];
 	  ownerEvent = [[[theEvent parent] events] objectAtIndex: 0];
-	  attendees = [ownerEvent attendees];
-	  found = NO;
-	  
-	  for (i = 0; i < [attendees count]; i++)
-	    {
-	      if ([[attendees objectAtIndex: i] hasSameEmailAddress: person])
-		{
-		  found = YES;
-		  break;
-		}
-	    }
-	  
-	  if (!found)
+	  user = [SOGoUser userWithLogin: theUID];
+	  if (![ownerEvent userAsAttendee: user])
 	    {
 	      // Update the master event in the owner's calendar with the
 	      // status of the new attendee set as "DECLINED".
+              person = [iCalPerson elementWithTag: @"attendee"];
+              [person setCn: [user cn]];
+              [person setEmail: [[user allEmails] objectAtIndex: 0]];
+              [person setParticipationStatus: iCalPersonPartStatDeclined];
+              [person setRsvp: @"TRUE"];
+              [person setRole: @"REQ-PARTICIPANT"];
 	      [ownerEvent addToAttendees: person];
-	      iCalString = [[ownerEvent parent] versitString];
-	      [ownerObject saveContentString: iCalString];
+
+              iCalString = [[ownerEvent parent] versitString];
 	    }
-	} 
+	}
       else
 	{
 	  // TODO : if [theEvent recurrenceId], only update this occurrence
@@ -238,7 +232,8 @@
 	}
       
       // Save the event in the attendee's calendar
-      [attendeeObject saveContentString: iCalString];
+      if (iCalString)
+        [attendeeObject saveContentString: iCalString];
     }
 }
 
@@ -266,7 +261,7 @@
       folder = [[SOGoUser userWithLogin: theUID]
                  personalCalendarFolderInContext: context];
       object = [folder lookupName: nameInContainer
-		       inContext: context acquire: NO];
+                        inContext: context acquire: NO];
       if (![object isKindOfClass: [NSException class]])
 	{
 	  if (recurrenceId == nil)
@@ -415,8 +410,6 @@
                      previousObject: oldEvent
                         toAttendees: updateAttendees
                            withType: @"calendar:invitation-update"];
-  [self sendReceiptEmailUsingTemplateNamed: @"Update"
-                                 forObject: newEvent to: updateAttendees];
 }
 
 //
@@ -441,7 +434,7 @@
   NSEnumerator *enumerator;
   NSString *currentUID;
   SOGoUser *user;
- 
+
   enumerator = [theAttendees objectEnumerator];
   
   while ((currentAttendee = [enumerator nextObject]))
@@ -456,8 +449,12 @@
 	    {
 	      SOGoAppointmentFolder *folder;
 	      NSCalendarDate *start, *end;
+	      NGCalendarDateRange *range;
 	      NSMutableArray *fbInfo;
-	      int i;
+	      NSArray *allOccurences;
+  
+	      BOOL must_delete;
+  	      int i, j;
 
 	      // We get the start/end date for our conflict range. If the event to be added is recurring, we
 	      // check for at least a year to start with.
@@ -486,12 +483,50 @@
 	      // We first remove any occurences in the freebusy that corresponds to the
 	      // current event. We do this to avoid raising a conflict if we move a 1 hour
 	      // meeting from 12:00-13:00 to 12:15-13:15. We would overlap on ourself otherwise.
+	      //
+	      // We must also check here for repetitive events that don't overlap our event.
+	      // We remove all events that don't overlap. The events here are already
+	      // decomposed.
+	      //
+	      if ([theEvent isRecurrent])
+		allOccurences = [theEvent recurrenceRangesWithinCalendarDateRange: [NGCalendarDateRange calendarDateRangeWithStartDate: start
+															       endDate: end]
+						   firstInstanceCalendarDateRange: [NGCalendarDateRange calendarDateRangeWithStartDate: [theEvent startDate]
+															       endDate: [theEvent endDate]]];
+	      else
+		allOccurences = nil;
+	      
 	      for (i = [fbInfo count]-1; i >= 0; i--)
 		{
+		  range = [NGCalendarDateRange calendarDateRangeWithStartDate: [[fbInfo objectAtIndex: i] objectForKey: @"startDate"]
+								      endDate: [[fbInfo objectAtIndex: i] objectForKey: @"endDate"]];
+		  
 		  if ([[[fbInfo objectAtIndex: i] objectForKey: @"c_uid"] compare: [theEvent uid]] == NSOrderedSame)
-		    [fbInfo removeObjectAtIndex: i];
-		}
+		    {
+		      [fbInfo removeObjectAtIndex: i];
+		      continue;
+		    }
+		  
+		  // No need to check if the event isn't recurrent here as it's handled correctly
+		  // when we compute the "end" date.
+		  if ([allOccurences count])
+		    {
+		      must_delete = YES;
 
+		      for (j = 0; j < [allOccurences count]; j++)
+			{
+			  if ([range doesIntersectWithDateRange: [allOccurences objectAtIndex: j]])
+			    {
+			      must_delete = NO;
+			      break;
+			    }
+			}
+		      
+		      if (must_delete)
+			[fbInfo removeObjectAtIndex: i];
+		    }
+		}
+	      
 	      if ([fbInfo count])
 		{
 		  // If we always force the auto-accept if numberOfSimultaneousBookings == 0 (ie., no limit
@@ -499,7 +534,10 @@
 		  // overlapping events
 		  if ([user numberOfSimultaneousBookings] == 0 ||
 		      [user numberOfSimultaneousBookings] > [fbInfo count])
-		    [currentAttendee setParticipationStatus: iCalPersonPartStatAccepted];
+                    {
+                      [[currentAttendee attributes] removeObjectForKey: @"RSVP"];
+                      [currentAttendee setParticipationStatus: iCalPersonPartStatAccepted];
+                    }
 		  else
 		    {
 		      iCalCalendar *calendar;
@@ -529,6 +567,7 @@
 		  // No conflict, we auto-accept. We do this for resources automatically if no
 		  // double-booking is observed. If it's not the desired behavior, just don't
 		  // set the resource as one!
+                  [[currentAttendee attributes] removeObjectForKey: @"RSVP"];
 		  [currentAttendee setParticipationStatus: iCalPersonPartStatAccepted];
 		}
   	    }
@@ -595,7 +634,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	    [e addToAttendees: [theAttendees objectAtIndex: j]];
 	  else
 	    [e removeFromAttendees: [theAttendees objectAtIndex: j]];
-      
+
     }
 }
 		       
@@ -605,9 +644,13 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 - (NSException *) _handleUpdatedEvent: (iCalEvent *) newEvent
 		         fromOldEvent: (iCalEvent *) oldEvent
 {
+  NSArray *addedAttendees, *deletedAttendees, *updatedAttendees;
   iCalEventChanges *changes;
-  NSArray *attendees;
   NSException *ex;
+
+  addedAttendees = nil;
+  deletedAttendees = nil;
+  updatedAttendees = nil;
 
   changes = [newEvent getChangesRelativeToEvent: oldEvent];
   if ([changes sequenceShouldBeIncreased])
@@ -620,36 +663,34 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
         changes = [newEvent getChangesRelativeToEvent: oldEvent];
     }
 
-  attendees = [changes deletedAttendees];
+  deletedAttendees = [changes deletedAttendees];
 
   // We delete the attendees in all exception occurences, if
   // the attendees were removed from the master event.
-  [self _addOrDeleteAttendees: attendees
+  [self _addOrDeleteAttendees: deletedAttendees
 	inRecurrenceExceptionsForEvent: newEvent
 			  add: NO];
 
-  if ([attendees count])
+  if ([deletedAttendees count])
     {
-      [self _handleRemovedUsers: attendees
+      [self _handleRemovedUsers: deletedAttendees
                withRecurrenceId: [newEvent recurrenceId]];
       [self sendEMailUsingTemplateNamed: @"Deletion"
                               forObject: [newEvent itipEntryWithMethod: @"cancel"]
                          previousObject: oldEvent
-                            toAttendees: attendees
+                            toAttendees: deletedAttendees
                                withType: @"calendar:cancellation"];
-      [self sendReceiptEmailUsingTemplateNamed: @"Deletion"
-                                     forObject: newEvent to: attendees];
     }
   
   if ((ex = [self _handleResourcesConflicts: [newEvent attendees]
                                    forEvent: newEvent]))
     return ex;
 
-  attendees = [changes insertedAttendees];
+  addedAttendees = [changes insertedAttendees];
 
   // We insert the attendees in all exception occurences, if
   // the attendees were added to the master event.
-  [self _addOrDeleteAttendees: attendees
+  [self _addOrDeleteAttendees: addedAttendees
 	inRecurrenceExceptionsForEvent: newEvent
 			  add: YES];
 
@@ -659,7 +700,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
       // Update attendees calendars and send them an update
       // notification by email
       [self _handleSequenceUpdateInEvent: newEvent
-                       ignoringAttendees: attendees
+                       ignoringAttendees: addedAttendees
                             fromOldEvent: oldEvent];
     }
   else
@@ -671,7 +712,6 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	  NSEnumerator *enumerator;
 	  iCalPerson *currentAttendee;
 	  NSString *currentUID;
-          NSArray *updatedAttendees;
 	  
           updatedAttendees = [newEvent attendees];
 	  enumerator = [updatedAttendees objectEnumerator];
@@ -683,27 +723,27 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 				 forUID: currentUID
 				  owner: owner];
 	    }
-
-          [self sendReceiptEmailUsingTemplateNamed: @"Update"
-                                         forObject: newEvent
-                                                to: updatedAttendees];
 	}
     }
 
-  if ([attendees count])
+  if ([addedAttendees count])
     {
       // Send an invitation to new attendees
-      if ((ex = [self _handleAddedUsers: attendees fromEvent: newEvent]))
+      if ((ex = [self _handleAddedUsers: addedAttendees fromEvent: newEvent]))
 	return ex;
       
       [self sendEMailUsingTemplateNamed: @"Invitation"
                               forObject: [newEvent itipEntryWithMethod: @"request"]
                          previousObject: oldEvent
-                            toAttendees: attendees
+                            toAttendees: addedAttendees
                                withType: @"calendar:invitation"];
-      [self sendReceiptEmailUsingTemplateNamed: @"Invitation"
-                                     forObject: newEvent to: attendees];
     }
+
+  [self sendReceiptEmailForObject: newEvent
+		   addedAttendees: addedAttendees
+		 deletedAttendees: deletedAttendees
+		 updatedAttendees: updatedAttendees
+			operation: EventUpdated];
 
   return nil;
 }
@@ -741,7 +781,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   SOGoUser *ownerUser;
   NSArray *attendees;
   NSException *ex;
-  
+
   [[newEvent parent] setMethod: @""];
   ownerUser = [SOGoUser userWithLogin: owner];
 
@@ -767,9 +807,13 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 			     previousObject: nil
 				toAttendees: attendees
                                    withType: @"calendar:invitation"];
-          [self sendReceiptEmailUsingTemplateNamed: @"Invitation"
-                                         forObject: newEvent to: attendees];
 	}
+
+      [self sendReceiptEmailForObject: newEvent
+		       addedAttendees: attendees
+		     deletedAttendees: nil
+		     updatedAttendees: nil
+			    operation: EventCreated];
     }
   else
     {
@@ -785,7 +829,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	  // If recurrenceId is defined, find the specified occurence
 	  // within the repeating vEvent.
 	  recurrenceTime = [NSString stringWithFormat: @"%f", [recurrenceId timeIntervalSince1970]];
-	  oldEvent = (iCalEvent*)[self lookupOccurence: recurrenceTime];
+	  oldEvent = (iCalEvent*)[self lookupOccurrence: recurrenceTime];
 	  if (oldEvent == nil)
 	    // If no occurence found, create one
 	    oldEvent = (iCalEvent *)[self newOccurenceWithID: recurrenceTime];
@@ -852,7 +896,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	  // If recurrenceId is defined, find the specified occurence
 	  // within the repeating vEvent.
 	  recurrenceTime = [NSString stringWithFormat: @"%f", [recurrenceId timeIntervalSince1970]];
-	  event = [eventObject lookupOccurence: recurrenceTime];
+	  event = [eventObject lookupOccurrence: recurrenceTime];
 	  
 	  if (event == nil)
 	    // If no occurence found, create one
@@ -920,6 +964,10 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
           [otherAttendee setDelegatedTo: [attendee delegatedTo]];
           [otherAttendee setDelegatedFrom: [attendee delegatedFrom]];
 
+          // Remove the RSVP attribute, as an action from the attendee
+          // was actually performed, and this confuses iCal (bug #1850)
+          [[otherAttendee attributes] removeObjectForKey: @"RSVP"];
+
 	  // If one has accepted / declined an invitation on behalf of
 	  // the attendee, we add the user to the SENT-BY attribute.
 	  if (b && ![[currentUser login] isEqualToString: [theOwnerUser login]])
@@ -951,7 +999,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 
 
 //
-// This method is invoked from the SOGo Web interface.
+// This method is invoked from the SOGo Web interface or from the DAV interface.
 //
 // - theOwnerUser is owner of the calendar where the attendee
 //   participation state has changed.
@@ -962,7 +1010,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 		     statusChange: (NSString *) newStatus
 			  inEvent: (iCalEvent *) event
 {
-  NSString *newContent, *currentStatus, *organizerUID;
+  NSString *currentStatus, *organizerUID;
   SOGoUser *ownerUser, *currentUser;
   NSException *ex;
 
@@ -1015,6 +1063,10 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
       || [currentStatus caseInsensitiveCompare: newStatus]
       != NSOrderedSame)
     {
+      NSMutableArray *delegates;
+      NSString *delegatedUID;
+
+      delegatedUID = nil;
       [attendee setPartStat: newStatus];
       
       // If one has accepted / declined an invitation on behalf of
@@ -1038,9 +1090,6 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	}
  
       [attendee setDelegatedTo: [delegate email]];
-
-      NSString *delegatedUID = nil;
-      NSMutableArray *delegates;
 
       if (removeDelegate)
 	{
@@ -1075,10 +1124,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 			     previousObject: nil
 				toAttendees: delegates
                                    withType: @"calendar:cancellation"];
-	  [self sendReceiptEmailUsingTemplateNamed: @"Deletion"
-					 forObject: event
-						to: delegates];
-	}
+	} // if (removeDelegate)
 
       if (addDelegate)
 	{
@@ -1097,29 +1143,17 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 			     previousObject: nil
 				toAttendees: delegates
                                    withType: @"calendar:invitation"];
-	  [self sendReceiptEmailUsingTemplateNamed: @"Invitation"
-					 forObject: event to: delegates];
-	}
+	} // if (addDelegate)
       
-      // We generate the updated iCalendar file and we save it in the database.
-      // We do this ONLY when using SOGo from the Web interface. Over DAV, it'll
-      // be handled directly in PUTAction:
-      if (![context request] || [[context request] handledByDefaultHandler])
-	{
-	  newContent = [[event parent] versitString];
-	  ex = [self saveContentString: newContent];
-	}
-
       // If the current user isn't the organizer of the event
       // that has just been updated, we update the event and
       // send a notification
       ownerUser = [SOGoUser userWithLogin: owner];
       if (!(ex || [event userIsOrganizer: ownerUser]))
 	{
-	  if ([[attendee rsvp] isEqualToString: @"true"]
-	      && [event isStillRelevant])
+	  if ([event isStillRelevant])
 	    [self sendResponseToOrganizer: event
-		  from: ownerUser];
+                                     from: ownerUser];
 	  
 	  organizerUID = [[event organizer] uid];
 
@@ -1280,66 +1314,80 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   ex = nil;
   delegatedUser = nil;
 
-  calendar = [self calendar: NO secure: NO];
-  if (calendar)
+  calendar = [[self calendar: NO secure: NO] mutableCopy];
+  [calendar autorelease];
+
+  if (_recurrenceId)
     {
-      if (_recurrenceId)
-	{
-	  // If _recurrenceId is defined, find the specified occurence
-	  // within the repeating vEvent.
-	  recurrenceTime = [NSString stringWithFormat: @"%f", [_recurrenceId timeIntervalSince1970]];
-	  event = (iCalEvent*)[self lookupOccurence: recurrenceTime];
-	  
-	  if (event == nil)
-	    // If no occurence found, create one
-	    event = (iCalEvent*)[self newOccurenceWithID: recurrenceTime];
-	}
-      else
-	// No specific occurence specified; return the first vEvent of
-	// the vCalendar.
-	event = (iCalEvent*)[calendar firstChildWithTag: [self componentTag]];
+      // If _recurrenceId is defined, find the specified occurence
+      // within the repeating vEvent.
+      recurrenceTime = [NSString stringWithFormat: @"%f", [_recurrenceId timeIntervalSince1970]];
+      event = (iCalEvent*)[self lookupOccurrence: recurrenceTime];
+      
+      if (event == nil)
+        // If no occurence found, create one
+        event = (iCalEvent*)[self newOccurenceWithID: recurrenceTime];
     }
+  else
+    // No specific occurence specified; return the first vEvent of
+    // the vCalendar.
+    event = (iCalEvent*)[calendar firstChildWithTag: [self componentTag]];
+  
   if (event)
     {
       // ownerUser will actually be the owner of the calendar
       // where the participation change on the event occurs. The particpation
       // change will be on the attendee corresponding to the ownerUser.
       ownerUser = [SOGoUser userWithLogin: owner];
-
+      
       attendee = [event userAsAttendee: ownerUser];
       if (attendee)
-	{
-	  if (delegate
-	      && ![[delegate email] isEqualToString: [attendee delegatedTo]])
-	    {
-	      delegatedUid = [delegate uid];
-	      if (delegatedUid)
-		delegatedUser = [SOGoUser userWithLogin: delegatedUid];
-	      if (delegatedUser != nil && [event userIsOrganizer: delegatedUser])
-		ex = [NSException exceptionWithHTTPStatus: 403
-						   reason: @"delegate is organizer"];		
-	      if ([event isAttendee: [[delegate email] rfc822Email]])
-		ex = [NSException exceptionWithHTTPStatus: 403
-						   reason: @"delegate is a attendee"];
-	      else if ([SOGoGroup groupWithEmail: [[delegate email] rfc822Email]
+        {
+          if (delegate
+              && ![[delegate email] isEqualToString: [attendee delegatedTo]])
+            {
+              delegatedUid = [delegate uid];
+              if (delegatedUid)
+                delegatedUser = [SOGoUser userWithLogin: delegatedUid];
+              if (delegatedUser != nil && [event userIsOrganizer: delegatedUser])
+                ex = [NSException exceptionWithHTTPStatus: 403
+                                                   reason: @"delegate is organizer"];		
+              if ([event isAttendee: [[delegate email] rfc822Email]])
+                ex = [NSException exceptionWithHTTPStatus: 403
+                                                   reason: @"delegate is a participant"];
+              else if ([SOGoGroup groupWithEmail: [[delegate email] rfc822Email]
                                         inDomain: [ownerUser domain]])
-		ex = [NSException exceptionWithHTTPStatus: 403
-						   reason: @"delegate is a group"];
-	    }
-	  if (ex == nil)
-	    ex = [self _handleAttendee: attendee
-			  withDelegate: delegate
-			     ownerUser: ownerUser
-			  statusChange: _status
-			       inEvent: event];
-	}
+                ex = [NSException exceptionWithHTTPStatus: 403
+                                                   reason: @"delegate is a group"];
+            }
+          if (ex == nil)
+            {
+              // Remove the RSVP attribute, as an action from the attendee
+              // was actually performed, and this confuses iCal (bug #1850)
+              [[attendee attributes] removeObjectForKey: @"RSVP"];
+              ex = [self _handleAttendee: attendee
+                            withDelegate: delegate
+                               ownerUser: ownerUser
+                            statusChange: _status
+                                 inEvent: event];
+            }
+          if (ex == nil)
+            {
+              // We generate the updated iCalendar file and we save it in
+              // the database. We do this ONLY when using SOGo from the
+              // Web interface. Over DAV, it'll be handled directly in
+              // PUTAction:
+              if (![context request] || [[context request] handledByDefaultHandler])
+                ex = [self saveContentString: [[event parent] versitString]];
+            }
+        }
       else
         ex = [NSException exceptionWithHTTPStatus: 404 // Not Found
-					   reason: @"user does not participate in this calendar event"];
+                                           reason: @"user does not participate in this calendar event"];
     }
   else
     ex = [NSException exceptionWithHTTPStatus: 500 // Server Error
-				       reason: @"unable to parse event record"];
+                                       reason: @"unable to parse event record"];
   
   return ex;
 }
@@ -1371,14 +1419,17 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 //
 - (void) prepareDeleteOccurence: (iCalEvent *) occurence
 {
-  iCalEvent *event;
   SOGoUser *ownerUser, *currentUser;
-  NSArray *attendees;
   NSCalendarDate *recurrenceId;
+  NSArray *attendees;
+  iCalEvent *event;
+  BOOL send_receipt;
+
   
   ownerUser = [SOGoUser userWithLogin: owner];
   event = [self component: NO secure: NO];
-  
+  send_receipt = YES;
+
   if (![self _shouldScheduleEvent: [event organizer]])
     return;
 
@@ -1413,16 +1464,23 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
                              previousObject: nil
                                 toAttendees: attendees
                                    withType: @"calendar:cancellation"];
-	  [self sendReceiptEmailUsingTemplateNamed: @"Deletion"
-		forObject: occurence
-		to: attendees];
 	}
     }
   else if ([occurence userIsAttendee: ownerUser])
-    // The current user deletes the occurence; let the organizer know that
-    // the user has declined this occurence.
-    [self changeParticipationStatus: @"DECLINED" withDelegate: nil
-	  forRecurrenceId: recurrenceId];
+    {
+      // The current user deletes the occurence; let the organizer know that
+      // the user has declined this occurence.
+      [self changeParticipationStatus: @"DECLINED" withDelegate: nil
+		      forRecurrenceId: recurrenceId];
+      send_receipt = NO;
+    }
+
+  if (send_receipt)
+    [self sendReceiptEmailForObject: event
+		     addedAttendees: nil
+		   deletedAttendees: nil
+		   updatedAttendees: nil
+			  operation: EventDeleted];
 }
 
 - (NSException *) prepareDelete
@@ -1465,11 +1523,9 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   return partStats;
 }
 
-#warning parseSingleFromSource is invoked far too many times: maybe we should use an additional ivar to store the new iCalendar
-- (void) _setupResponseCalendarInRequest: (WORequest *) rq
+- (iCalCalendar *) _setupResponseInRequestCalendar: (iCalCalendar *) rqCalendar
 {
-  iCalCalendar *calendar, *putCalendar;
-  NSData *newContent;
+  iCalCalendar *calendar;
   NSArray *keys;
   NSDictionary *partStats, *newPartStats;
   NSString *partStat, *key;
@@ -1481,8 +1537,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   max = [keys count];
   if (max > 0)
     {
-      putCalendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
-      newPartStats = [self _partStatsFromCalendar: putCalendar];
+      newPartStats = [self _partStatsFromCalendar: rqCalendar];
       if ([keys isEqualToArray: [newPartStats allKeys]])
         {
           for (count = 0; count < max; count++)
@@ -1494,36 +1549,24 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
         }
     }
 
-  newContent = [[calendar versitString]
-                         dataUsingEncoding: [rq contentEncoding]];
-  [rq setContent: newContent];
+  return calendar;
 }
 
-- (void) _adjustTransparencyInRequest: (WORequest *) rq
+- (void) _adjustTransparencyInRequestCalendar: (iCalCalendar *) rqCalendar
 {
-  iCalCalendar *calendar;
   NSArray *allEvents;
   iCalEvent *event;
   int i;
-  BOOL modified;
 
-  calendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
-  allEvents = [calendar events];
-  modified = NO;
-  
+  allEvents = [rqCalendar events];
   for (i = 0; i < [allEvents count]; i++)
     {
       event = [allEvents objectAtIndex: i];
-      
       if ([event isAllDay] && [event isOpaque])
 	{
 	  [event setTransparency: @"TRANSPARENT"];
-	  modified = YES;
-	}
+        }
     }
-  
-  if (modified)
-    [rq setContent: [[calendar versitString] dataUsingEncoding: [rq contentEncoding]]];
 }
 
 /**
@@ -1531,17 +1574,13 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
  * Currently only check if the events have an end date or a duration.
  * @param rq the HTTP PUT request
  */
-- (void) _adjustEventsInRequest: (WORequest *) rq
+- (void) _adjustEventsInRequestCalendar: (iCalCalendar *) rqCalendar
 {
-  iCalCalendar *calendar;
   NSArray *allEvents;
   iCalEvent *event;
   NSUInteger i;
-  BOOL modified;
 
-  calendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
-  allEvents = [calendar events];
-  modified = NO;
+  allEvents = [rqCalendar events];
 
   for (i = 0; i < [allEvents count]; i++)
     {
@@ -1554,28 +1593,16 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
             [event setDuration: @"P1D"];
           else
             [event setDuration: @"PT1H"];
-          
-          modified = YES;
-          [self errorWithFormat: @"Invalid event: no end date; setting duration to %@", [event duration]];
+          [self warnWithFormat: @"Invalid event: no end date; setting duration to %@", [event duration]];
         }
     }
-  
-  if (modified)
-    [rq setContent: [[calendar versitString] dataUsingEncoding: [rq contentEncoding]]];
 }
 
-- (void) _decomposeGroupsInRequest: (WORequest *) rq
+- (void) _decomposeGroupsInRequestCalendar: (iCalCalendar *) rqCalendar
 {
-  iCalCalendar *calendar;
   NSArray *allEvents;
   iCalEvent *event;
   int i;
-  BOOL modified;
-
-  // If we decomposed at least one group, let's rewrite the content
-  // of the request. Otherwise, leave it as is in case this rewrite
-  // isn't totaly lossless.
-  calendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
 
   // The algorithm is pretty straightforward:
   //
@@ -1584,20 +1611,12 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   //     If some are groups, we decompose them
   // We regenerate the iCalendar string
   //
-  allEvents = [calendar events];
-  modified = NO;
-
+  allEvents = [rqCalendar events];
   for (i = 0; i < [allEvents count]; i++)
     {
       event = [allEvents objectAtIndex: i];
-      modified |= [self expandGroupsInEvent: event];
+      [self expandGroupsInEvent: event];
     }
-
-  // If we decomposed at least one group, let's rewrite the content
-  // of the request. Otherwise, leave it as is in case this rewrite
-  // isn't totaly lossless.
-  if (modified)
-    [rq setContent: [[calendar versitString] dataUsingEncoding: [rq contentEncoding]]];
 }
 
 
@@ -1661,25 +1680,28 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 }
 
 //
-// If we see "X-SOGo: NoGroupsDecomposition" in the HTTP headers, we
-// simply invoke super's PUTAction.
+// This method is meant to be the common point of any save operation from web
+// and DAV requests, as well as from code making use of SOGo as a library
+// (OpenChange)
 //
-// We also check if we must force transparency on all day events
-// from iPhone clients.
-//
-- (id) PUTAction: (WOContext *) _ctx
+- (NSException *) updateContentWithCalendar: (iCalCalendar *) calendar
+                                fromRequest: (WORequest *) rq
 {
   NSException *ex;
-  NSString *etag;
   NSArray *roles;
-  WORequest *rq;
-  id response;
+  SOGoUser *ownerUser;
 
-  unsigned int baseVersion;
+  if (calendar == fullCalendar
+      || calendar == safeCalendar
+      || calendar == originalCalendar)
+    [NSException raise: NSInvalidArgumentException
+                format: @"the 'calendar' argument must be a distinct instance"
+                 @" from the original object"];
 
-  rq = [_ctx request];
-  roles = [[context activeUser] rolesForObject: self  inContext: context];
+  ownerUser = [SOGoUser userWithLogin: owner];
 
+  roles = [[context activeUser] rolesForObject: self
+                                     inContext: context];
   //
   // We check if we gave only the "Respond To" right and someone is actually
   // responding to one of our invitation. In this case, _setupResponseCalendarInRequest
@@ -1687,24 +1709,20 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   //
   if ([roles containsObject: @"ComponentResponder"]
       && ![roles containsObject: @"ComponentModifier"])
-    [self _setupResponseCalendarInRequest: rq];
+    calendar = [self _setupResponseInRequestCalendar: calendar];
   else
     {
-      SOGoUser *user;
-      
-      user = [SOGoUser userWithLogin: owner];
-      
       if (![[rq headersForKey: @"X-SOGo"]
-                         containsObject: @"NoGroupsDecomposition"])
-        [self _decomposeGroupsInRequest: rq];
+             containsObject: @"NoGroupsDecomposition"])
+        [self _decomposeGroupsInRequestCalendar: calendar];
 
-      if ([[user domainDefaults] iPhoneForceAllDayTransparency] 
+      if ([[ownerUser domainDefaults] iPhoneForceAllDayTransparency]
 	  && [rq isIPhone])
 	{
-	  [self _adjustTransparencyInRequest: rq];
+	  [self _adjustTransparencyInRequestCalendar: calendar];
 	}
 
-      [self _adjustEventsInRequest: rq];
+      [self _adjustEventsInRequestCalendar: calendar];
     }
 
   //
@@ -1712,25 +1730,30 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
   //
   if ([self isNew])
     {
-      iCalCalendar *calendar;
-      SOGoUser *ownerUser;
       iCalEvent *event;
-      
+      NSArray *attendees;
+      NSString *eventUID;
       BOOL scheduling;
 
-      calendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
+      attendees = nil;
 
       event = [[calendar events] objectAtIndex: 0];
-      ownerUser = [SOGoUser userWithLogin: owner];
+      eventUID = [event uid];
       scheduling = [self _shouldScheduleEvent: [event organizer]];
+
+      // make sure eventUID doesn't conflict with an existing event -  see bug #1853
+      // TODO: send out a no-uid-conflict (DAV:href) xml element (rfc4791 section 5.3.2.1)
+      if ([container resourceNameForEventUID: eventUID])
+        {
+	  return [NSException exceptionWithHTTPStatus: 403
+					       reason: [NSString stringWithFormat: @"Event UID already in use. (%s)", eventUID]];
+        }
      
       //
       // New event and we're the organizer -- send invitation to all attendees
       //
       if (scheduling && [event userIsOrganizer: ownerUser])
 	{ 
-	  NSArray *attendees;
-
 	  attendees = [event attendeesWithoutUser: ownerUser];
 	  if ([attendees count])
 	    {
@@ -1749,8 +1772,6 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
                                  previousObject: nil
                                     toAttendees: attendees
                                        withType: @"calendar:invitation"];
-	      [self sendReceiptEmailUsingTemplateNamed: @"Invitation"
-		    forObject: event to: attendees];
 	    }
 	}
       //
@@ -1764,36 +1785,31 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 		from: ownerUser
 		to: [event organizer]];
 	}
-    }
+
+      	      
+      [self sendReceiptEmailForObject: event
+		       addedAttendees: attendees
+		     deletedAttendees: nil
+		     updatedAttendees: nil
+			    operation: EventCreated];
+    }  // if ([self isNew])
   else
     {
-      iCalCalendar *oldCalendar, *newCalendar;
+      iCalCalendar *oldCalendar;
       iCalEvent *oldEvent, *newEvent;
       iCalEventChanges *changes;
-      NSMutableArray *oldEvents, *newEvents;
+      NSArray *oldEvents, *newEvents;
       NSCalendarDate *recurrenceId;
-      NSException *error;
       BOOL master;
       int i;
 
       //
-      // We must check for etag changes prior doing anything since an attendee could
-      // have changed its participation status and the organizer didn't get the
-      // copy and is trying to do a modification to the event.
-      //
-      error = [self matchesRequestConditionInContext: _ctx];
-
-      if (error)
-	return (WOResponse *)error;
-      
-      //
       // We check what has changed in the event and react accordingly.
       //
-      newCalendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
-      newEvents = [NSMutableArray arrayWithArray: [newCalendar events]];
+      newEvents = [calendar events];
 
       oldCalendar = [self calendar: NO secure: NO];
-      oldEvents = [NSMutableArray arrayWithArray: [oldCalendar events]];
+      oldEvents = [oldCalendar events];
       recurrenceId = nil;
       master = NO;
 
@@ -1826,8 +1842,8 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 		}
 	      else
 		{
-		  [newEvents removeObject: oldEvent];
-		  [oldEvents removeObject: newEvent];
+                  [calendar removeChild: oldEvent];
+                  [oldCalendar removeChild: newEvent];
 		}
 	    }
 	  
@@ -1896,13 +1912,6 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	    {
 	      if ((ex = [self _handleUpdatedEvent: newEvent  fromOldEvent: oldEvent]))
 		return ex;
-	      else
-		{
-		  // We might have auto-accepted resources here. If that's the
-		  // case, let's regenerate the versitstring and replace the
-		  // one from the request.
-		  [rq setContent: [[[newEvent parent] versitString] dataUsingEncoding: [rq contentEncoding]]];
-		}
 	    }
 	  //
 	  // else => attendee is responding
@@ -1917,13 +1926,16 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 	      NSString *delegateEmail;
 	      
 	      attendee = [newEvent userAsAttendee: [SOGoUser userWithLogin: owner]];
-	      
+
 	      // We first check of the sequences are alright. We don't accept attendees
 	      // accepting "old" invitations. If that's the case, we return a 403
               if ([[newEvent sequence] intValue] < [[oldEvent sequence] intValue])
 		return [NSException exceptionWithHTTPStatus:403
 				    reason: @"sequences don't match"];
 	      
+              // Remove the RSVP attribute, as an action from the attendee
+              // was actually performed, and this confuses iCal (bug #1850)
+              [[attendee attributes] removeObjectForKey: @"RSVP"]; 
 
 	      delegate = nil;
 	      delegateEmail = [attendee delegatedTo];
@@ -1944,7 +1956,7 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 		  [self changeParticipationStatus: @"DECLINED"
 			withDelegate: nil // FIXME (specify delegate?)
 			forRecurrenceId: [self _addedExDate: oldEvent  newEvent: newEvent]];
-	      }
+		}
 	      else if (attendee)
 		{
 		  [self changeParticipationStatus: [attendee partStat]
@@ -1961,27 +1973,69 @@ inRecurrenceExceptionsForEvent: (iCalEvent *) theEvent
 		  [self _handleRemovedUsers: [changes deletedAttendees]
 			   withRecurrenceId: recurrenceId];
 		}
-	    }
+	    }  
+	} // if ([[newEvent attendees] count] || [[oldEvent attendees] count])
+      else
+	{
+	  [self sendReceiptEmailForObject: newEvent
+			   addedAttendees: nil
+			 deletedAttendees: nil
+			 updatedAttendees: nil
+				operation: EventUpdated];
 	}
-    }
+    }  // else of if (isNew) ...
 
+  unsigned int baseVersion;
   // We must NOT invoke [super PUTAction:] here as it'll resave
   // the content string and we could have etag mismatches.
-  response = [_ctx response];
-
   baseVersion = (isNew ? 0 : version);
 
-  ex = [self saveContentString: [rq contentAsString]
+  ex = [self saveContentString: [calendar versitString]
 		   baseVersion: baseVersion];
+
+  return ex;  
+}
+
+//
+// If we see "X-SOGo: NoGroupsDecomposition" in the HTTP headers, we
+// simply invoke super's PUTAction.
+//
+// We also check if we must force transparency on all day events
+// from iPhone clients.
+//
+- (id) PUTAction: (WOContext *) _ctx
+{
+  NSException *ex;
+  NSString *etag;
+  WORequest *rq;
+  WOResponse *response;
+  iCalCalendar *rqCalendar;
+
+  rq = [_ctx request];
+  rqCalendar = [iCalCalendar parseSingleFromSource: [rq contentAsString]];
+
+  if (![self isNew])
+    {
+      //
+      // We must check for etag changes prior doing anything since an attendee could
+      // have changed its participation status and the organizer didn't get the
+      // copy and is trying to do a modification to the event.
+      //
+      ex = [self matchesRequestConditionInContext: context];
+      if (ex)
+	return ex;
+    }
+
+  ex = [self updateContentWithCalendar: rqCalendar fromRequest: rq];
   if (ex)
     response = (WOResponse *) ex;
   else
     {
+      response = [_ctx response];
       if (isNew)
 	[response setStatus: 201 /* Created */];
       else
 	[response setStatus: 204 /* No Content */];
-      
       etag = [self davEntityTag];
       if (etag)
 	[response setHeader: etag forKey: @"etag"];

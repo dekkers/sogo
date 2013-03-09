@@ -1,6 +1,6 @@
 /* UIxListEditor.m - this file is part of SOGo
  *
- * Copyright (C) 2008-2011 Inverse inc.
+ * Copyright (C) 2008-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Francis Lachapelle <flachapelle@inverse.ca>
@@ -147,7 +147,7 @@
       for (i = 0; i < count; i++)
         {
           currentReference = [references objectAtIndex: i];
-          if (![self cardReferences: initialReferences 
+          if (![self cardReferences: [list cardReferences] 
                             contain: currentReference])
             {
               // Search contact by vCard UID

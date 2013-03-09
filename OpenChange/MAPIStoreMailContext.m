@@ -1,6 +1,6 @@
 /* MAPIStoreMailContext.m - this file is part of SOGo
  *
- * Copyright (C) 2010 Inverse inc.
+ * Copyright (C) 2010-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -23,7 +23,8 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
-
+#import <Foundation/NSURL.h>
+#import <NGExtensions/NSString+misc.h>
 #import <Mailer/SOGoMailAccount.h>
 #import <Mailer/SOGoMailFolder.h>
 
@@ -129,7 +130,7 @@ MakeDisplayFolderName (NSString *folderName)
     {
       context = talloc_zero (memCtx, struct mapistore_contexts_list);
       stringData = [NSString stringWithFormat: @"%@%@", urlBase,
-                      folderName[count]];
+                             [folderName[count] stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
       context->url = [stringData asUnicodeInMemCtx: context];
       /* remove "folder" prefix */
       stringData = MakeDisplayFolderName (folderName[count]);
@@ -152,7 +153,8 @@ MakeDisplayFolderName (NSString *folderName)
     {
       context = talloc_zero (memCtx, struct mapistore_contexts_list);
       currentName = [secondaryFolders objectAtIndex: count];
-      stringData = [NSString stringWithFormat: @"%@%@", urlBase, currentName];
+      stringData = [NSString stringWithFormat: @"%@%@",
+                             urlBase, [currentName stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
       context->url = [stringData asUnicodeInMemCtx: context];
       stringData = [[currentName substringFromIndex: 6] fromCSSIdentifier];
       context->name = [stringData asUnicodeInMemCtx: context];
@@ -185,7 +187,8 @@ MakeDisplayFolderName (NSString *folderName)
                                  inContainer: accountFolder];
   if ([newFolder create])
     mapistoreURI = [NSString stringWithFormat: @"sogo://%@:%@@mail/%@/",
-                             userName, userName, folderName];
+                             userName, userName,
+                             [folderName stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding]];
   else
     mapistoreURI = nil;
   [MAPIApp setUserContext: nil];
@@ -201,6 +204,34 @@ MakeDisplayFolderName (NSString *folderName)
 - (id) rootSOGoFolder
 {
   return [[userContext rootFolders] objectForKey: @"mail"];
+}
+
+- (void) updateURLWithFolderName: (NSString *) newFolderName
+{
+  NSString *urlString, *escapedName;
+  NSMutableArray *pathComponents;
+  BOOL hasSlash;
+  NSUInteger max, folderNameIdx;
+  NSURL *newURL;
+
+  /* we do not need to unescape the url here as it will be reassembled later
+     in the method */
+  urlString = [contextUrl absoluteString];
+  hasSlash = [urlString hasSuffix: @"/"];
+  pathComponents = [[urlString componentsSeparatedByString: @"/"]
+                     mutableCopy];
+  [pathComponents autorelease];
+  max = [pathComponents count];
+  if (hasSlash)
+    folderNameIdx = max - 2;
+  else
+    folderNameIdx = max - 1;
+  escapedName = [newFolderName stringByAddingPercentEscapesUsingEncoding: NSUTF8StringEncoding];
+  [pathComponents replaceObjectAtIndex: folderNameIdx
+                            withObject: escapedName];
+  urlString = [pathComponents componentsJoinedByString: @"/"];
+  newURL = [NSURL URLWithString: urlString];
+  ASSIGN (contextUrl, newURL);
 }
 
 @end

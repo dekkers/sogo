@@ -38,9 +38,6 @@ UL#userList
 DIV.tabsContainer > DIV.scrollToolbar > A > SPAN
 { line-height: 12px; }
 
-DIV.dialog.none DIV
-{ padding-bottom: 0px; }
-
 DIV#popupFrame IFRAME
 { height: expression(document.body.clientHeight - 88 + "px") }
 
@@ -79,7 +76,7 @@ DIV#editorTabs TABLE.frame INPUT.textField
 { margin: 0px; }
 
 INPUT.textField._invalid, INPUT.comboBoxField._invalid
-{ background: #f00 !important; }
+{ background: #f66 !important; }
 
 /* SchedulerUI */
 
@@ -171,7 +168,8 @@ TABLE.framenocaption
 TABLE.frame TBODY
 { padding: 20px; }
 
-UL#calendarList
+UL#calendarList,
+UL#contactFolders
 { margin-top: 2px; }
 
 A.toolbarButton SPAN,
@@ -179,10 +177,8 @@ A.toolbarButton:hover SPAN {
   height: 50px;
   padding: 5px 2px 6px 5px;
 }
-A.smallToolbarButton, A.smallToolbarButton:hover,
-A.smallToolbarButton SPAN, A.smallToolbarButton:hover SPAN
-{ height: 33px; }
-
+A.smallToolbarButton, A.smallToolbarButton:hover
+{ height: 34px; }
 A.toolbarButton:active SPAN {
   background-position: auto; /*broken*/
 }
@@ -206,18 +202,20 @@ DIV#listEditor TABLE TBODY TR TD:first-child
 A#aboutClose
 { top: 25px;}
 
-DIV#uploadDialog P,
-DIV#uploadResults P
-{ margin: 5px;
-  padding: 0; }
+.dialog h3
+{ font-size: 14px; }
+
+.dialog p
+{ margin: 0px; }
 
 /* UIxPreferences */
 
 DIV#filtersListWrapper
 { overflow-x: hidden; }
 
-TABLE#filtersList
-{ width: auto; }
+dl.dl-horizontal
+{ margin-top: 2px;
+  margin-bottom: 2px; }
 
 /* UIxComponentEditor */
 
@@ -234,3 +232,22 @@ BODY.popup DIV.dialog.none
 .safetyBlock
 {  background-color: #fff;
    filter: alpha(opacity=0); }
+
+/* datepicker pseudo-elements fix for IE7 */
+.datepicker .prev,
+.datepicker .next {
+    *zoom: expression(
+          this.runtimeStyle.zoom="1",
+          this.appendChild( document.createElement("small") ).className="ie-after"
+         );
+}
+.datepicker .prev .ie-after {
+    zoom: expression(
+        this.runtimeStyle['zoom'] = '1',
+        this.innerHTML = '«');
+}
+.datepicker .next .ie-after {
+    zoom: expression(
+        this.runtimeStyle['zoom'] = '1',
+        this.innerHTML = '»');
+}

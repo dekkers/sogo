@@ -12,16 +12,12 @@
 /* The content of attribute values should be quoted properly by using the
  equivalent entities. */
 function dTreeQuote(str) {
-    return (str
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/\"/g, "&quot;")
-            .replace(/\'/g, "&apos;"));
+    return str.escapeHTML();
 }
 
 // Node object
-function Node(id, pid, name, isParent, url, dataname, datatype, title, target,
-              icon, iconOpen, open) {
+function dTreeNode(id, pid, name, isParent, url, dataname, datatype, title, target,
+                   icon, iconOpen, open) {
     this.isParent = isParent;
     this.id = id;
     this.pid = pid;
@@ -68,7 +64,7 @@ function dTree(objName) {
     this.objects = {};
     this.aNodes = [];
     this.aIndent = [];
-    this.root = new Node(-1);
+    this.root = new dTreeNode(-1);
     this.selectedNode = null;
     this.selectedFound = false;
     this.completed = false;
@@ -90,7 +86,7 @@ dTree.prototype = {
     // Adds a new node to the node array
     add: function(id, pid, name, isParent, url, datatype,
                   title, target, icon, iconOpen, open) {
-        this.aNodes[this.aNodes.length] = new Node(id, pid, name, isParent, url,
+        this.aNodes[this.aNodes.length] = new dTreeNode(id, pid, name, isParent, url,
                                                    datatype, title, target, icon,
                                                    iconOpen, open, false);
     },
@@ -277,9 +273,11 @@ dTree.prototype = {
             if (this.selectedNode || this.selectedNode==0) {
                 eOld = document.getElementById("s" + this.obj + this.selectedNode);
                 eOld.deselect();
+                eOld.parentNode.removeClassName('_selected');
             }
             eNew = document.getElementById("s" + this.obj + id);
             eNew.selectElement();
+            eNew.parentNode.addClassName('_selected');
             this.selectedNode = id;
             if (this.config.useCookies) this.setCookie('cs' + this.obj, cn.id);
         }

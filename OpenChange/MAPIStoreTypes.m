@@ -1,6 +1,6 @@
 /* MAPIStoreTypes.m - this file is part of SOGo
  *
- * Copyright (C) 2010 Inverse inc.
+ * Copyright (C) 2010-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -21,6 +21,7 @@
  */
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSCalendarDate.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSNull.h>
@@ -221,7 +222,7 @@ NSObjectFromSPropValue (const struct SPropValue *value)
       result = [NSArray arrayFromMVLong: &value->value.MVl];
       break;
     case PT_MV_I8:
-      result = [NSArray arrayFromMVI8: &value->value.MVi8];
+      result = [NSArray arrayFromMVUI8: &value->value.MVui8];
       break;
     case PT_MV_STRING8:
       result = [NSArray arrayFromMVString: &value->value.MVszA];

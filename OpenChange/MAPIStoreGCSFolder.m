@@ -1,6 +1,6 @@
 /* MAPIStoreGCSFolder.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -24,6 +24,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <NGExtensions/NSObject+Logs.h>
+#import <NGExtensions/NSObject+Values.h>
 #import <EOControl/EOQualifier.h>
 #import <EOControl/EOFetchSpecification.h>
 #import <EOControl/EOSortOrdering.h>
@@ -40,7 +41,7 @@
 #import "NSData+MAPIStore.h"
 #import "NSDate+MAPIStore.h"
 #import "NSString+MAPIStore.h"
-#import "SOGoMAPIFSMessage.h"
+#import "SOGoMAPIDBMessage.h"
 
 #import "MAPIStoreGCSFolder.h"
 
@@ -71,8 +72,9 @@ static Class NSNumberK;
 - (void) setupVersionsMessage
 {
   ASSIGN (versionsMessage,
-          [SOGoMAPIFSMessage objectWithName: @"versions.plist"
-                                inContainer: propsFolder]);
+          [SOGoMAPIDBMessage objectWithName: @"versions.plist"
+                                inContainer: dbFolder]);
+  [versionsMessage setObjectType: MAPIDBObjectTypeInternal];
 }
 
 - (void) dealloc
@@ -136,7 +138,7 @@ static Class NSNumberK;
 }
 
 - (int) getPidTagDisplayName: (void **) data
-                inMemCtx: (TALLOC_CTX *) memCtx
+                    inMemCtx: (TALLOC_CTX *) memCtx
 {
   NSString *displayName;
   Class cClass;
@@ -260,6 +262,7 @@ static Class NSNumberK;
 
 - (void) _setChangeKey: (NSData *) changeKey
        forMessageEntry: (NSMutableDictionary *) messageEntry
+      inChangeListOnly: (BOOL) inChangeListOnly
 {
   struct XID *xid;
   NSString *guid;
@@ -272,12 +275,15 @@ static Class NSNumberK;
   globCnt = [NSData dataWithBytes: xid->Data length: xid->Size];
   talloc_free (xid);
 
-  /* 1. set change key association */
-  changeKeyDict = [NSDictionary dictionaryWithObjectsAndKeys:
-                                  guid, @"GUID",
-                                globCnt, @"LocalId",
-                                nil];
-  [messageEntry setObject: changeKeyDict forKey: @"ChangeKey"];
+  if (!inChangeListOnly)
+    {
+      /* 1. set change key association */
+      changeKeyDict = [NSDictionary dictionaryWithObjectsAndKeys:
+                                      guid, @"GUID",
+                                    globCnt, @"LocalId",
+                                    nil];
+      [messageEntry setObject: changeKeyDict forKey: @"ChangeKey"];
+    }
 
   /* 2. append/update predecessor change list */
   changeList = [messageEntry objectForKey: @"PredecessorChangeList"];
@@ -285,7 +291,7 @@ static Class NSNumberK;
     {
       changeList = [NSMutableDictionary new];
       [messageEntry setObject: changeList
-                    forKey: @"PredecessorChangeList"];
+                       forKey: @"PredecessorChangeList"];
       [changeList release];
     }
   [changeList setObject: globCnt forKey: guid];
@@ -320,22 +326,27 @@ static Class NSNumberK;
 
 - (BOOL) synchroniseCache
 {
-  BOOL rc = YES, foundChange = NO;
+  BOOL rc = YES;
   uint64_t newChangeNum;
   NSData *changeKey;
-  NSString *cName;
-  NSNumber *ti, *changeNumber, *lastModificationDate, *cVersion,
-    *cLastModified, *cDeleted;
+  NSString *cName, *changeNumber;
+  NSNumber *ti, *lastModificationDate, *cVersion, *cLastModified, *cDeleted;
   EOFetchSpecification *fs;
   EOQualifier *searchQualifier, *fetchQualifier;
   NSUInteger count, max;
-  NSArray *fetchResults;
+  NSArray *fetchResults, *changeNumbers;
+  NSMutableArray *keys, *modifiedEntries;
   NSDictionary *result;
   NSMutableDictionary *currentProperties, *messages, *mapping, *messageEntry;
   NSCalendarDate *now;
   GCSFolder *ocsFolder;
   static NSArray *fields = nil;
   static EOSortOrdering *sortOrdering = nil;
+
+  /* NOTE: we are using NSString instance for "changeNumber" because
+     NSNumber proved to give very bad performances when used as NSDictionary
+     keys with GNUstep 1.22.1. The bug seems to be solved with 1.24 but many
+     distros still ship an older version. */
 
   if (!fields)
     fields = [[NSArray alloc]
@@ -349,6 +360,7 @@ static Class NSNumberK;
       [sortOrdering retain];
     }
 
+  [versionsMessage reloadIfNeeded];
   currentProperties = [versionsMessage properties];
 
   lastModificationDate = [currentProperties objectForKey: @"SyncLastModificationDate"];
@@ -394,12 +406,13 @@ static Class NSNumberK;
           [mapping release];
         }
 
-      ldb_transaction_start([[self context] connectionInfo]->oc_ctx);
-
+      keys = [NSMutableArray arrayWithCapacity: max];
+      modifiedEntries = [NSMutableArray arrayWithCapacity: max];
       for (count = 0; count < max; count++)
         {
           result = [fetchResults objectAtIndex: count];
           cName = [result objectForKey: @"c_name"];
+          [keys addObject: cName];
           cDeleted = [result objectForKey: @"c_deleted"];
           if ([cDeleted isKindOfClass: NSNumberK] && [cDeleted intValue])
             cVersion = [NSNumber numberWithInt: -1];
@@ -420,19 +433,10 @@ static Class NSNumberK;
             {
               [sogoObject removeChildRecordWithName: cName];
 
-              foundChange = YES;
-
-              newChangeNum = [[self context] getNewChangeNumber];
-              changeNumber = [NSNumber numberWithUnsignedLongLong: newChangeNum];
+              [modifiedEntries addObject: messageEntry];
 
               [messageEntry setObject: cLastModified forKey: @"c_lastmodified"];
               [messageEntry setObject: cVersion forKey: @"c_version"];
-              [messageEntry setObject: changeNumber forKey: @"version"];
-
-              changeKey = [self getReplicaKeyFromGlobCnt: newChangeNum >> 16];
-              [self _setChangeKey: changeKey forMessageEntry: messageEntry];
-
-              [mapping setObject: cLastModified forKey: changeNumber];
 
               if (!lastModificationDate
                   || ([lastModificationDate compare: cLastModified]
@@ -440,18 +444,35 @@ static Class NSNumberK;
                 lastModificationDate = cLastModified;
             }
         }
-      
-      ldb_transaction_commit([[self context] connectionInfo]->oc_ctx);
-      
-      if (foundChange)
+
+      /* make sure all returned objects have a corresponding mid */
+      [self ensureIDsForChildKeys: keys];
+
+      max = [modifiedEntries count];
+      if (max > 0)
         {
+          changeNumbers = [[self context] getNewChangeNumbers: max];
+          for (count = 0; count < max; count++)
+            {
+              messageEntry = [modifiedEntries objectAtIndex: count];
+
+              changeNumber = [changeNumbers objectAtIndex: count];
+              cLastModified = [messageEntry objectForKey: @"c_lastmodified"];
+              [mapping setObject: cLastModified forKey: changeNumber];
+              [messageEntry setObject: changeNumber forKey: @"version"];
+
+              newChangeNum = [changeNumber unsignedLongValue];
+              changeKey = [self getReplicaKeyFromGlobCnt: newChangeNum >> 16];
+              [self _setChangeKey: changeKey forMessageEntry: messageEntry
+                 inChangeListOnly: NO];
+            }
+
           now = [NSCalendarDate date];
           ti = [NSNumber numberWithDouble: [now timeIntervalSince1970]];
           [currentProperties setObject: ti
                                 forKey: @"SyncLastSynchronisationDate"];
           [currentProperties setObject: lastModificationDate
                                 forKey: @"SyncLastModificationDate"];
-          [versionsMessage appendProperties: currentProperties];
           [versionsMessage save];
         }
     }
@@ -462,53 +483,44 @@ static Class NSNumberK;
 - (void) updateVersionsForMessageWithKey: (NSString *) messageKey
                            withChangeKey: (NSData *) newChangeKey
 {
-  [self synchroniseCache];
+  NSMutableDictionary *messages, *messageEntry;
 
+  [self synchroniseCache];
   if (newChangeKey)
-    [self setChangeKey: newChangeKey forMessageWithKey: messageKey];
+    {
+      messages = [[versionsMessage properties] objectForKey: @"Messages"];
+      messageEntry = [messages objectForKey: messageKey];
+      if (!messageEntry)
+        [NSException raise: @"MAPIStoreIOException"
+                    format: @"no version record found for message '%@'",
+                     messageKey];
+      [self _setChangeKey: newChangeKey forMessageEntry: messageEntry
+         inChangeListOnly: YES];
+      [versionsMessage save];
+    }
 }
  
-- (NSNumber *) lastModifiedFromMessageChangeNumber: (NSNumber *) changeNum
+- (NSNumber *) lastModifiedFromMessageChangeNumber: (NSString *) changeNumber
 {
   NSDictionary *mapping;
   NSNumber *modseq;
 
   mapping = [[versionsMessage properties] objectForKey: @"VersionMapping"];
-  modseq = [mapping objectForKey: changeNum];
+  modseq = [mapping objectForKey: changeNumber];
 
   return modseq;
 }
 
-- (NSNumber *) changeNumberForMessageWithKey: (NSString *) messageKey
+- (NSString *) changeNumberForMessageWithKey: (NSString *) messageKey
 {
   NSDictionary *messages;
-  NSNumber *changeNumber;
+  NSString *changeNumber;
 
   messages = [[versionsMessage properties] objectForKey: @"Messages"];
   changeNumber = [[messages objectForKey: messageKey]
                    objectForKey: @"version"];
 
   return changeNumber;
-}
-
-- (void) setChangeKey: (NSData *) changeKey
-    forMessageWithKey: (NSString *) messageKey
-{
-  NSMutableDictionary *messages;
-  NSMutableDictionary *messageEntry;
-
-  messages = [[versionsMessage properties] objectForKey: @"Messages"];
-  messageEntry = [messages objectForKey: messageKey];
-  if (!messageEntry)
-    {
-      [self synchroniseCache];
-      messageEntry = [messages objectForKey: messageKey];
-      if (!messageEntry)
-        abort ();
-    }
-  [self _setChangeKey: changeKey forMessageEntry: messageEntry];
-  
-  [versionsMessage save];
 }
 
 - (NSData *) changeKeyForMessageWithKey: (NSString *) messageKey
@@ -577,8 +589,8 @@ static Class NSNumberK;
                                  inTableType: (uint8_t) tableType
 {
   NSArray *deletedKeys, *deletedCNames, *records;
-  NSNumber *changeNumNbr, *lastModified;
-  NSString *cName;
+  NSNumber *lastModified;
+  NSString *cName, *changeNumber;
   NSDictionary *versionProperties, *messageEntry;
   NSMutableDictionary *messages;
   uint64_t maxChangeNum = changeNum, currentChangeNum;
@@ -592,8 +604,8 @@ static Class NSNumberK;
     {
       deletedKeys = [NSMutableArray array];
 
-      changeNumNbr = [NSNumber numberWithUnsignedLongLong: changeNum];
-      lastModified = [self lastModifiedFromMessageChangeNumber: changeNumNbr];
+      changeNumber = [NSString stringWithUnsignedLongLong: changeNum];
+      lastModified = [self lastModifiedFromMessageChangeNumber: changeNumber];
       if (lastModified)
         {
           versionProperties = [versionsMessage properties];

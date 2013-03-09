@@ -18,31 +18,7 @@
 
 /* Day */
 
-"Sunday" = "Vasárnap";
-"Monday" = "Hétfő";
-"Tuesday" = "Kedd";
-"Wednesday" = "Szerda";
-"Thursday" = "Csütörtök";
-"Friday" = "Péntek";
-"Saturday" = "Szombat";
 "DayOfTheMonth" = "A hónap napja";
-
-"Sun" = "Vas";
-"Mon" = "Hét";
-"Tue" = "Ked";
-"Wed" = "Sze";
-"Thu" = "Csü";
-"Fri" = "Pén";
-"Sat" = "Szo";
-
-"a2_Sunday" = "Va";
-"a2_Monday" = "Hé";
-"a2_Tuesday" = "Ke";
-"a2_Wednesday" = "Sz";
-"a2_Thursday" = "Cs";
-"a2_Friday" = "Pé";
-"a2_Saturday" = "Sz";
-
 "dayLabelFormat" = "%Y.%m.%d";
 "today" = "Ma";
 
@@ -62,32 +38,6 @@
 /* Month */
 
 "this month" = "aktuális hónap";
-
-"January" = "Január";
-"February" = "Február";
-"March" = "Március";
-"April" = "Április";
-"May" = "Május";
-"June" = "Június";
-"July" = "Július";
-"August" = "Augusztus";
-"September" = "Szeptember";
-"October" = "Október";
-"November" = "November";
-"December" = "December";
-
-"a3_January" = "Január";
-"a3_February" = "Február";
-"a3_March" = "Március";
-"a3_April" = "Április";
-"a3_May" = "Május";
-"a3_June" = "Június";
-"a3_July" = "Július";
-"a3_August" = "Augusztus";
-"a3_September" = "Szeptember";
-"a3_October" = "Október";
-"a3_November" = "November";
-"a3_December" = "December";
 
 "Previous Month" = "Előző hónap";
 "Next Month" = "Következő hónap";
@@ -110,6 +60,7 @@
 "Import Events" = "Események importálása";
 "Select an iCalendar file (.ics)." = "Válasszon egy iCalendar fájlt (.ics).";
 "Upload" = "Feltöltés";
+"Uploading" = "Feltöltés";
 "Publish Calendar..." = "Naptár közzététele...";
 "Reload Remote Calendars" = "Távoli naptárak frissítése";
 "Properties" = "Tulajdonságok";
@@ -371,7 +322,7 @@
 /* Appointment categories */
 
 "category_none" = "Nincs";
-"category_labels" = "Évforduló,Születésnap,Üzleti,Meghívás,Ügyfelek,Versenytársak,Vevő,Kedvencek,Nyomonkövetés,Ajándékozás,Szabadság,Ötletek,Meeting,Ügyek,Egyéb,Személyes,Projektek,Állami ünnep,Állapot,Szállítók,Utazás,Szünidő";
+"category_labels" = "Évforduló,Születésnap,Üzleti,Meghívás,Ügyfelek,Versenytársak,Vevő,Kedvencek,Nyomonkövetés,Ajándékozás,Szabadság,Ötletek,Megbeszélés,Ügyek,Egyéb,Személyes,Projektek,Állami ünnep,Állapot,Szállítók,Utazás,Szünidő";
 
 "repeat_NEVER" = "Nem ismétlődik";
 "repeat_DAILY" = "Naponta";
@@ -429,6 +380,7 @@ validate_invalid_startdate = "Événytelen kezdődátum!";
 validate_invalid_enddate   = "Érvénytelen befejező dátum!";
 validate_endbeforestart    = "A megadott befejező dátum korábbi, mint a kezdődátum.";
 
+"Events" = "Események";
 "Tasks" = "Feladatok";
 "Show completed tasks" = "Befejezett feladatok megjelenítése";
 
@@ -502,12 +454,17 @@ validate_endbeforestart    = "A megadott befejező dátum korábbi, mint a kezd�
 "Title" = "Cím";
 "Start" = "Kezdés";
 "End" = "Befejezés";
+"Due Date" = "Lejárat";
 "Location" = "Hely";
+
 "(Private Event)" = "(Magán esemény)";
 
 vevent_class0 = "(Nyilvános esemény)";
 vevent_class1 = "(Magán esemény)";
 vevent_class2 = "(Bizalmas esemény)";
+
+"Priority" = "Fontosság";
+"Category" = "Kategória";
 
 vtodo_class0 = "(Nyilvános feladat)";
 vtodo_class1 = "(Magán feladat)";
@@ -535,6 +492,11 @@ vtodo_class2 = "(Bizalmas feladat)";
 "Display" = "Kijelez";
 "Show alarms" = "Riasztások megjelenítése";
 "Show tasks" = "Feladatok megjelenítése";
+
+"Notifications" = "Értesítések";
+"Receive a mail when I modify my calendar" = "Kapjak email értesítést, amikor módosítok a naptáramon";
+"Receive a mail when someone else modifies my calendar" = "Kapjak email értesítést, amikor mások módosítják a naptáramat";
+"When I modify my calendar, send a mail to:" = "Email értesítés küldése az alábbi címre a naptáram módosításakor";
 
 "Links to this Calendar" = "Hivatkozások ehhez a naptárhoz";
 "Authenticated User Access" = "Belépett felhasználók";
@@ -564,6 +526,7 @@ vtodo_class2 = "(Bizalmas feladat)";
 "Delete Task" = "Feladat törlése";
 "Delete Event" = "Esemény törlése";
 "Copy event to my calendar" = "Esemény másolása a naptáromba";
+"View Raw Source" = "Forrás megtekintése";
 
 "Subscribe to a web calendar..." = "Internetes naptár becsatolása";
 "URL of the Calendar" = "A naptár URL címe";

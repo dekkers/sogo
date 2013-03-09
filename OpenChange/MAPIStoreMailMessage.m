@@ -1,6 +1,6 @@
 /* MAPIStoreMailMessage.m - this file is part of SOGo
  *
- * Copyright (C) 2011 Inverse inc
+ * Copyright (C) 2011-2012 Inverse inc
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Ludovic Marcotte <lmarcotte@inverse.ca>
@@ -26,6 +26,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <NGExtensions/NSObject+Logs.h>
+#import <NGExtensions/NSObject+Values.h>
 #import <NGImap4/NGImap4Client.h>
 #import <NGImap4/NGImap4Connection.h>
 #import <NGImap4/NGImap4EnvelopeAddress.h>
@@ -50,6 +51,7 @@
 #import "MAPIStoreMapping.h"
 #import "MAPIStoreSamDBUtils.h"
 #import "MAPIStoreTypes.h"
+#import "MAPIStoreUserContext.h"
 
 #import "MAPIStoreMailMessage.h"
 
@@ -239,7 +241,7 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
   if (!headerSetup)
     [self _fetchHeaderData];
 
-  if (mimeKey)
+  if (!bodyContent && mimeKey)
     {
       result = [sogoObject fetchParts: [NSArray arrayWithObject: mimeKey]];
       result = [[result valueForKey: @"RawResponse"] objectForKey: @"fetch"];
@@ -365,21 +367,21 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
 - (uint64_t) objectVersion
 {
   uint64_t version = ULLONG_MAX;
-  NSNumber *uid, *changeNumber;
+  NSString *uid, *changeNumber;
 
   uid = [(MAPIStoreMailFolder *)
           container messageUIDFromMessageKey: [self nameInContainer]];
   if (uid)
     {
       changeNumber = [(MAPIStoreMailFolder *) container
-                     changeNumberForMessageUID: uid];
+                         changeNumberForMessageUID: uid];
       if (!changeNumber)
         {
           [self warnWithFormat: @"attempting to get change number"
                 @" by synchronising folder..."];
           [(MAPIStoreMailFolder *) container synchroniseCache];
           changeNumber = [(MAPIStoreMailFolder *) container
-                         changeNumberForMessageUID: uid];
+                             changeNumberForMessageUID: uid];
           if (changeNumber)
             [self logWithFormat: @"got one"];
           else
@@ -443,19 +445,6 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
   else
     longValue = 0;
   *data = MAPILongValue (memCtx, longValue);
-
-  return MAPISTORE_SUCCESS;
-}
-
-- (int) getPidTagSubject: (void **) data
-                inMemCtx: (TALLOC_CTX *) memCtx
-{
-  NSString *stringValue;
-
-  stringValue = [self subject];
-  if (!stringValue)
-    stringValue = @"";
-  *data = [stringValue asUnicodeInMemCtx: memCtx];
 
   return MAPISTORE_SUCCESS;
 }
@@ -704,7 +693,7 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
   ngAddress = [[NGMailAddressParser mailAddressParserWithString: fullMail]
                 parse];
   if ([ngAddress isKindOfClass: [NGMailAddress class]])
-    cn = [ngAddress address];
+    cn = [ngAddress displayName];
   else
     cn = @"";
 
@@ -1008,12 +997,6 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
 
 - (int) getPidTagReadReceiptRequested: (void **) data // TODO
                              inMemCtx: (TALLOC_CTX *) memCtx
-{
-  return [self getNo: data inMemCtx: memCtx];
-}
-
-- (int) getPidTagDeleteAfterSubmit: (void **) data // TODO
-                          inMemCtx: (TALLOC_CTX *) memCtx
 {
   return [self getNo: data inMemCtx: memCtx];
 }
@@ -1345,8 +1328,14 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
 - (void) getMessageData: (struct mapistore_message **) dataPtr
                inMemCtx: (TALLOC_CTX *) memCtx
 {
-  NSArray *to;
-  NSInteger count, max, p;
+  NSArray *addresses;
+  NSString *addressMethods[] = { @"fromEnvelopeAddresses",
+                                 @"toEnvelopeAddresses",
+                                 @"ccEnvelopeAddresses",
+                                 @"bccEnvelopeAddresses" };
+  enum ulRecipClass addressTypes[] = { MAPI_ORIG, MAPI_TO,
+                                       MAPI_CC, MAPI_BCC };
+  NSUInteger arrayCount, count, recipientStart, max, p;
   NGImap4EnvelopeAddress *currentAddress;
   NSString *username, *cn, *email;
   NSData *entryId;
@@ -1367,9 +1356,9 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
                                        inMemCtx: memCtx];
   else
     {
+      mgr = [SOGoUserManager sharedUserManager];
+
       /* Retrieve recipients from the message */
-      to = [sogoObject toEnvelopeAddresses];
-      max = [to count];
 
       msgData->columns = set_SPropTagArray (msgData, 9,
                                             PR_OBJECT_TYPE,
@@ -1382,75 +1371,86 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
                                             PR_RECIPIENT_ENTRYID,
                                             PR_RECIPIENT_TRACKSTATUS);
 
-      if (max > 0)
+      msgData->recipients_count = 0;
+      msgData->recipients = NULL;
+
+      recipientStart = 0;
+
+      for (arrayCount = 0; arrayCount < 4; arrayCount++)
         {
-          mgr = [SOGoUserManager sharedUserManager];
-          msgData->recipients_count = max;
-          msgData->recipients = talloc_array (msgData, struct mapistore_message_recipient, max);
-          for (count = 0; count < max; count++)
+          addresses = [sogoObject performSelector: NSSelectorFromString (addressMethods[arrayCount])];
+          max = [addresses count];
+          if (max > 0)
             {
-              recipient = msgData->recipients + count;
+              msgData->recipients_count += max;
+              msgData->recipients = talloc_realloc (msgData, msgData->recipients, struct mapistore_message_recipient, msgData->recipients_count);
 
-              currentAddress = [to objectAtIndex: count];
-              cn = [currentAddress personalName];
-              email = [currentAddress baseEMail];
-              if ([cn length] == 0)
-                cn = email;
-              contactInfos = [mgr contactInfosForUserWithUIDorEmail: email];
-
-              if (contactInfos)
+              for (count = 0; count < max; count++)
                 {
-                  username = [contactInfos objectForKey: @"c_uid"];
-                  recipient->username = [username asUnicodeInMemCtx: msgData];
-                  entryId = MAPIStoreInternalEntryId (samCtx, username);
-                }
-              else
-                {
-                  recipient->username = NULL;
-                  entryId = MAPIStoreExternalEntryId (cn, email);
-                }
-              recipient->type = MAPI_TO;
+                  recipient = msgData->recipients + recipientStart;
+                  currentAddress = [addresses objectAtIndex: count];
+                  cn = [currentAddress personalName];
+                  email = [currentAddress baseEMail];
+                  if ([cn length] == 0)
+                    cn = email;
+                  contactInfos = [mgr contactInfosForUserWithUIDorEmail: email];
+                  
+                  if (contactInfos)
+                    {
+                      username = [contactInfos objectForKey: @"c_uid"];
+                      recipient->username = [username asUnicodeInMemCtx: msgData];
+                      entryId = MAPIStoreInternalEntryId (samCtx, username);
+                    }
+                  else
+                    {
+                      recipient->username = NULL;
+                      entryId = MAPIStoreExternalEntryId (cn, email);
+                    }
+                  recipient->type = addressTypes[arrayCount];
 
-              /* properties */
-              p = 0;
-              recipient->data = talloc_array (msgData, void *, msgData->columns->cValues);
-              memset (recipient->data, 0, msgData->columns->cValues * sizeof (void *));
+                  /* properties */
+                  p = 0;
+                  recipient->data = talloc_array (msgData, void *, msgData->columns->cValues);
+                  memset (recipient->data, 0, msgData->columns->cValues * sizeof (void *));
+                  
+                  // PR_OBJECT_TYPE = MAPI_MAILUSER (see MAPI_OBJTYPE)
+                  recipient->data[p] = MAPILongValue (msgData, MAPI_MAILUSER);
+                  p++;
 
-              // PR_OBJECT_TYPE = MAPI_MAILUSER (see MAPI_OBJTYPE)
-              recipient->data[p] = MAPILongValue (msgData, MAPI_MAILUSER);
-              p++;
-
-              // PR_DISPLAY_TYPE = DT_MAILUSER (see MS-NSPI)
-              recipient->data[p] = MAPILongValue (msgData, 0);
-              p++;
+                  // PR_DISPLAY_TYPE = DT_MAILUSER (see MS-NSPI)
+                  recipient->data[p] = MAPILongValue (msgData, 0);
+                  p++;
               
-              // PR_7BIT_DISPLAY_NAME_UNICODE
-              recipient->data[p] = [cn asUnicodeInMemCtx: msgData];
-              p++;
+                  // PR_7BIT_DISPLAY_NAME_UNICODE
+                  recipient->data[p] = [cn asUnicodeInMemCtx: msgData];
+                  p++;
 
-              // PR_SMTP_ADDRESS_UNICODE
-              recipient->data[p] = [email asUnicodeInMemCtx: msgData];
-              p++;
+                  // PR_SMTP_ADDRESS_UNICODE
+                  recipient->data[p] = [email asUnicodeInMemCtx: msgData];
+                  p++;
               
-              // PR_SEND_INTERNET_ENCODING = 0x00060000 (plain text, see OXCMAIL)
-              recipient->data[p] = MAPILongValue (msgData, 0x00060000);
-              p++;
+                  // PR_SEND_INTERNET_ENCODING = 0x00060000 (plain text, see OXCMAIL)
+                  recipient->data[p] = MAPILongValue (msgData, 0x00060000);
+                  p++;
 
-              // PR_RECIPIENT_DISPLAY_NAME_UNICODE
-              recipient->data[p] = [cn asUnicodeInMemCtx: msgData];
-              p++;
+                  // PR_RECIPIENT_DISPLAY_NAME_UNICODE
+                  recipient->data[p] = [cn asUnicodeInMemCtx: msgData];
+                  p++;
 
-              // PR_RECIPIENT_FLAGS
-              recipient->data[p] = MAPILongValue (msgData, 0x01);
-              p++;
+                  // PR_RECIPIENT_FLAGS
+                  recipient->data[p] = MAPILongValue (msgData, 0x01);
+                  p++;
 
-              // PR_RECIPIENT_ENTRYID
-              recipient->data[p] = [entryId asBinaryInMemCtx: msgData];
-              p++;
+                  // PR_RECIPIENT_ENTRYID
+                  recipient->data[p] = [entryId asBinaryInMemCtx: msgData];
+                  p++;
 
-              // PR_RECIPIENT_TRACKSTATUS
-              recipient->data[p] = MAPILongValue (msgData, 0x00);
-              p++;
+                  // PR_RECIPIENT_TRACKSTATUS
+                  recipient->data[p] = MAPILongValue (msgData, 0x00);
+                  p++;
+
+                  recipientStart++;
+                }
             }
         }
     }
@@ -1528,8 +1528,8 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
       if (currentPart)
         {
           attachment = [MAPIStoreMailAttachment
-                         mapiStoreObjectWithSOGoObject: currentPart
-                                           inContainer: self];
+                         mapiStoreObjectInContainer: self];
+          [attachment setBodyPart: currentPart];
           [attachment setBodyInfo: [attachmentParts objectForKey: childKey]];
           [attachment setAID: [[self attachmentKeys] indexOfObject: childKey]];
         }
@@ -1549,6 +1549,31 @@ _compareBodyKeysByPriority (id entry1, id entry2, void *data)
     [sogoObject addFlags: imapFlag];
 
   return MAPISTORE_SUCCESS;
+}
+
+- (NSString *) bodyContentPartKey
+{
+  NSString *bodyPartKey;
+
+  if (!headerSetup)
+    [self _fetchHeaderData];
+
+  if ([mimeKey hasPrefix: @"body.peek"])
+    bodyPartKey = [NSString stringWithFormat: @"body[%@]",
+                          [mimeKey _strippedBodyKey]];
+  else
+    bodyPartKey = mimeKey;
+
+  return bodyPartKey;
+}
+
+- (void) setBodyContentFromRawData: (NSData *) rawContent
+{
+  if (!headerSetup)
+    [self _fetchHeaderData];
+
+  ASSIGN (bodyContent, [rawContent bodyDataFromEncoding: headerEncoding]);
+  bodySetup = YES;
 }
 
 - (void) save

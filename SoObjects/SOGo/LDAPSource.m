@@ -107,10 +107,11 @@ static Class NSStringK;
       [searchFields retain];
       IMAPHostField = nil;
       IMAPLoginField = nil;
+      SieveHostField = nil;
       bindFields = nil;
       _scope = @"sub";
       _filter = nil;
-	  _userPasswordAlgorithm = nil;
+      _userPasswordAlgorithm = nil;
       listRequiresDot = YES;
 
       searchAttributes = nil;
@@ -149,6 +150,7 @@ static Class NSStringK;
   [searchFields release];
   [IMAPHostField release];
   [IMAPLoginField release];
+  [SieveHostField release];
   [bindFields release];
   [_filter release];
   [_userPasswordAlgorithm release];
@@ -191,11 +193,12 @@ static Class NSStringK;
               CNField: [udSource objectForKey: @"CNFieldName"]
              UIDField: [udSource objectForKey: @"UIDFieldName"]
            mailFields: [udSource objectForKey: @"MailFieldNames"]
-	 searchFields: [udSource objectForKey: @"SearchFieldNames"]
-	IMAPHostField: [udSource objectForKey: @"IMAPHostFieldName"]
+         searchFields: [udSource objectForKey: @"SearchFieldNames"]
+        IMAPHostField: [udSource objectForKey: @"IMAPHostFieldName"]
        IMAPLoginField: [udSource objectForKey: @"IMAPLoginFieldName"]
-	   bindFields: [udSource objectForKey: @"bindFields"]
-	    kindField: [udSource objectForKey: @"KindFieldName"]
+       SieveHostField: [udSource objectForKey: @"SieveHostFieldName"]
+           bindFields: [udSource objectForKey: @"bindFields"]
+            kindField: [udSource objectForKey: @"KindFieldName"]
             andMultipleBookingsField: [udSource objectForKey: @"MultipleBookingsFieldName"]];
 
       dotValue = [udSource objectForKey: @"listRequiresDot"];
@@ -234,7 +237,7 @@ static Class NSStringK;
         queryTimeout = [dd ldapQueryTimeout];
 
       ASSIGN(modulesConstraints,
-	     [udSource objectForKey: @"ModulesConstraints"]);
+          [udSource objectForKey: @"ModulesConstraints"]);
       ASSIGN(_filter, [udSource objectForKey: @"filter"]);
       ASSIGN(_userPasswordAlgorithm, [udSource objectForKey: @"userPasswordAlgorithm"]);
       ASSIGN(_scope, ([udSource objectForKey: @"scope"]
@@ -242,10 +245,10 @@ static Class NSStringK;
                        : (id)@"sub"));
 
       if (!_userPasswordAlgorithm)
-	_userPasswordAlgorithm = @"none";
+        _userPasswordAlgorithm = @"none";
 
       if ([udSource objectForKey: @"passwordPolicy"])
-	passwordPolicy = [[udSource objectForKey: @"passwordPolicy"] boolValue];
+        passwordPolicy = [[udSource objectForKey: @"passwordPolicy"] boolValue];
 
       ASSIGN(MSExchangeHostname, [udSource objectForKey: @"MSExchangeHostname"]);
     }
@@ -280,10 +283,10 @@ static Class NSStringK;
 }
 
 - (void) setBindDN: (NSString *) newBindDN
-	  password: (NSString *) newBindPassword
-	  hostname: (NSString *) newBindHostname
-	      port: (NSString *) newBindPort
-	encryption: (NSString *) newEncryption
+          password: (NSString *) newBindPassword
+          hostname: (NSString *) newBindHostname
+              port: (NSString *) newBindPort
+        encryption: (NSString *) newEncryption
  bindAsCurrentUser: (NSString *) bindAsCurrentUser
 {
   ASSIGN(bindDN, newBindDN);
@@ -304,16 +307,17 @@ static Class NSStringK;
 //
 //
 - (void) setBaseDN: (NSString *) newBaseDN
-	   IDField: (NSString *) newIDField
-	   CNField: (NSString *) newCNField
-	  UIDField: (NSString *) newUIDField
-	mailFields: (NSArray *) newMailFields
+           IDField: (NSString *) newIDField
+           CNField: (NSString *) newCNField
+          UIDField: (NSString *) newUIDField
+        mailFields: (NSArray *) newMailFields
       searchFields: (NSArray *) newSearchFields
      IMAPHostField: (NSString *) newIMAPHostField
     IMAPLoginField: (NSString *) newIMAPLoginField
-	bindFields: (id) newBindFields
-	 kindField: (NSString *) newKindField
-andMultipleBookingsField: (NSString *) newMultipleBookingsField
+    SieveHostField: (NSString *) newSieveHostField
+        bindFields: (id) newBindFields
+         kindField: (NSString *) newKindField
+  andMultipleBookingsField: (NSString *) newMultipleBookingsField
 {
   ASSIGN(baseDN, [newBaseDN lowercaseString]);
   if (newIDField)
@@ -326,6 +330,8 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
     ASSIGN(IMAPHostField, [newIMAPHostField lowercaseString]);
   if (newIMAPLoginField)
     ASSIGN(IMAPLoginField, [newIMAPLoginField lowercaseString]);
+  if (newSieveHostField)
+    ASSIGN(SieveHostField, [newSieveHostField lowercaseString]);
   if (newMailFields)
     ASSIGN(mailFields, newMailFields);
   if (newSearchFields)
@@ -346,12 +352,12 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       //
       // We check for the old format and we support it.
       if ([newBindFields isKindOfClass: [NSArray class]])
-	ASSIGN(bindFields, newBindFields);
+        ASSIGN(bindFields, newBindFields);
       else
-	{
-	  [self logWithFormat: @"WARNING: using old bindFields format - please update it"];
-	  ASSIGN(bindFields, [newBindFields componentsSeparatedByString: @","]);
-	}
+        {
+          [self logWithFormat: @"WARNING: using old bindFields format - please update it"];
+          ASSIGN(bindFields, [newBindFields componentsSeparatedByString: @","]);
+        }
     }
   if (newKindField)
     ASSIGN(kindField, [newKindField lowercaseString]);
@@ -390,8 +396,8 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
   else
     {
       [self errorWithFormat:
-	      @"encryption scheme '%@' not supported:"
-	    @" use 'SSL' or 'STARTTLS'", encryption];
+        @"encryption scheme '%@' not supported:"
+        @" use 'SSL' or 'STARTTLS'", encryption];
       rc = NO;
     }
 
@@ -410,31 +416,31 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       //NSLog(@"Creating NGLdapConnection instance for bindDN '%@'", bindDN);
 
       ldapConnection = [[NGLdapConnection alloc] initWithHostName: hostname
-						 port: port];
+                                                             port: port];
       [ldapConnection autorelease];
       if (![encryption length] || [self _setupEncryption: ldapConnection])
-	{
-	  [ldapConnection bindWithMethod: @"simple"
-			  binddn: bindDN
-			  credentials: password];
-	  if (queryLimit > 0)
-	    [ldapConnection setQuerySizeLimit: queryLimit];
-	  if (queryTimeout > 0)
-	    [ldapConnection setQueryTimeLimit: queryTimeout];
+        {
+          [ldapConnection bindWithMethod: @"simple"
+                                  binddn: bindDN
+                             credentials: password];
+          if (queryLimit > 0)
+            [ldapConnection setQuerySizeLimit: queryLimit];
+          if (queryTimeout > 0)
+            [ldapConnection setQueryTimeLimit: queryTimeout];
           if (!schema)
             {
               schema = [LDAPSourceSchema new];
               [schema readSchemaFromConnection: ldapConnection];
             }
-	}
+        }
       else
-	ldapConnection = nil;
+        ldapConnection = nil;
     }
   NS_HANDLER
     {
-      [self errorWithFormat: @"Could not bind to the LDAP server %@ (%d)"
-						 @" using the bind DN: %@",
-            hostname, port, bindDN];
+      [self errorWithFormat: @"Could not bind to the LDAP server %@ (%d) "
+                             @"using the bind DN: %@", hostname, port, bindDN];
+      [self errorWithFormat: @"%@", localException];
       ldapConnection = nil;
     }
   NS_ENDHANDLER;
@@ -505,10 +511,10 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 //
 //
 - (BOOL) checkLogin: (NSString *) _login
-	   password: (NSString *) _pwd
-	       perr: (SOGoPasswordPolicyError *) _perr
-	     expire: (int *) _expire
-	      grace: (int *) _grace
+           password: (NSString *) _pwd
+               perr: (SOGoPasswordPolicyError *) _perr
+             expire: (int *) _expire
+              grace: (int *) _grace
 {
   NGLdapConnection *bindConnection;
   NSString *userDN;
@@ -516,61 +522,62 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 
   didBind = NO;
 
-  if ([_login length] > 0 && [_pwd length] > 0)
-    {
-      bindConnection = [[NGLdapConnection alloc] initWithHostName: hostname
-						 port: port];
-      if (![encryption length] || [self _setupEncryption: bindConnection])
-	{
-	  if (queryTimeout > 0)
-	    [bindConnection setQueryTimeLimit: queryTimeout];
+  NS_DURING
+    if ([_login length] > 0 && [_pwd length] > 0)
+      {
+        bindConnection = [[NGLdapConnection alloc] initWithHostName: hostname
+                                                             port: port];
+        if (![encryption length] || [self _setupEncryption: bindConnection])
+          {
+            if (queryTimeout > 0)
+              [bindConnection setQueryTimeLimit: queryTimeout];
 
-	  userDN = [_dnCache objectForKey: _login];
+            userDN = [_dnCache objectForKey: _login];
 
-	  if (!userDN)
-	    {
-	      if (bindFields)
-		{
-		  // We MUST always use the source's bindDN/password in
-		  // order to lookup the user's DN. This is important since
-		  // if we use bindAsCurrentUser, we could stay bound and
-		  // lookup the user's DN (for an other user that is trying
-		  // to log in) but not be able to do so due to ACLs in LDAP.
-		  [self setBindDN: sourceBindDN];
-		  [self setBindPassword: sourceBindPassword];
-		  userDN = [self _fetchUserDNForLogin: _login];
-		}
-	      else
-		userDN = [NSString stringWithFormat: @"%@=%@,%@",
-				   IDField, [_login escapedForLDAPDN], baseDN];
-	    }
+            if (!userDN)
+              {
+                if (bindFields)
+                  {
+                    // We MUST always use the source's bindDN/password in
+                    // order to lookup the user's DN. This is important since
+                    // if we use bindAsCurrentUser, we could stay bound and
+                    // lookup the user's DN (for an other user that is trying
+                    // to log in) but not be able to do so due to ACLs in LDAP.
+                    [self setBindDN: sourceBindDN];
+                    [self setBindPassword: sourceBindPassword];
+                    userDN = [self _fetchUserDNForLogin: _login];
+                  }
+                else
+                  userDN = [NSString stringWithFormat: @"%@=%@,%@",
+                                   IDField, [_login escapedForLDAPDN], baseDN];
+              }
 
-	  if (userDN)
-	    {
-	      // We cache the _login <-> userDN entry to speed up things
-	      [_dnCache setObject: userDN  forKey: _login];
-	      
-	      NS_DURING
-		if (!passwordPolicy)
-		  didBind = [bindConnection bindWithMethod: @"simple"
-					    binddn: userDN
-					    credentials: _pwd];
-	        else  
-		  didBind = [bindConnection bindWithMethod: @"simple"
-					    binddn: userDN
-					    credentials: _pwd
-					    perr: (void *)_perr
-					    expire: _expire
-					    grace: _grace];
-	      NS_HANDLER
-                ;
-              NS_ENDHANDLER
-                ;
-            }
-	}
-      [bindConnection release];
-    }
+            if (userDN)
+              {
+                // We cache the _login <-> userDN entry to speed up things
+                [_dnCache setObject: userDN  forKey: _login];
   
+                if (!passwordPolicy)
+                  didBind = [bindConnection bindWithMethod: @"simple"
+                                                    binddn: userDN
+                                               credentials: _pwd];
+                else  
+                  didBind = [bindConnection bindWithMethod: @"simple"
+                                                    binddn: userDN
+                                               credentials: _pwd
+                                                      perr: (void *)_perr
+                                                    expire: _expire
+                                                     grace: _grace];
+              }
+          }
+      }
+  NS_HANDLER
+    {
+      [self logWithFormat: @"%@", localException];
+    }
+  NS_ENDHANDLER;
+
+  [bindConnection release];
   return didBind;
 }
 
@@ -586,7 +593,10 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
   pass = [plainPassword asCryptedPassUsingScheme: _userPasswordAlgorithm];
 
   if (pass == nil)
-    [self errorWithFormat: @"Unsupported user-password algorithm: %@", _userPasswordAlgorithm];
+    {
+      [self errorWithFormat: @"Unsupported user-password algorithm: %@", _userPasswordAlgorithm];
+      return nil;
+    }
 
   return [NSString stringWithFormat: @"{%@}%@", _userPasswordAlgorithm, pass];
 }
@@ -595,9 +605,9 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 //
 //
 - (BOOL) changePasswordForLogin: (NSString *) login
-		    oldPassword: (NSString *) oldPassword
-		    newPassword: (NSString *) newPassword
-			   perr: (SOGoPasswordPolicyError *) perr
+                    oldPassword: (NSString *) oldPassword
+                    newPassword: (NSString *) newPassword
+                           perr: (SOGoPasswordPolicyError *) perr
   
 {
   NGLdapConnection *bindConnection;
@@ -606,59 +616,73 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 
   didChange = NO;
 
-  if ([login length] > 0)
-    {
-      bindConnection = [[NGLdapConnection alloc] initWithHostName: hostname
-						 port: port];
-     if (![encryption length] || [self _setupEncryption: bindConnection])
-	{
-	  if (queryTimeout > 0)
-	    [bindConnection setQueryTimeLimit: queryTimeout];
-	  if (bindFields)
-	    userDN = [self _fetchUserDNForLogin: login];
-	  else
-	    userDN = [NSString stringWithFormat: @"%@=%@,%@",
-			       IDField, [login escapedForLDAPDN], baseDN];
-	  if (userDN)
-	    {
-	      NS_DURING
-		if (!passwordPolicy)
-		  {
-		    // We don't use a password policy - we simply use
-		    // a modify-op to change the password
-		    NGLdapModification *mod;
-		    NGLdapAttribute *attr;
-		    NSArray *changes;
-		    
-		    attr = [[NGLdapAttribute alloc] initWithAttributeName: @"userPassword"];
-		    [attr addStringValue: [self _encryptPassword: newPassword]];
-		    
-		    mod = [NGLdapModification replaceModification: attr];
-		    changes = [NSArray arrayWithObject: mod];
-		    *perr = PolicyNoError;
+  NS_DURING
+    if ([login length] > 0)
+      {
+        bindConnection = [[NGLdapConnection alloc] initWithHostName: hostname
+                                                             port: port];
+        if (![encryption length] || [self _setupEncryption: bindConnection])
+          {
+            if (queryTimeout > 0)
+              [bindConnection setQueryTimeLimit: queryTimeout];
+            if (bindFields)
+              userDN = [self _fetchUserDNForLogin: login];
+            else
+              userDN = [NSString stringWithFormat: @"%@=%@,%@",
+                     IDField, [login escapedForLDAPDN], baseDN];
+            if (userDN)
+              {
+                if (!passwordPolicy)
+                  {
+                    // We don't use a password policy - we simply use
+                    // a modify-op to change the password
+                    NGLdapModification *mod;
+                    NGLdapAttribute *attr;
+                    NSArray *changes;
+                    NSString* encryptedPass;
 
-		    if ([bindConnection bindWithMethod: @"simple"
-					binddn: userDN
-					credentials: oldPassword])
-		      didChange = [bindConnection modifyEntryWithDN: userDN
-						  changes: changes]; 
-		    else
-		      didChange = NO;
-		  }
-	      else
-		didChange = [bindConnection changePasswordAtDn: userDN
-					    oldPassword: oldPassword
-					    newPassword: newPassword
-					    perr: (void *)perr];
-	      NS_HANDLER
-                ;
-              NS_ENDHANDLER
-                ;
-            }
-	}
-      [bindConnection release];
+                    attr = [[NGLdapAttribute alloc] initWithAttributeName: @"userPassword"];
+                    if ([_userPasswordAlgorithm isEqualToString: @"none"])
+                      {
+                        encryptedPass = newPassword;
+                      }
+                    else
+                      {
+                        encryptedPass = [self _encryptPassword: newPassword];
+                      }
+                    if(encryptedPass != nil)
+                      {
+                        [attr addStringValue: encryptedPass];
+                        mod = [NGLdapModification replaceModification: attr];
+                        changes = [NSArray arrayWithObject: mod];
+                        *perr = PolicyNoError;
+
+                        if ([bindConnection bindWithMethod: @"simple"
+                            binddn: userDN
+                            credentials: oldPassword])
+                          {
+                            didChange = [bindConnection modifyEntryWithDN: userDN
+                                                                  changes: changes];
+                        }
+                        else
+                          didChange = NO;
+                      }
+                  }
+                else
+                  didChange = [bindConnection changePasswordAtDn: userDN
+                                                     oldPassword: oldPassword
+                                                     newPassword: newPassword
+                                                            perr: (void *)perr];
+              }
+          }
+      }
+  NS_HANDLER
+    {
+      [self logWithFormat: @"%@", localException];
     }
+  NS_ENDHANDLER ;
   
+  [bindConnection release];
   return didChange;
 }
 
@@ -683,18 +707,18 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       if ([escapedFilter isEqualToString: @"."])
         [qs appendFormat: @"(%@='*')", CNField];
       else
-	{
-	  fieldFormat = [NSString stringWithFormat: @"(%%@='%@*')", escapedFilter];
-	  fields = [NSMutableArray arrayWithArray: searchFields];
-	  [fields addObjectsFromArray: mailFields];
-	  [fields addObject: CNField];
-	  searchFormat = [[[fields uniqueObjects] stringsWithFormat: fieldFormat]
-				    componentsJoinedByString: @" OR "];
-	  [qs appendString: searchFormat];
-	}
+        {
+          fieldFormat = [NSString stringWithFormat: @"(%%@='%@*')", escapedFilter];
+          fields = [NSMutableArray arrayWithArray: searchFields];
+          [fields addObjectsFromArray: mailFields];
+          [fields addObject: CNField];
+          searchFormat = [[[fields uniqueObjects] stringsWithFormat: fieldFormat]
+            componentsJoinedByString: @" OR "];
+          [qs appendString: searchFormat];
+        }
 
       if (_filter && [_filter length])
-	[qs appendFormat: @" AND %@", _filter];
+        [qs appendFormat: @" AND %@", _filter];
 
       qualifier = [EOQualifier qualifierWithQualifierFormat: qs];
     }
@@ -702,7 +726,7 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
     {
       qs = [NSMutableString stringWithFormat: @"(%@='*')", CNField];
       if ([_filter length])
-	[qs appendFormat: @" AND %@", _filter];
+        [qs appendFormat: @" AND %@", _filter];
       qualifier = [EOQualifier qualifierWithQualifierFormat: qs];
     }
   else
@@ -721,18 +745,18 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 
   fieldFormat = [NSString stringWithFormat: @"(%%@='%@')", escapedUid];
   mailFormat = [[mailFields stringsWithFormat: fieldFormat]
-		 componentsJoinedByString: @" OR "];
+                     componentsJoinedByString: @" OR "];
   qs = [NSMutableString stringWithFormat: @"(%@='%@') OR %@",
                         UIDField, escapedUid, mailFormat];
   if (bindFields)
     {
       bindFieldsEnum = [bindFields objectEnumerator];
       while ((currentField = [bindFieldsEnum nextObject]))
-	{
-	  if ([currentField caseInsensitiveCompare: UIDField] != NSOrderedSame
-	      && ![mailFields containsObject: currentField])
-	    [qs appendFormat: @" OR (%@='%@')", [currentField stringByTrimmingSpaces], escapedUid];
-	}
+        {
+          if ([currentField caseInsensitiveCompare: UIDField] != NSOrderedSame
+              && ![mailFields containsObject: currentField])
+            [qs appendFormat: @" OR (%@='%@')", [currentField stringByTrimmingSpaces], escapedUid];
+        }
     }
 
   if (_filter && [_filter length])
@@ -792,7 +816,7 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
   while ((currentEntry = [entries nextObject]))
     {
       value = [[currentEntry attributeWithName: IDField]
-		    stringValueAtIndex: 0];
+                            stringValueAtIndex: 0];
       if ([value length] > 0)
         [ids addObject: value];
     }
@@ -813,7 +837,7 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
   while ((currentFieldName = [emailFields nextObject]))
     {
       allValues = [[ldapEntry attributeWithName: currentFieldName]
-		    allStringValues];
+                    allStringValues];
       [emails addObjectsFromArray: allValues];
     }
   [ldifRecord setObject: emails forKey: @"c_emails"];
@@ -823,19 +847,26 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
     {
       ldapValue = [[ldapEntry attributeWithName: IMAPHostField] stringValueAtIndex: 0];
       if ([ldapValue length] > 0)
-	[ldifRecord setObject: ldapValue forKey: @"c_imaphostname"];
+        [ldifRecord setObject: ldapValue forKey: @"c_imaphostname"];
     }
 
   if (IMAPLoginField)
     {
       ldapValue = [[ldapEntry attributeWithName: IMAPLoginField] stringValueAtIndex: 0];
       if ([ldapValue length] > 0)
-	[ldifRecord setObject: ldapValue forKey: @"c_imaplogin"];
+        [ldifRecord setObject: ldapValue forKey: @"c_imaplogin"];
+    }
+
+  if (SieveHostField)
+    {
+      ldapValue = [[ldapEntry attributeWithName: SieveHostField] stringValueAtIndex: 0];
+      if ([ldapValue length] > 0)
+        [ldifRecord setObject: ldapValue forKey: @"c_sievehostname"];
     }
 }
 
 - (void) _fillConstraints: (NGLdapEntry *) ldapEntry
-		forModule: (NSString *) module
+                forModule: (NSString *) module
            intoLDIFRecord: (NSMutableDictionary *) ldifRecord
 {
   NSDictionary *constraints;
@@ -851,15 +882,15 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       matches = [[constraints allKeys] objectEnumerator];
       currentMatch = [matches nextObject];
       while (result && currentMatch)
-	{
-	  ldapValue = [[ldapEntry attributeWithName: currentMatch]
-			stringValueAtIndex: 0];
-	  currentValue = [constraints objectForKey: currentMatch];
-	  if ([ldapValue caseInsensitiveMatches: currentValue])
-	    currentMatch = [matches nextObject];
-	  else
-	    result = NO;
-	}
+        {
+          ldapValue = [[ldapEntry attributeWithName: currentMatch]
+            stringValueAtIndex: 0];
+          currentValue = [constraints objectForKey: currentMatch];
+          if ([ldapValue caseInsensitiveMatches: currentValue])
+            currentMatch = [matches nextObject];
+          else
+            result = NO;
+        }
     }
 
   [ldifRecord setObject: [NSNumber numberWithBool: result]
@@ -964,8 +995,8 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       classes = [NSMutableArray arrayWithArray: o];
       c = [classes count];
       for (i = 0; i < c; i++)
-	[classes replaceObjectAtIndex: i
-		 withObject: [[classes objectAtIndex: i] lowercaseString]];
+        [classes replaceObjectAtIndex: i
+          withObject: [[classes objectAtIndex: i] lowercaseString]];
     }
 
   if (classes)
@@ -973,26 +1004,26 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
       // We check if our entry is a group. If so, we set the
       // 'isGroup' custom attribute.
       if ([classes containsObject: @"group"] ||
-	  [classes containsObject: @"groupofnames"] ||
-	  [classes containsObject: @"groupofuniquenames"] ||
-	  [classes containsObject: @"posixgroup"])
-	{
-	  [ldifRecord setObject: [NSNumber numberWithInt: 1]
+          [classes containsObject: @"groupofnames"] ||
+          [classes containsObject: @"groupofuniquenames"] ||
+          [classes containsObject: @"posixgroup"])
+        {
+          [ldifRecord setObject: [NSNumber numberWithInt: 1]
                          forKey: @"isGroup"];
-	}
+        }
       // We check if our entry is a resource. We also support
       // determining resources based on the KindFieldName attribute
       // value - see below.
       else if ([classes containsObject: @"calendarresource"])
-	{
-	  [ldifRecord setObject: [NSNumber numberWithInt: 1]
+        {
+          [ldifRecord setObject: [NSNumber numberWithInt: 1]
                          forKey: @"isResource"];
-	}
+        }
     }
 
   // We check if that entry corresponds to a resource. For this,
   // kindField must be defined and it must hold one of those values
-  //				       
+  //
   // location
   // thing
   // group
@@ -1197,19 +1228,19 @@ andMultipleBookingsField: (NSString *) newMultipleBookingsField
 - (NGLdapEntry *) lookupGroupEntryByUID: (NSString *) theUID
 {
   return [self lookupGroupEntryByAttribute: UIDField
-	       andValue: theUID];
+                                  andValue: theUID];
 }
 
 - (NGLdapEntry *) lookupGroupEntryByEmail: (NSString *) theEmail
 {
 #warning We should support MailFieldNames
   return [self lookupGroupEntryByAttribute: @"mail"
-	       andValue: theEmail];
+                                  andValue: theEmail];
 }
 
 // This method should accept multiple attributes
 - (NGLdapEntry *) lookupGroupEntryByAttribute: (NSString *) theAttribute 
-				     andValue: (NSString *) theValue
+                                     andValue: (NSString *) theValue
 {
   EOQualifier *qualifier;
   NSString *s;
@@ -1593,6 +1624,7 @@ _makeLDAPChanges (NGLdapConnection *ldapConnection,
                                    searchFields: nil
                                   IMAPHostField: nil
                                  IMAPLoginField: nil
+                                 SieveHostField: nil
                                      bindFields: nil
                                       kindField: nil
                        andMultipleBookingsField: nil];

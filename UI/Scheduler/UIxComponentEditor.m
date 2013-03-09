@@ -1,6 +1,6 @@
 /* UIxComponentEditor.m - this file is part of SOGo
  *
- * Copyright (C) 2006-2011 Inverse inc.
+ * Copyright (C) 2006-2013 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Francis Lachapelle <flachapelle@inverse.ca>
@@ -43,6 +43,7 @@
 #import <NGObjWeb/NSException+HTTP.h>
 #import <NGObjWeb/WOApplication.h>
 #import <NGObjWeb/WORequest.h>
+#import <NGObjWeb/WOResponse.h>
 #import <NGExtensions/NSCalendarDate+misc.h>
 #import <NGExtensions/NSObject+Logs.h>
 #import <NGExtensions/NSString+misc.h>
@@ -766,9 +767,85 @@ iRANGE(2);
   return attachUrl;
 }
 
+- (NSDictionary *) organizerProfile
+{
+  NSMutableDictionary *profile;
+  NSDictionary *ownerIdentity;
+  NSString *uid, *name, *email, *partstat, *role;
+  SOGoUserManager *um;
+  SOGoCalendarComponent *co;
+  SOGoUser *ownerUser;
+
+  if (organizerProfile == nil)
+    {
+      profile = [NSMutableDictionary dictionary];
+      email = [organizer rfc822Email];
+      role = nil;
+      partstat = nil;
+      
+      if ([email length])
+	{
+	  um = [SOGoUserManager sharedUserManager];
+	  
+	  name = [organizer cn];
+	  uid = [um getUIDForEmail: email];
+	  
+	  partstat = [[organizer partStat] lowercaseString];
+	  role = [[organizer role] lowercaseString];
+	}
+      else
+	{
+	  // No organizer defined in vEvent; use calendar owner
+	  co = [self clientObject];
+	  uid = [[co container] ownerInContext: context];
+	  ownerUser = [SOGoUser userWithLogin: uid roles: nil];
+	  ownerIdentity = [ownerUser defaultIdentity];
+	  
+	  name = [ownerIdentity objectForKey: @"fullName"];
+	  email = [ownerIdentity  objectForKey: @"email"];
+	}
+      
+      if (uid != nil)
+	[profile setObject: uid 
+		    forKey: @"uid"];
+      else
+	uid = email;
+      
+      [profile setObject: name
+			   forKey: @"name"];
+      
+      [profile setObject: email
+			   forKey: @"email"];
+      
+      if (partstat == nil || ![partstat length])
+	partstat = @"accepted";
+      [profile setObject: partstat
+			   forKey: @"partstat"];
+      
+      if (role == nil || ![role length])
+	role = @"chair";
+      [profile setObject: role
+			   forKey: @"role"];
+      
+      organizerProfile = [NSDictionary dictionaryWithObject: profile forKey: uid];
+      [organizerProfile retain];
+    }
+
+  return organizerProfile;
+}
+
 - (NSString *) organizerName
 {
-  return [organizer mailAddress];
+  NSDictionary *profile;
+
+  profile = [[[self organizerProfile] allValues] lastObject];
+
+  return [profile objectForKey: @"name"];
+}
+
+- (NSString *) jsonOrganizer
+{
+  return [[[[self organizerProfile] allValues] lastObject] jsonRepresentation];
 }
 
 // - (BOOL) canBeOrganizer
@@ -898,78 +975,6 @@ iRANGE(2);
 - (NSString *) jsonAttendees
 {
   return [jsonAttendees jsonRepresentation];
-}
-
-- (NSDictionary *) organizerProfile
-{
-  NSMutableDictionary *profile;
-  NSDictionary *ownerIdentity;
-  NSString *uid, *name, *email, *partstat, *role;
-  SOGoUserManager *um;
-  SOGoCalendarComponent *co;
-  SOGoUser *ownerUser;
-
-  if (organizerProfile == nil)
-    {
-      profile = [NSMutableDictionary dictionary];
-      email = [organizer rfc822Email];
-      role = nil;
-      partstat = nil;
-      
-      if ([email length])
-	{
-	  um = [SOGoUserManager sharedUserManager];
-	  
-	  name = [organizer cn];
-	  uid = [um getUIDForEmail: email];
-	  
-	  partstat = [[organizer partStat] lowercaseString];
-	  role = [[organizer role] lowercaseString];
-	}
-      else
-	{
-	  // No organizer defined in vEvent; use calendar owner
-	  co = [self clientObject];
-	  uid = [[co container] ownerInContext: context];
-	  ownerUser = [SOGoUser userWithLogin: uid roles: nil];
-	  ownerIdentity = [ownerUser defaultIdentity];
-	  
-	  name = [ownerIdentity objectForKey: @"fullName"];
-	  email = [ownerIdentity  objectForKey: @"email"];
-	}
-      
-      if (uid != nil)
-	[profile setObject: uid 
-		    forKey: @"uid"];
-      else
-	uid = email;
-      
-      [profile setObject: name
-			   forKey: @"name"];
-      
-      [profile setObject: email
-			   forKey: @"email"];
-      
-      if (partstat == nil || ![partstat length])
-	partstat = @"accepted";
-      [profile setObject: partstat
-			   forKey: @"partstat"];
-      
-      if (role == nil || ![role length])
-	role = @"chair";
-      [profile setObject: role
-			   forKey: @"role"];
-      
-      organizerProfile = [NSDictionary dictionaryWithObject: profile forKey: uid];
-      [organizerProfile retain];
-    }
-
-  return organizerProfile;
-}
-
-- (NSString *) jsonOrganizer
-{
-  return [[[[self organizerProfile] allValues] lastObject] jsonRepresentation];
 }
 
 - (void) setLocation: (NSString *) _value
@@ -1457,14 +1462,12 @@ RANGE(2);
 ////////////////////////////////// JUNK ////////////////////////////////////////
 - (NSArray *) cycles
 {
-  NSBundle *bundle;
   NSString *path;
   static NSArray *cycles = nil;
   
   if (!cycles)
     {
-      bundle = [NSBundle bundleForClass:[self class]];
-      path   = [bundle pathForResource: @"cycles" ofType: @"plist"];
+      path = [[self componentBundle] pathForResource: @"cycles" ofType: @"plist"];
       NSAssert(path != nil, @"Cannot find cycles.plist!");
       cycles = [[NSArray arrayWithContentsOfFile:path] retain];
       NSAssert(cycles != nil, @"Cannot instantiate cycles from cycles.plist!");
@@ -1790,34 +1793,37 @@ RANGE(2);
 	    {
 	      currentData = [attendees objectAtIndex: count];
 	      currentEmail = [currentData objectForKey: @"email"];
-              role = [[currentData objectForKey: @"role"] uppercaseString];
-              if (!role)
-                role = @"REQ-PARTICIPANT";
-              if ([role isEqualToString: @"NON-PARTICIPANT"])
-                partstat = @"";
-              else
+              if ([currentEmail length] > 0)
                 {
-                  partstat = [[currentData objectForKey: @"partstat"]
-                               uppercaseString];
-                  if (!partstat)
-                    partstat = @"NEEDS-ACTION";
-                }
-	      currentAttendee = [component findAttendeeWithEmail: currentEmail];
-	      if (!currentAttendee)
-		{
-		  currentAttendee = [iCalPerson elementWithTag: @"attendee"];
-		  [currentAttendee setCn: [currentData objectForKey: @"name"]];
-		  [currentAttendee setEmail: currentEmail];
-		  // [currentAttendee
-		  //   setParticipationStatus: iCalPersonPartStatNeedsAction];
-		}
-              [currentAttendee
+                  role = [[currentData objectForKey: @"role"] uppercaseString];
+                  if (!role)
+                    role = @"REQ-PARTICIPANT";
+                  if ([role isEqualToString: @"NON-PARTICIPANT"])
+                    partstat = @"";
+                  else
+                    {
+                      partstat = [[currentData objectForKey: @"partstat"]
+                                   uppercaseString];
+                      if (!partstat)
+                        partstat = @"NEEDS-ACTION";
+                    }
+                  currentAttendee = [component findAttendeeWithEmail: currentEmail];
+                  if (!currentAttendee)
+                    {
+                      currentAttendee = [iCalPerson elementWithTag: @"attendee"];
+                      [currentAttendee setCn: [currentData objectForKey: @"name"]];
+                      [currentAttendee setEmail: currentEmail];
+                      // [currentAttendee
+                      //   setParticipationStatus: iCalPersonPartStatNeedsAction];
+                    }
+                  [currentAttendee
                     setRsvp: ([role isEqualToString: @"NON-PARTICIPANT"]
                               ? @"FALSE"
                               : @"TRUE")];
-              [currentAttendee setRole: role];
-              [currentAttendee setPartStat: partstat];
-	      [newAttendees addObject: currentAttendee];
+                  [currentAttendee setRole: role];
+                  [currentAttendee setPartStat: partstat];
+                  [newAttendees addObject: currentAttendee];
+                }
 	    }
 	  [component setAttendees: newAttendees];
 	}
@@ -1912,14 +1918,19 @@ RANGE(2);
     {
       NSCalendarDate *date;
       SOGoUserDefaults *ud;
-      NSDictionary *locale;
 
-      ud = [[context activeUser] userDefaults];
-      locale = [[self resourceManager]
-                 localeForLanguageNamed: [ud language]];
       date = [NSCalendarDate dateWithString: [self range2]
 			     calendarFormat: dateFormat
                                      locale: locale];
+
+      // Adjust timezone
+      ud = [[context activeUser] userDefaults];
+      date = [NSCalendarDate dateWithYear: [date yearOfCommonEra]
+                                    month: [date monthOfYear]
+                                      day: [date dayOfMonth]
+                                     hour: 0 minute: 0 second: 0
+                                 timeZone: [ud timeZone]];
+
       [theRule setUntilDate: date];
     }
   // No end date.
@@ -2392,12 +2403,7 @@ RANGE(2);
     {
       ownerAttendee = [component userAsAttendee: ownerUser];
       if (ownerAttendee)
-        {
-          if ([[ownerAttendee rsvp] isEqualToString: @"true"])
-            rc = 1;
-          else
-            rc = 2;
-        }
+        rc = 1;
     }
 
   return rc;
@@ -2524,6 +2530,32 @@ RANGE(2);
 - (NSString *) ownerLogin
 {
   return [[self clientObject] ownerInContext: context];
+}
+
+- (unsigned int) firstDayOfWeek
+{
+  SOGoUserDefaults *ud;
+
+  ud = [[context activeUser] userDefaults];
+
+  return [ud firstDayOfWeek];
+}
+
+// returns the raw content of the object
+- (WOResponse *) rawAction
+{
+  NSMutableString *content;
+  WOResponse *response;
+
+  content = [NSMutableString string];
+  response = [context response];
+
+  [content appendFormat: [[self clientObject] contentAsString]];
+  [response setHeader: @"text/plain; charset=utf-8" 
+            forKey: @"content-type"];
+  [response appendContentString: content];
+
+  return response;
 }
 
 @end

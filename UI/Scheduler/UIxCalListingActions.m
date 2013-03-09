@@ -96,8 +96,10 @@ static NSArray *tasksFields = nil;
   if (!tasksFields)
     {
       tasksFields = [NSArray arrayWithObjects: @"c_name", @"c_folder",
+                             @"calendarName",
 			     @"c_status", @"c_title", @"c_enddate",
-			     @"c_classification", @"editable", @"erasable",
+			     @"c_classification", @"c_location", @"c_category",
+                             @"editable", @"erasable",
                              @"c_priority", nil];
       [tasksFields retain];
     }
@@ -209,11 +211,11 @@ static NSArray *tasksFields = nil;
   user = [context activeUser];
   userLogin = [user login];
 
+  title = [request formValueForKey: @"search"];
   param = [request formValueForKey: @"filterpopup"];
   if ([param length])
     {
       [self _setupDatesWithPopup: param andUserTZ: userTimeZone];
-      title = [request formValueForKey: @"search"];
     }
   else
     {
@@ -666,7 +668,7 @@ _userStateInEvent (NSArray *event)
 	  withNumber: (NSNumber *) number
 {
   int currentDayStart, startSecs, endsSecs, currentStart, eventStart,
-    eventEnd, offset, recurrenceTime, swap;
+    eventEnd, computedEventEnd, offset, recurrenceTime, swap;
   NSMutableArray *currentDay;
   NSMutableDictionary *eventBlock;
   iCalPersonPartStat userState;
@@ -721,6 +723,11 @@ _userStateInEvent (NSArray *event)
               if (eventEnd > endsSecs)
                 eventEnd = endsSecs;
 
+              if (eventEnd < startSecs)
+                // The event doesn't end in the covered period.
+                // This special case occurs with a DST change.
+                return;
+
               userState = _userStateInEvent (event);
               while (currentDayStart + dayLength < eventEnd)
                 {
@@ -736,19 +743,21 @@ _userStateInEvent (NSArray *event)
                   offset++;
                   currentDay = [blocks objectAtIndex: offset];
                 }
-	      if (eventEnd > currentStart)
-		{
-		  eventBlock = [self _eventBlockWithStart: currentStart
-						      end: eventEnd
-						   number: number
-						    onDay: currentDayStart
-					   recurrenceTime: recurrenceTime
-						userState: userState];
-		  [currentDay addObject: eventBlock];
-		}
-	      else
-		[self warnWithFormat: @"event '%@' has end <= start: %d < %d",
-		      [event objectAtIndex: eventNameIndex], eventEnd, currentStart];
+
+	      computedEventEnd = eventEnd;
+
+	      // We add 5 mins to the end date of an event if the end date
+	      // is equal or smaller than the event's start date.
+	      if (eventEnd <= currentStart)
+		computedEventEnd = currentStart + (5*60);
+	      
+	      eventBlock = [self _eventBlockWithStart: currentStart
+						  end: computedEventEnd
+					       number: number
+						onDay: currentDayStart
+				       recurrenceTime: recurrenceTime
+					    userState: userState];
+	      [currentDay addObject: eventBlock];
 	    }
         }
     }
@@ -1023,6 +1032,7 @@ _computeBlocksPosition (NSArray *blocks)
           now = [NSCalendarDate calendarDate];
           taskDate
 	    = [NSCalendarDate dateWithTimeIntervalSince1970: endDateStamp];
+          [taskDate setTimeZone: userTimeZone];
           if ([taskDate earlierDate: now] == taskDate)
             statusClass = @"overdue";
           else
@@ -1034,7 +1044,7 @@ _computeBlocksPosition (NSArray *blocks)
             }
         }
       else
-        statusClass = @"duelater";
+        statusClass = @"noduedate";
     }
 
   return statusClass;
@@ -1042,14 +1052,16 @@ _computeBlocksPosition (NSArray *blocks)
 
 - (WOResponse *) tasksListAction
 {
+  NSMutableArray *filteredTasks, *filteredTask;
+  NSString *sort, *ascending;
+  NSString *statusFlag;
   SOGoUserSettings *us;
   NSEnumerator *tasks;
-  NSMutableArray *filteredTasks, *filteredTask;
-  BOOL showCompleted;
   NSArray *task;
-  int statusCode;
+
   unsigned int endDateStamp;
-  NSString *statusFlag;
+  BOOL showCompleted;
+  int statusCode;
 
   filteredTasks = [NSMutableArray array];
 
@@ -1068,18 +1080,39 @@ _computeBlocksPosition (NSArray *blocks)
 		 forComponentOfType: @"vtodo"] objectEnumerator];
   while ((task = [tasks nextObject]))
     {
-      statusCode = [[task objectAtIndex: 2] intValue];
+      statusCode = [[task objectAtIndex: 3] intValue];
       if (statusCode != 1 || showCompleted)
 	{
 	  filteredTask = [NSMutableArray arrayWithArray: task];
-	  endDateStamp = [[task objectAtIndex: 4] intValue];
+	  endDateStamp = [[task objectAtIndex: 5] intValue];
 	  statusFlag = [self _getStatusClassForStatusCode: statusCode
 			     andEndDateStamp: endDateStamp];
 	  [filteredTask addObject: statusFlag];
+          if (endDateStamp > 0)
+            [filteredTask addObject: [self _formattedDateForSeconds: endDateStamp
+                                                          forAllDay: NO]];
 	  [filteredTasks addObject: filteredTask];
 	}
     }
-  [filteredTasks sortUsingSelector: @selector (compareTasksAscending:)];
+  sort = [[context request] formValueForKey: @"sort"];
+  if ([sort isEqualToString: @"title"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksTitleAscending:)];
+  else if ([sort isEqualToString: @"priority"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksPriorityAscending:)];
+  else if ([sort isEqualToString: @"end"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksEndAscending:)];
+  else if ([sort isEqualToString: @"location"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksLocationAscending:)];
+  else if ([sort isEqualToString: @"category"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksCategoryAscending:)];
+  else if ([sort isEqualToString: @"calendarname"])
+    [filteredTasks sortUsingSelector: @selector (compareTasksCalendarNameAscending:)];
+  else 
+    [filteredTasks sortUsingSelector: @selector (compareTasksAscending:)];
+
+  ascending = [[context request] formValueForKey: @"asc"];
+  if (![ascending boolValue])
+    [filteredTasks reverseArray];
 
   return [self _responseWithData: filteredTasks];
 }

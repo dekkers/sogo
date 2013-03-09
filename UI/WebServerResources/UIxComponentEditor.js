@@ -123,8 +123,7 @@ function initializeDocumentHref() {
     var documentLabel = $("documentLabel");
     var documentUrl = $("attach");
 
-    documentHref.observe("click", onPopupDocumentWindow, false);
-    documentHref.setStyle({ textDecoration: "underline", color: "#00f" });
+    documentHref.on("click", onPopupDocumentWindow, false);
     if (documentUrl.value.length > 0) {
         documentHref.appendChild(document.createTextNode(documentUrl.value));
         documentLabel.setStyle({ display: "block" });
@@ -132,7 +131,7 @@ function initializeDocumentHref() {
 
     var changeUrlButton = $("changeAttachButton");
     if (changeUrlButton)
-        changeUrlButton.observe("click", onPopupAttachWindow, false);
+        changeUrlButton.on("click", onPopupAttachWindow, false);
 }
 
 function initializeClassificationMenu() {
@@ -193,7 +192,7 @@ function onComponentEditorLoad(event) {
     initializeClassificationMenu();
     var list = $("calendarList");
     if (list) {
-        list.observe("change", onChangeCalendar, false);
+        list.on("change", onChangeCalendar, false);
         list.fire("mousedown");
     }
     
@@ -201,14 +200,12 @@ function onComponentEditorLoad(event) {
     if (tmp) {
         var menuItems = tmp.childNodesWithTag("li");
         for (var i = 0; i < menuItems.length; i++)
-            menuItems[i].observe("mousedown",
-                                 onMenuSetClassification.bindAsEventListener(menuItems[i]),
-                                 false);
+            menuItems[i].on("mousedown", onMenuSetClassification);
     }
 
     tmp = $("replyList");
     if (tmp) {
-        tmp.observe("change", onReplyChange);
+        tmp.on("change", onReplyChange);
         var isDelegated = (tmp.value == 4);
         tmp = $("delegatedTo");
         tmp.addInterface(SOGoAutoCompletionInterface);
@@ -227,22 +224,22 @@ function onComponentEditorLoad(event) {
 
     tmp = $("repeatHref");
     if (tmp)
-        tmp.observe("click", onPopupRecurrenceWindow);
+        tmp.on("click", onPopupRecurrenceWindow);
     tmp = $("repeatList");
     if (tmp)
-        tmp.observe("change", onPopupRecurrenceWindow);
+        tmp.on("change", onPopupRecurrenceWindow);
     tmp = $("reminderHref");
     if (tmp)
-        tmp.observe("click", onPopupReminderWindow);
+        tmp.on("click", onPopupReminderWindow);
     tmp = $("reminderList");
     if (tmp)
-        tmp.observe("change", onPopupReminderWindow);
+        tmp.on("change", onPopupReminderWindow);
     tmp = $("summary");
     if (tmp)
-        tmp.observe("keyup", onSummaryChange);
+        tmp.on("keyup", onSummaryChange);
     
-    Event.observe(window, "resize", onWindowResize);
-    Event.observe(window, "beforeunload", onComponentEditorClose);
+    Event.on(window, "resize", onWindowResize);
+    Event.on(window, "beforeunload", onComponentEditorClose);
     
     onPopupRecurrenceWindow(null);
     onPopupReminderWindow(null);
@@ -256,10 +253,10 @@ function onComponentEditorLoad(event) {
     
     tmp = $("okButton");
     if (tmp)
-        tmp.observe ("click", onOkButtonClick);
+        tmp.on ("click", onOkButtonClick);
     tmp = $("cancelButton");
     if (tmp)
-        tmp.observe ("click", onCancelButtonClick);
+        tmp.on ("click", onCancelButtonClick);
 }
 
 function onSummaryChange (e) {
@@ -415,4 +412,4 @@ function onCancelButtonClick (e) {
     window.close ();
 }
 
-document.observe("dom:loaded", onComponentEditorLoad);
+document.on("dom:loaded", onComponentEditorLoad);

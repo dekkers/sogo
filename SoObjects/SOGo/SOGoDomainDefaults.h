@@ -1,6 +1,6 @@
 /* SOGoDomainDefaults.h - this file is part of SOGo
  *
- * Copyright (C) 2009-2012 Inverse inc.
+ * Copyright (C) 2009-2013 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -47,12 +47,13 @@
 - (NSString *) imapAclGroupIdPrefix;
 - (NSString *) imapFolderSeparator;
 - (BOOL) imapAclConformsToIMAPExt;
-- (BOOL) forceIMAPLoginWithEmail;
+- (BOOL) forceExternalLoginWithEmail;
 - (BOOL) sieveScriptsEnabled;
 - (BOOL) forwardEnabled;
 - (BOOL) vacationEnabled;
 - (NSString *) mailingMechanism;
 - (NSString *) smtpServer;
+- (NSString *) smtpAuthenticationType;
 - (NSString *) mailSpoolPath;
 - (float) softQuotaRatio;
 - (BOOL) mailKeepDraftsAfterSend;
@@ -76,6 +77,10 @@
 - (NSArray *) additionalJSFiles;
 
 - (BOOL) hideSystemEMail;
+
+- (int) searchMinimumWordLength;
+- (BOOL) notifyOnPersonalModifications;
+- (BOOL) notifyOnExternalModifications;
 
 @end
 

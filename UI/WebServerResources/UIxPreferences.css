@@ -49,7 +49,7 @@ DIV.listWrapper
   background: #ccddec;}
 
 #calendarCategoriesListWrapper
-{ top: 170px;
+{ top: 210px;
   bottom: 30px;
   right: 2em;
   left: 2em; }
@@ -71,15 +71,6 @@ SPAN.timeDateControl INPUT.textField
 { width: 7em;
   vertical-align: text-bottom; }
 
-#vacation LABEL.timeDate,
-#vacation LABEL.timeDate input.checkBox
-{ line-height: 2.0em;
-}
-#vacation LABEL.timeDate,
-#vacation LABEL.timeDate input.checkBox,
-SPAN.timeDateControl SPAN
-{ vertical-align: text-top; }
-
 /* vacation, forward */
 #vacation, #forward
 { padding-left: 2.5em; }
@@ -97,7 +88,8 @@ SPAN.timeDateControl SPAN
 { float: right; }
 #vacation SPAN.timeDateControl,
 #vacation SPAN.timeDateControl SPAN
-{ float: none; }
+{ float: none;
+  vertical-align: middle; }
 #vacation BR,
 #passwordView BR
 { clear: both; }
@@ -106,7 +98,7 @@ SPAN.timeDateControl SPAN
 DIV#filtersListWrapper
 { bottom: 30px;
   right: 2em;
-  top: 174px;
+  top: 208px;
   left: 2em; }
 
 DIV#filtersListWrapper TD,
@@ -149,8 +141,10 @@ P.infoMessage#passwordError
   bottom: 30px;
   left: 140px;
   padding: 0px;
-  padding-top: 5px;
   right: 5px; }
+
+#mailAccountEditor dl
+{ margin: 5px; }
 
 #mailAccountsListWrapper
 { overflow-x: hidden;
@@ -171,7 +165,8 @@ P.infoMessage#passwordError
 { cursor: pointer;
   white-space: nowrap;
   padding-left: 5px;
-  height: 20px; }
+  height: 22px;
+  line-height: 22px; }
 
 #mailAccountsList LI.readonly
 { cursor: default;
@@ -186,7 +181,7 @@ P.infoMessage#passwordError
 #userName, #password
 { width: 180px; }
 
-#fullName, #email
+#fullName, #email, #replyTo
 { width: 180px; }
 
 #actSignature
@@ -204,8 +199,10 @@ P.infoMessage#passwordError
   left: 10px;
   width: auto !important;
   right: 10px;
-  height: 200px;
   top: 50px; }
+
+#cke_signature, #cke_signature div
+{ padding: 0px; }
 
 #signature
 { width: 100%;

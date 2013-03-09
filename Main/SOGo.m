@@ -33,6 +33,7 @@
 #import <GDLContentStore/GCSChannelManager.h>
 #import <GDLContentStore/GCSFolderManager.h>
 #import <GDLContentStore/GCSAlarmsFolder.h>
+#import <GDLContentStore/GCSSessionsFolder.h>
 
 #import <NGObjWeb/SoClassSecurityInfo.h>
 #import <NGObjWeb/WOContext.h>
@@ -201,6 +202,7 @@ static BOOL debugLeaks;
   fileSuffix = [channelURL scheme];
   tc = [cm acquireOpenChannelForURL: channelURL];
 
+  /* FIXME: make use of [EOChannelAdaptor describeTableNames] instead */
   tableName = [url lastPathComponent];
   if ([tc evaluateExpressionX:
 	    [NSString stringWithFormat: @"SELECT count(*) FROM %@",

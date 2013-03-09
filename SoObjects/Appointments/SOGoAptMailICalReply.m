@@ -1,6 +1,6 @@
 /* SOGoAptMailICalReply - this file is part of SOGo
  *
- * Copyright (C) 2010 Inverse inc.
+ * Copyright (C) 2010-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -19,6 +19,10 @@
  * the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+
+#import <Foundation/NSCharacterSet.h>
+
+#import <NGObjWeb/WOResponse.h>
 
 #import <SOGo/NSDictionary+Utilities.h>
 #import <SOGo/NSObject+Utilities.h>
@@ -95,23 +99,33 @@
 - (NSString *) getSubject
 {
   NSString *subjectFormat;
+  NSString *partStat;
 
   if (!values)
     [self setupValues];
 
-  subjectFormat = [self labelForKey: @"Reply to invitation: \"%{Summary}\""
-                          inContext: context];
+  partStat = [[attendee partStat] lowercaseString];
+
+  if ([partStat isEqualToString: @"accepted"])
+    subjectFormat = [self labelForKey: @"Accepted invitation: \"%{Summary}\""
+                            inContext: context];
+  else if ([partStat isEqualToString: @"declined"])
+    subjectFormat = [self labelForKey: @"Declined invitation: \"%{Summary}\""
+                            inContext: context];
+  else if ([partStat isEqualToString: @"delegated"])
+    subjectFormat = [self labelForKey: @"Delegated invitation: \"%{Summary}\""
+                            inContext: context];
+  else
+    subjectFormat = [self labelForKey: @"Not yet decided on invitation: \"%{Summary}\""
+                            inContext: context];
 
   return [values keysWithFormat: subjectFormat];
 }
 
-- (NSString *) getBody
+- (NSString *) bodyStartText
 {
   NSString *bodyFormat;
   NSString *partStat, *delegate;
-
-  if (!values)
-    [self setupValues];
 
   partStat = [[attendee partStat] lowercaseString];
   if ([partStat isEqualToString: @"accepted"])
@@ -135,7 +149,19 @@
   else
     bodyFormat = @"%{Attendee} %{SentByText}has not yet decided upon your event invitation.";
 
-  return [values keysWithFormat: [self labelForKey: bodyFormat inContext: context]];
+  return  [values keysWithFormat: [self labelForKey: bodyFormat inContext: context]];
+}
+
+- (NSString *) getBody
+{
+  NSString *body;
+
+  if (!values)
+    [self setupValues];
+
+  body = [[self generateResponse] contentAsString];
+  
+  return [body stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 }
 
 @end

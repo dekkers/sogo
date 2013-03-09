@@ -1,3 +1,248 @@
+2.0.4b (2013-02-04)
+------------------
+
+Bug fixes
+ - Fixed order of precedence for options (#2166)
+   The following order is enforced - first match wins
+     1. Command line arguments
+     2. .GNUstepDefaults
+     3. /etc/sogo/{debconf,sogo}.conf
+     4. SOGoDefaults.plist
+ - fixed handling of LDAP DN containing special characters (#2152, #2207)
+ - fixed handling of credential files for older GNUsteps (#2216)
+ - fixed display of messages with control characters (#2079, #2177)
+ - fixed tooltips in contacts list (#2211)
+ - fixed classification menu in component editor (#2223)
+ - fixed link to ACL editor for 'any authenticated user' (#2222, #2224)
+ - fixed saving preferences when mail module is disabled
+ - fixed handling for long credential strings (#2212)
+
+2.0.4a (2013-01-30)
+------------------
+
+Enhancements
+ - updated Czech translation
+ - birthday is now properly formatted in addressbook module
+
+Bug fixes
+ - fixed handling of groups with spaces in their UID
+ - fixed possible infinite loop in repeatable object
+ - fixed until date in component editor
+ - fixed saving all-day event in appointment editor
+ - fixed handling of decoding contacts UID
+ - fixed support of GNUstep 1.20 / Debian Squeeze
+
+2.0.4 (2013-01-25)
+------------------
+
+New features
+ - sogo-tool: new "dump-defaults" command to easily create /etc/sogo/sogo.conf
+
+Enhancements
+ - The sogo user is now a system user.
+   For new installs, this means that 'su - sogo' won't work anymore.
+   Please use 'sudo -u sogo cmd' instead
+   If used in scripts from cronjobs, 'requiretty' must be disabled in sudoers
+ - added basic support for LDAP URL in user sources
+ - renamed default SOGoForceIMAPLoginWithEmail to
+   SOGoForceExternalLoginWithEmail and extended it to SMTP authentication
+ - updated the timezone files to the 2012j edition and removed RRDATES
+ - updated CKEditor to version 4.0.1
+ - added Finnish translation - thanks to Kari Salmu
+ - updated translations
+ - recurrence-id of all-day events is now set as a proper date with no time
+ - 'show completed tasks' is now persistent
+ - fixed memory usage consumption for remote ICS subscriptions
+
+Bug fixes
+ - fixed usage of browser's language for the login page
+ - fixed partstat of attendee in her/his calendar
+ - fixed French templates encoding
+ - fixed CardDAV collections for OS X
+ - fixed event recurrence editor (until date)
+ - fixed column display for subfolders of draft & sent
+ - improved IE7 support
+ - fixed drag'n'drop of events with Safari
+ - fixed first day of the week in datepickers
+ - fixed exceptions of recurring all-day events
+
+2.0.3 (2012-12-06)
+------------------
+
+New features
+ - support for SAML2 for single sign-on, with the help of the lasso library
+ - added support for the "AUTHENTICATE" command and SASL mechanisms
+ - added domain default SieveHostFieldName
+ - added a search field for tasks
+
+Enhancements
+ - search the contacts for the organization attribute
+ - in HTML mode, optionally place answer after the quoted text
+ - improved memory usage of "sogo-tool restore"
+ - fixed invitations status in OSX iCal.app/Calendar.app (cleanup RSVP attribute)
+ - now uses "imap4flags" instead of the deprecated "imapflags"
+ - added Slovak translation - thanks to Martin Pastor
+ - updated translations
+
+Bug fixes
+ - fixed LDIF import with categories
+ - imported events now keep their UID when possible
+ - fixed importation of multiple calendars
+ - fixed modification date when drag'n'droping events
+ - fixed missing 'from' header in Outlook
+ - fixed invitations in Outlook
+ - fixed JavaScript regexp for Firefox
+ - fixed JavaScript syntax for IE7
+ - fixed all-day event display in day/week view
+ - fixed parsing of alarm
+ - fixed Sieve server URL fallback
+ - fixed Debian cronjob (spool directory cleanup)
+
+2.0.2a (2012-11-15)
+-------------------
+
+Enhancements
+ - improved user rights editor in calendar module
+ - disable alarms for newly subsribed calendars
+
+Bug fixes
+ - fixed typos in Spanish (Spain) translation
+ - fixed display of raw source for tasks
+ - fixed title display of cards with a photo
+ - fixed null address in reply-to header of messages
+ - fixed scrolling for calendar/addressbooks lists
+ - fixed display of invitations on BlackBerry devices
+ - fixed sogo-tool rename-user for MySQL database
+ - fixed corrupted attachments in Webmail
+ - fixed parsing of URLs that can throw an exception
+ - fixed password encoding in user sources
+
+2.0.2 (2012-10-24)
+------------------
+
+New features
+ - added support for SMTP AUTH
+ - sogo configuration can now be set in /etc/sogo/sogo.conf
+ - added support for GNU TLS
+
+Enhancements
+ - speed up of the parsing of IMAP traffic
+ - minor speed up of the web interface
+ - speed up the scrolling of the message list in the mail module
+ - speed up the deletion of a large amounts of entries in the contacts module
+ - updated the timezone files to the 2012.g edition
+ - openchange backend: miscellaneous speed up of the synchronization
+   operations
+ - open file descriptors are now closed when the process starts
+
+Bug fixes
+ - the parameters included in the url of remote calendars are now taken into
+   account
+ - fixed an issue occurring with timezone definitions providing multiple entries
+ - openchange backend: miscellaneous crashes during certain Outlook
+   operations, which have appeared in version 2.0.0, have been fixed
+ - fixed issues occuring on OpenBSD and potentially other BSD flavours
+
+2.0.1 (2012-10-10)
+-------------------
+
+Enhancements
+ - deletion of contacts is now performed in batch, which speeds up the
+   operation for large numbers of items
+ - scalability enhancements in the OpenChange backend that enables the first
+   synchronization of mailboxes in a more reasonable time and using less
+   memory
+ - the task list is now sortable 
+
+Bug Fixes
+ - improved support of IE 9
+
+2.0.0 (2012-09-27)
+-------------------
+New Features
+ - Microsoft Outlook compatibility layer
+
+Enhancements
+ - updated translations
+ - calendars list and mini-calendar are now always visible
+ - tasks list has moved to a table in a tabs view along the events list
+ - rows in tree view are now 4 pixels taller
+ - node selection in trees now highlights entire row
+ - new inline date picker
+ - improved IE8/9 support
+ - added support for standard/daylight timezone definition with end date
+ - no longer possible to send a message multilpe times
+ - mail editor title now reflects the current message subject
+ - default language is selected on login page
+ - mail notifications now include the calendar name
+
+Bug Fixes
+ - fixed translation of invitation replies
+ - fixed vacation message encoding
+ - fixed display of events of no duration
+ - fixed error when copying/moving large set of contacts
+ - fixed drag'n'drop of all-day events
+
+1.3.18a (2012-09-04)
+-------------------
+Bug Fixes
+ - fixed display of weekly events with no day mask
+ - fixed parsing of mail headers
+ - fixed support for OS X 10.8 (Mountain Lion)
+
+1.3.18 (2012-08-28)
+-------------------
+Enhancements
+ - updated Catalan, Dutch, German, Hungarian, Russian, Spanish (Argentina), and
+   Spanish (Spain) translations
+ - mail filters (Sieve) are no longer conditional to each other (all filters are
+   executed, no matter if a previous condition matches)
+ - improved tasks list display
+ - RPM packages now treat logrotate file as a config file
+ - completed the transition from text/plain message templates to HTML
+ - new packages for Debian 7.0 (Wheezy)
+
+Bug Fixes
+ - fixed passwords that would be prefixed with '{none}' when not using a
+   password algorithm
+ - fixed handling of duplicated contacts in contact lists
+ - fixed handling of exception dates with timezones in recurrent events
+ - fixed validation of the interval in daily recurrent events with a day mask
+   covering multiple days
+ - fixed name quoting when sending invitations
+
+1.3.17 (2012-07-26)
+-------------------
+New Features
+ - new contextual menu to view the raw content of events, tasks and contacts
+ - send and/or receive email notifications when a calendar is modified (new
+   domain defaults SOGoNotifyOnPersonalModifications and
+   SOGoNotifyOnExternalModifications)
+ - added the SOGoSearchMinimumWordLength domain default which controls the
+   minimal length required before triggering server-side search operations for
+   attendee completion, contact searches, etc. The default value is 2, which
+   means search operations are trigged once the 3rd character is typed.
+
+Enhancements
+ - updated BrazilianPortuguese, Czech, Dutch, French, German, Italian,
+   Spanish (Argentina), Spanish (Spain) translations
+ - all addresses from a contact are displayed in the Web interface (no longer
+   limited to one additional address)
+ - improved Sieve script: vacation message is now sent after evaluating the
+   mail filters
+ - updated CKEditor to version 3.6.4
+
+Bug Fixes
+ - fixed a crash when multiple mail headers of the same type were encountered
+ - fixed logrotate script for Debian
+ - fixed linking of libcurl on Ubuntu 12.04
+ - fixed parsing of timezones when importing .ics files
+ - fixed resource reservation for recurring events
+ - fixed display of text attachments in messages
+ - fixed contextual menu on newly created address books
+ - fixed missing sender in mail notifications to removed attendees
+ - improved invitations handling in iCal
+
 1.3.16 (2012-06-07)
 -------------------
 Enhancements
@@ -8,6 +253,7 @@ Enhancements
  - it's no longer possible to click the "Upload" button multiple times
  - allow delivery of mail with no subject, but alert the user
  - updated Dutch, German, French translations
+
 Bug Fixes
  - fixed compilation under GNU/kFreeBSD
  - fixed compilation for arm architecture

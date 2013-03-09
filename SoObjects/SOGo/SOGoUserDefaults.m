@@ -1,6 +1,6 @@
 /* SOGoUserDefaults.m - this file is part of SOGo
  *
- * Copyright (C) 2009-2010 Inverse inc.
+ * Copyright (C) 2009-2012 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *
@@ -22,6 +22,7 @@
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSSet.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSTimeZone.h>
 
@@ -89,6 +90,22 @@ NSString *SOGoWeekStartFirstFullWeek = @"FirstFullWeek";
   ud = [self defaultsSourceWithSource: up andParentSource: parent];
 
   return ud;
+}
+
+- (id) init
+{
+  if ((self = [super init]))
+    {
+      userLanguage = nil;
+    }
+
+  return self;
+}
+
+- (void) dealloc
+{
+  [userLanguage release];
+  [super dealloc];
 }
 
 - (BOOL) _migrateLastModule
@@ -243,16 +260,6 @@ NSString *SOGoWeekStartFirstFullWeek = @"FirstFullWeek";
   return [self stringForKey: @"SOGoDefaultCalendar"];
 }
 
-- (void) setAppointmentSendEMailReceipts: (BOOL) newValue
-{
-  [self setBool: newValue forKey: @"SOGoAppointmentSendEMailReceipts"];
-}
-
-- (BOOL) appointmentSendEMailReceipts
-{
-  return [self boolForKey: @"SOGoAppointmentSendEMailReceipts"];
-}
-
 - (void) setDayStartTime: (NSString *) newValue
 {
   [self setObject: newValue forKey: @"SOGoDayStartTime"];
@@ -365,21 +372,25 @@ NSString *SOGoWeekStartFirstFullWeek = @"FirstFullWeek";
 
 - (NSString *) language
 {
-  NSString *language;
   NSArray *supportedLanguages;
-  
-  /* see SOGoDomainDefaults for the meaning of this */
-  language = [source objectForKey: @"SOGoLanguage"];
-  if (!(language && [language isKindOfClass: [NSString class]]))
-    language = [(SOGoDomainDefaults *) parentSource language];
-  
-  /* make sure the language is part of the supported languages */
-  supportedLanguages = [[SOGoSystemDefaults sharedSystemDefaults]
-                         supportedLanguages];
-  if (![supportedLanguages containsObject: language])
-    language = [parentSource stringForKey: @"SOGoLanguage"];
 
-  return language;
+  if (!userLanguage)
+    {
+      /* see SOGoDomainDefaults for the meaning of this */
+      userLanguage = [source objectForKey: @"SOGoLanguage"];
+      if (!(userLanguage && [userLanguage isKindOfClass: [NSString class]]))
+        userLanguage = [(SOGoDomainDefaults *) parentSource language];
+  
+      supportedLanguages = [[SOGoSystemDefaults sharedSystemDefaults]
+                             supportedLanguages];
+
+      /* make sure the language is part of the supported languages */
+      if (![supportedLanguages containsObject: userLanguage])
+        userLanguage = [parentSource stringForKey: @"SOGoLanguage"];
+      [userLanguage retain];
+    }
+
+  return userLanguage;
 }
 
 - (void) setMailShowSubscribedFoldersOnly: (BOOL) newValue
@@ -480,6 +491,16 @@ NSString *SOGoWeekStartFirstFullWeek = @"FirstFullWeek";
 - (NSString *) mailComposeMessageType
 {
   return [self stringForKey: @"SOGoMailComposeMessageType"];
+}
+
+- (void) setMailDisplayRemoteInlineImages: (NSString *) newValue;
+{
+  [self setObject: newValue forKey: @"SOGoMailDisplayRemoteInlineImages"];
+}
+
+- (NSString *) mailDisplayRemoteInlineImages;
+{
+  return [self stringForKey: @"SOGoMailDisplayRemoteInlineImages"];
 }
 
 - (void) setMailMessageForwarding: (NSString *) newValue

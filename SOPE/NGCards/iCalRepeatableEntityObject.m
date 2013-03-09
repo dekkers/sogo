@@ -33,6 +33,7 @@
 #import "iCalDateTime.h"
 #import "iCalEvent.h"
 #import "iCalTimeZone.h"
+#import "iCalTimeZonePeriod.h"
 #import "iCalRecurrenceRule.h"
 #import "iCalRecurrenceCalculator.h"
 #import "iCalRepeatableEntityObject.h"
@@ -258,19 +259,19 @@
       
       while ((dateString = [dateList nextObject]))
 	{
-	  exDates = [(iCalDateTime*) dateString valuesAtIndex: 0 forKey: @""];
-	  for (i = 0; i < [exDates count]; i++)
+          exDates = [(iCalDateTime*) dateString dateTimes];
+          for (i = 0; i < [exDates count]; i++)
 	    {
-	      dateString = [exDates objectAtIndex: i];
+	      exDate = [exDates objectAtIndex: i];
+
+              // Example: timezone is -0400, date is 2012-05-24 (00:00:00 +0000),
+              //                      and changes to 2012-05-24 04:00:00 +0000
               if ([theTimeZone isKindOfClass: [iCalTimeZone class]])
                 {
-                  exDate = [(iCalTimeZone *) theTimeZone computedDateForString: dateString];
+                    exDate = [(iCalTimeZone *) theTimeZone computedDateForDate: exDate];
                 }
               else
                 {
-                  // Example: timezone is -0400, date is 2012-05-24 (00:00:00 +0000),
-                  //                      and changes to 2012-05-24 04:00:00 +0000
-                  exDate = [dateString asCalendarDate];
                   offset = [(NSTimeZone *) theTimeZone secondsFromGMTForDate: exDate];
                   exDate = (NSCalendarDate *) [exDate dateByAddingYears:0 months:0 days:0 hours:0 minutes:0
                                                                seconds:-offset];
@@ -329,14 +330,15 @@ lastPossibleRecurrenceStartDateUsingFirstInstanceCalendarDateRange: (NGCalendarD
 
   rRules = [[self recurrenceRules] objectEnumerator];
   rule = [rRules nextObject];
-  while (rule && ![rule isInfinite] & !date)
+  while (rule && ![rule isInfinite] && !date)
     {
       calc = [iCalRecurrenceCalculator
                recurrenceCalculatorForRecurrenceRule: rule
-               withFirstInstanceCalendarDateRange: _r];
+                  withFirstInstanceCalendarDateRange: _r];
       rdate = [[calc lastInstanceCalendarDateRange] startDate];
-      if (!date
-          || ([date compare: rdate] == NSOrderedAscending))
+      if (!rdate)
+        date = [_r startDate];
+      else if (!date || ([date compare: rdate] == NSOrderedAscending))
         date = rdate;
       else
         rule = [rRules nextObject];
