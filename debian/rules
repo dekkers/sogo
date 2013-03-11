@@ -17,7 +17,7 @@ override_dh_auto_configure:
 	./configure --with-ssl=gnutls
 
 override_dh_auto_install:
-	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp GNUSTEP_INSTALLATION_DOMAIN=SYSTEM install
+	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp GNUSTEP_INSTALLATION_DOMAIN=SYSTEM OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes install
 	mkdir -p debian/tmp/etc/default debian/tmp/etc/cron.d debian/tmp/usr/share/doc/sogo
 	cp Scripts/sogo-default debian/tmp/etc/default/sogo
 	cp Scripts/sogo.cron debian/tmp/etc/cron.d/sogo
