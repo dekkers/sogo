@@ -29,15 +29,15 @@ Subject: Put private libraries in /usr/lib/sogo
  23 files changed, 32 insertions(+), 12 deletions(-)
 
 diff --git a/Main/GNUmakefile b/Main/GNUmakefile
-index 3827767..4b61d72 100644
+index 962730c..ef3de99 100644
 --- a/Main/GNUmakefile
 +++ b/Main/GNUmakefile
-@@ -6,7 +6,7 @@ include ../Version
- 
- ADDITIONAL_INCLUDE_DIRS += 
+@@ -7,7 +7,7 @@ include ../Version
+ ADDITIONAL_OBJCFLAGS += -fPIE
+ ADDITIONAL_INCLUDE_DIRS +=
  ADDITIONAL_LIB_DIRS += -L../SOPE/GDLContentStore/obj/
--ADDITIONAL_LDFLAGS += -Wl,--no-as-needed
-+ADDITIONAL_LDFLAGS += -Wl,--no-as-needed -Wl,--rpath,/usr/lib/sogo
+-ADDITIONAL_LDFLAGS += -Wl,--no-as-needed -fPIE -pie
++ADDITIONAL_LDFLAGS += -Wl,--no-as-needed -fPIE -pie -Wl,--rpath,/usr/lib/sogo
  
  SOGOD     = sogod
  TOOL_NAME = $(SOGOD)
@@ -75,10 +75,10 @@ index 3b7a48a..e435573 100644
  include $(GNUSTEP_MAKEFILES)/tool.make
  -include GNUmakefile.postamble
 diff --git a/OGoContentStore/GNUmakefile.preamble b/OGoContentStore/GNUmakefile.preamble
-index b2d9374..8ec2581 100644
+index 3a45858..9fb3000 100644
 --- a/OGoContentStore/GNUmakefile.preamble
 +++ b/OGoContentStore/GNUmakefile.preamble
-@@ -12,7 +12,7 @@ libOGoContentStore_LIBRARIES_DEPEND_UPON += \
+@@ -11,7 +11,7 @@ libOGoContentStore_LIBRARIES_DEPEND_UPON += \
  
  ADDITIONAL_INCLUDE_DIRS += -I. -I.. -I../SOPE -I../SoObjects
  
@@ -88,10 +88,10 @@ index b2d9374..8ec2581 100644
  SYSTEM_LIB_DIR += -L/usr/local/lib -L/usr/lib
  
 diff --git a/OpenChange/GNUmakefile b/OpenChange/GNUmakefile
-index 0f3fb1a..b217b5e 100644
+index 68f3e8d..4e0af97 100644
 --- a/OpenChange/GNUmakefile
 +++ b/OpenChange/GNUmakefile
-@@ -164,13 +164,13 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy
+@@ -195,13 +195,13 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy -lWEExte
  
  $(MAPISTORESOGO)_INSTALL_DIR = $(DESTDIR)/$(SAMBA_LIB_DIR)/mapistore_backends
  $(MAPISTORESOGO)_LIB_DIRS += \
@@ -132,19 +132,19 @@ index 90f7584..31cfdd8 100644
  else
  include $(GNUSTEP_MAKEFILES)/framework.make
 diff --git a/SoObjects/SOGo/GNUmakefile b/SoObjects/SOGo/GNUmakefile
-index da52efc..c4b0e25 100644
+index f38ce60..fb4a306 100644
 --- a/SoObjects/SOGo/GNUmakefile
 +++ b/SoObjects/SOGo/GNUmakefile
-@@ -11,6 +11,8 @@ SOGo_INSTALL_DIR = $(DESTDIR)$(GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_FRAMEWORKS
- 
- SOGo_VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
+@@ -11,6 +11,8 @@ SOGo_VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
+ #SOGo_INSTALL_DIR = $(SOGO_LIBDIR)
+ SOGo_INSTALL_DIR = $(DESTDIR)$(GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_FRAMEWORKS)
  
 +ADDITIONAL_LDFLAGS += -Wl,--rpath,/usr/lib/sogo
 +
  SOGo_HEADER_FILES = \
  	SOGoBuild.h \
  	SOGoProductLoader.h		\
-@@ -165,6 +167,7 @@ ADDITIONAL_LDFLAGS += -lmemcached
+@@ -175,6 +177,7 @@ ADDITIONAL_LDFLAGS += -lmemcached
  ifneq ($(FHS_INSTALL_ROOT),)
  GNUSTEP_HEADERS=$(DESTDIR)$(FHS_INSTALL_ROOT)/include
  endif
@@ -179,7 +179,7 @@ index 90cc86a..5cd238c 100644
  	-L../../SOPE/GDLContentStore/$(GNUSTEP_OBJ_DIR)/ -lGDLContentStore \
  	-L../../SOPE/NGCards/$(GNUSTEP_OBJ_DIR)/ -lNGCards \
 diff --git a/Tests/Unit/GNUmakefile b/Tests/Unit/GNUmakefile
-index c95bd73..df22fe7 100644
+index a7a8376..dc42725 100644
 --- a/Tests/Unit/GNUmakefile
 +++ b/Tests/Unit/GNUmakefile
 @@ -33,9 +33,9 @@ $(TEST_TOOL)_CPPFLAGS += \
@@ -193,9 +193,9 @@ index c95bd73..df22fe7 100644
 +	-Wl,-rpath,../../SoObjects/SOGo/SOGo.framework/Versions/Current/sogo -Wl,-rpath,../../SOPE/NGCards/obj -Wl,-rpath,../../SOPE/GDLContentStore/obj -Wl,-rpath,../../OGoContentStore/obj
  ADDITIONAL_LDFLAGS += -Wl,--no-as-needed
  
- check ::
+ -include GNUmakefile.preamble
 diff --git a/Tools/GNUmakefile b/Tools/GNUmakefile
-index 99235cb..4d0b728 100644
+index c5b56a1..7d09f56 100644
 --- a/Tools/GNUmakefile
 +++ b/Tools/GNUmakefile
 @@ -4,6 +4,8 @@ include ../config.make
@@ -221,7 +221,7 @@ index 8f087f0..103a0b9 100644
  	-L../SOPE/GDLContentStore/$(GNUSTEP_OBJ_DIR)/ -lGDLContentStore \
  	-L../SOPE/NGCards/$(GNUSTEP_OBJ_DIR)/ -lNGCards \
 diff --git a/UI/AdministrationUI/GNUmakefile b/UI/AdministrationUI/GNUmakefile
-index ef8acf8..3504f4c 100644
+index 3b8ecd1..03300f2 100644
 --- a/UI/AdministrationUI/GNUmakefile
 +++ b/UI/AdministrationUI/GNUmakefile
 @@ -25,6 +25,7 @@ AdministrationUI_LOCALIZED_RESOURCE_FILES += \
@@ -233,7 +233,7 @@ index ef8acf8..3504f4c 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/Common/GNUmakefile b/UI/Common/GNUmakefile
-index a8bc5e0..4d55ae5 100644
+index 488ab9f..09bc098 100644
 --- a/UI/Common/GNUmakefile
 +++ b/UI/Common/GNUmakefile
 @@ -33,6 +33,7 @@ CommonUI_LOCALIZED_RESOURCE_FILES +=	\
@@ -245,7 +245,7 @@ index a8bc5e0..4d55ae5 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/Contacts/GNUmakefile b/UI/Contacts/GNUmakefile
-index 8ba2a84..fc497b5 100644
+index b51fda8..35149f9 100644
 --- a/UI/Contacts/GNUmakefile
 +++ b/UI/Contacts/GNUmakefile
 @@ -37,6 +37,7 @@ ContactsUI_LOCALIZED_RESOURCE_FILES +=	\
@@ -257,7 +257,7 @@ index 8ba2a84..fc497b5 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MailPartViewers/GNUmakefile b/UI/MailPartViewers/GNUmakefile
-index 7316f2c..8ac5555 100644
+index 328141f..afec48a 100644
 --- a/UI/MailPartViewers/GNUmakefile
 +++ b/UI/MailPartViewers/GNUmakefile
 @@ -37,6 +37,7 @@ MailPartViewers_LOCALIZED_RESOURCE_FILES += \
@@ -269,7 +269,7 @@ index 7316f2c..8ac5555 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MailerUI/GNUmakefile b/UI/MailerUI/GNUmakefile
-index 129c468..0a2a97c 100644
+index dfce634..e082c23 100644
 --- a/UI/MailerUI/GNUmakefile
 +++ b/UI/MailerUI/GNUmakefile
 @@ -49,6 +49,7 @@ MailerUI_LOCALIZED_RESOURCE_FILES += \
@@ -281,10 +281,10 @@ index 129c468..0a2a97c 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MainUI/GNUmakefile b/UI/MainUI/GNUmakefile
-index bf49f11..2abbfec 100644
+index 786f483..b2b9dcd 100644
 --- a/UI/MainUI/GNUmakefile
 +++ b/UI/MainUI/GNUmakefile
-@@ -27,6 +27,7 @@ MainUI_LOCALIZED_RESOURCE_FILES += \
+@@ -31,6 +31,7 @@ MainUI_LOCALIZED_RESOURCE_FILES += \
  
  ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
  ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
@@ -293,7 +293,7 @@ index bf49f11..2abbfec 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/PreferencesUI/GNUmakefile b/UI/PreferencesUI/GNUmakefile
-index 596b1d2..4cb9f5d 100644
+index 4a8040b..eaa938a 100644
 --- a/UI/PreferencesUI/GNUmakefile
 +++ b/UI/PreferencesUI/GNUmakefile
 @@ -28,6 +28,7 @@ PreferencesUI_LOCALIZED_RESOURCE_FILES += \
@@ -325,7 +325,7 @@ index 2b781ca..da8dcce 100644
  include $(GNUSTEP_MAKEFILES)/library.make
  -include GNUmakefile.postamble
 diff --git a/UI/Scheduler/GNUmakefile b/UI/Scheduler/GNUmakefile
-index f71bcd6..fe354db 100644
+index 6d58c48..7973067 100644
 --- a/UI/Scheduler/GNUmakefile
 +++ b/UI/Scheduler/GNUmakefile
 @@ -72,6 +72,7 @@ SchedulerUI_RESOURCE_FILES +=		\
@@ -337,7 +337,7 @@ index f71bcd6..fe354db 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/common.make b/UI/common.make
-index 60288a7..0b36217 100644
+index 87c3d4f..2537c82 100644
 --- a/UI/common.make
 +++ b/UI/common.make
 @@ -20,13 +20,13 @@ ifeq ($(GNUSTEP_BUILD_DIR),)

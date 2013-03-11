@@ -7,7 +7,7 @@ Subject: Set SOGoMailSpoolPath to /var/spool/sogo by default
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/SoObjects/SOGo/SOGoDefaults.plist b/SoObjects/SOGo/SOGoDefaults.plist
-index c686a16..c09483b 100644
+index e0e0a2a..09a77c2 100644
 --- a/SoObjects/SOGo/SOGoDefaults.plist
 +++ b/SoObjects/SOGo/SOGoDefaults.plist
 @@ -24,7 +24,7 @@
