@@ -14,7 +14,7 @@ override_dh_auto_build:
 	dh_auto_build -- OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes
 
 override_dh_auto_configure:
-	./configure
+	./configure --with-ssl=gnutls
 
 override_dh_auto_install:
 	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp GNUSTEP_INSTALLATION_DOMAIN=SYSTEM install
