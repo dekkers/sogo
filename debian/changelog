@@ -9,6 +9,7 @@ sogo (2.0.4b-1~dev) UNRELEASED; urgency=low
     - 0004-Add-support-for-GnuTLS
     - 0007-Compile-daemon-as-PIE
   * Fix cronjob error after package removal. (Closes: #682843)
+  * Update standards version to 3.9.4.
 
  -- Jeroen Dekkers <jeroen@dekkers.ch>  Mon, 11 Mar 2013 14:38:15 +0100
 
