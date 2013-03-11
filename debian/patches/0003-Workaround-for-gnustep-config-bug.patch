@@ -1,0 +1,24 @@
+From: Jeroen Dekkers <jeroen@dekkers.ch>
+Date: Mon, 11 Mar 2013 18:10:16 +0100
+Subject: Workaround for gnustep-config bug
+
+This is a workaround for the following gnustep-config bug:
+https://savannah.gnu.org/bugs/index.php?38502
+---
+ configure |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/configure b/configure
+index 4ca6948..822fbdb 100755
+--- a/configure
++++ b/configure
+@@ -31,6 +31,9 @@ GNUSTEP_INSTALLATION_DOMAIN="LOCAL"
+ 
+ DARG_GNUSTEP_SH="$ARG_GSMAKE/GNUstep.sh"
+ 
++# Workaround for https://savannah.gnu.org/bugs/index.php?38502
++export MAKEFLAGS=""
++
+ # detect GNU make, needed at least on *BSD
+ make -v 2>/dev/null | grep GNU >/dev/null 2>/dev/null
+ if [ $? -eq 0 ];then

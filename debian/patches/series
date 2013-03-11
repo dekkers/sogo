@@ -1,2 +1,3 @@
 0001-Set-SOGoMailSpoolPath-to-var-spool-sogo-by-default.patch
 0002-Put-private-libraries-in-usr-lib-sogo.patch
+0003-Workaround-for-gnustep-config-bug.patch
