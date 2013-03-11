@@ -1,0 +1,23 @@
+From: Jeroen Dekkers <jeroen@dekkers.ch>
+Date: Mon, 11 Mar 2013 19:37:45 +0100
+Subject: Link libSOGo with libdl
+
+---
+ SoObjects/SOGo/GNUmakefile.preamble |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/SoObjects/SOGo/GNUmakefile.preamble b/SoObjects/SOGo/GNUmakefile.preamble
+index 925df35..baa7f5b 100644
+--- a/SoObjects/SOGo/GNUmakefile.preamble
++++ b/SoObjects/SOGo/GNUmakefile.preamble
+@@ -49,6 +49,10 @@ else
+ SOGo_LIBRARIES_DEPEND_UPON += -lcrypt
+ endif
+ 
++ifeq ($(findstring gnu, $(GNUSTEP_HOST_OS)), gnu)
++SOGo_LIBRARIES_DEPEND_UPON += -ldl
++endif
++
+ ADDITIONAL_TOOL_LIBS += \
+         -L$(GNUSTEP_OBJ_DIR)/ \
+         -lSOGo \
