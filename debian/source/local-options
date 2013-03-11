@@ -1,1 +1,3 @@
 unapply-patches
+# Ignore .tx directory that is present in git but not in orig tarballs.
+extend-diff-ignore = "^.tx"
