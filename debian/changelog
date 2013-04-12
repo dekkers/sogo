@@ -14,8 +14,10 @@ sogo (2.0.5-1~dev) UNRELEASED; urgency=low
   * Move sogo-backup.sh to /usr/sbin/sogo-backup and change backup
     location to /var/backups/sogo. Also change the locations in the
     cronjob. (Closes: #681797)
+  * Use systemd-tmpfiles instead of tmpreaper for systems running
+    systemd. (Closes: #677951)
 
- -- Jeroen Dekkers <jeroen@dekkers.ch>  Fri, 12 Apr 2013 22:50:48 +0200
+ -- Jeroen Dekkers <jeroen@dekkers.ch>  Sat, 13 Apr 2013 01:28:12 +0200
 
 sogo (1.3.16-1) unstable; urgency=low
 
