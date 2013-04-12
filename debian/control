@@ -1,7 +1,7 @@
 Source: sogo
 Priority: optional
 Maintainer: Jeroen Dekkers <jeroen@dekkers.ch>
-Build-Depends: debhelper (>= 9), gobjc, libgnustep-base-dev, libsope-dev (>= 2.0.4b), libmemcached-dev, libxml2-dev, libsbjson-dev, libgnutls-dev, libldap2-dev, libcurl4-gnutls-dev, liblasso3-dev, python-minimal
+Build-Depends: debhelper (>= 9), gobjc, libgnustep-base-dev, libsope-dev (>= 2.0.5), libmemcached-dev, libxml2-dev, libsbjson-dev, libgnutls-dev, libldap2-dev, libcurl4-gnutls-dev, liblasso3-dev, python-minimal
 Section: mail
 Standards-Version: 3.9.4
 Homepage: http://www.sogo.nu/
