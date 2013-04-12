@@ -21,6 +21,7 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/etc/default debian/tmp/etc/cron.d debian/tmp/usr/share/doc/sogo
 	cp Scripts/sogo-default debian/tmp/etc/default/sogo
 	cp Scripts/sogo.cron debian/tmp/etc/cron.d/sogo
+	cp Scripts/sogo-backup.sh debian/tmp/usr/sbin/sogo-backup
 	cp Apache/SOGo.conf debian/tmp/usr/share/doc/sogo/apache.conf
 # Remove javascript libraries already packaged by Debian.
 	rm -r debian/tmp/usr/lib/GNUstep/SOGo/WebServerResources/ckeditor

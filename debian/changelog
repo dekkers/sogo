@@ -11,6 +11,9 @@ sogo (2.0.5-1~dev) UNRELEASED; urgency=low
   * Fix cronjob error after package removal. (Closes: #682843)
   * Update standards version to 3.9.4.
   * Enable SAML support.
+  * Move sogo-backup.sh to /usr/sbin/sogo-backup and change backup
+    location to /var/backups/sogo. Also change the locations in the
+    cronjob. (Closes: #681797)
 
  -- Jeroen Dekkers <jeroen@dekkers.ch>  Fri, 12 Apr 2013 22:50:48 +0200
 
