@@ -1,3 +1,10 @@
+sogo (2.0.5a-1) unstable; urgency=low
+
+  * New upstream release.
+  * Include updated watch file written by Bart Martens.
+
+ -- Jeroen Dekkers <jeroen@dekkers.ch>  Mon, 06 May 2013 02:04:16 +0200
+
 sogo (2.0.5-1) unstable; urgency=low
 
   * New upstream release.
