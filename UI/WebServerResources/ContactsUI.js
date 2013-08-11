@@ -806,19 +806,25 @@ function validateUploadForm () {
     return rc;
 }
 function uploadCompleted(response) {
-    data = response.evalJSON(true);
     jQuery('#uploadCancel').show();
     var btn = jQuery('#uploadSubmit');
     btn.removeClass("disabled");
     btn.children('span').text(_('Upload'));
     var div = $("uploadResults");
-    if (data.imported <= 0)
+
+    try {
+        data = response.evalJSON(true);
+
+        if (data.imported <= 0)
+            $("uploadResultsContent").update(_("An error occured while importing contacts."));
+        else if (data.imported == 0)
+            $("uploadResultsContent").update(_("No card was imported."));
+        else {
+            $("uploadResultsContent").update(_("A total of %{0} cards were imported in the addressbook.").formatted(data.imported));
+            refreshCurrentFolder();
+        }
+    } catch (e) {
         $("uploadResultsContent").update(_("An error occured while importing contacts."));
-    else if (data.imported == 0)
-        $("uploadResultsContent").update(_("No card was imported."));
-    else {
-        $("uploadResultsContent").update(_("A total of %{0} cards were imported in the addressbook.").formatted(data.imported));
-        refreshCurrentFolder();
     }
 
     hideContactsImport();
@@ -1496,18 +1502,18 @@ function unsetCategoryOnNode(contactNode, category) {
 function configureDraggables() {
     if ($("contactFolders")) {
         var rows = jQuery("tr.vcard");
-        rows.draggable("destroy");
+        try { rows.draggable("destroy"); } catch (e) {}
         rows.draggable({
-                    helper: function (event) { return '<div id="dragDropVisual"></div>'; },
-                    start: startDragging,
-                    drag: whileDragging,
-                    stop: stopDragging,
-                    appendTo: 'body',
-                    cursorAt: { right: 25 },
-                    scroll: false,
-                    distance: 4,
-                    zIndex: 20
-                    });
+            helper: function (event) { return '<div id="dragDropVisual"></div>'; },
+            start: startDragging,
+            drag: whileDragging,
+            stop: stopDragging,
+            appendTo: 'body',
+            cursorAt: { right: 25 },
+            scroll: false,
+            distance: 4,
+            zIndex: 20
+        });
     }
 }
 
