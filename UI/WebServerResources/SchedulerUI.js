@@ -723,9 +723,9 @@ function onViewEventCallback(http) {
                 top -= cell.up("DIV.day").scrollTop;
             }
 
-            left = cellPosition[0] + cellDimensions["width"] - parseInt(cellDimensions["width"]/3);
+            left = cellPosition[0] + cellDimensions["width"] + 4;
             if (left + divDimensions["width"] > window.width()) {
-                left = cellPosition[0] - divDimensions["width"] + 10;
+                left = cellPosition[0] - divDimensions["width"];
                 div.removeClassName("left");
                 div.addClassName("right");
             }
@@ -748,19 +748,26 @@ function onViewEventCallback(http) {
             para = $(paras[1]);
             if (data["calendar"].length) {
  		// Remove owner email from calendar's name
-                para.down("SPAN", 1).update(data["calendar"].replace(/ \<.*\>/, ""));
+                para.down("SPAN", 1).update(data["calendar"].escapeHTML());
                 para.show();
             } else
                 para.hide();
 
             para = $(paras[2]);
             if (data["location"].length) {
-                para.down("SPAN", 1).update(data["location"]);
+                para.down("SPAN", 1).update(data["location"].escapeHTML());
                 para.show();
             } else
                 para.hide();
 
-            para = $(paras[3]);
+	    para = $(paras[3]);
+            if (data["created_by"].length) {
+		para.down("SPAN", 1).update(data["created_by"]);
+                para.show();
+            } else
+                para.hide();
+
+            para = $(paras[4]);
             if (data["description"].length) {
                 para.update(data["description"].replace(/\r?\n/g, "<BR/>"));
                 para.show();
@@ -3006,19 +3013,25 @@ function validateUploadForm() {
     return rc;
 }
 function uploadCompleted(response) {
-    data = response.evalJSON(true);
     jQuery('#uploadCancel').show();
     var btn = jQuery('#uploadSubmit');
     btn.removeClass("disabled");
     btn.children('span').text(_('Upload'));
     var div = $("uploadResults");
-    if (data.imported < 0)
-        $("uploadResultsContent").update(_("An error occurred while importing calendar."));
-    else if (data.imported == 0)
-        $("uploadResultsContent").update(_("No event was imported."));
-    else {
-        $("uploadResultsContent").update(_("A total of %{0} events were imported in the calendar.").formatted(data.imported));
-        refreshEventsAndDisplay();
+
+    try {
+	data = response.evalJSON(true);
+
+	if (data.imported < 0)
+            $("uploadResultsContent").update(_("An error occurred while importing calendar."));
+	else if (data.imported == 0)
+            $("uploadResultsContent").update(_("No event was imported."));
+	else {
+            $("uploadResultsContent").update(_("A total of %{0} events were imported in the calendar.").formatted(data.imported));
+            refreshEventsAndDisplay();
+	}
+    } catch (e) {
+	$("uploadResultsContent").update(_("An error occurred while importing calendar."));
     }
 
     hideCalendarImport();
@@ -3063,9 +3076,7 @@ function appendCalendar(folderName, folderPath) {
 
         var colorBox = document.createElement("div");
         li.appendChild(colorBox);
-        li.appendChild(document.createTextNode(folderName
-                                               .replace("&lt;", "<", "g")
-                                               .replace("&gt;", ">", "g")));
+        li.appendChild(document.createTextNode(folderName));
         colorBox.appendChild(document.createTextNode("OO"));
 
         $(colorBox).addClassName("colorBox");
@@ -3106,7 +3117,7 @@ function appendStyleElement(folderPath, color) {
 function onFolderSubscribeCB(folderData) {
     var folder = $(folderData["folder"]);
     if (!folder) {
-        appendCalendar(folderData["folderName"], folderData["folder"]);
+        appendCalendar(folderData["folderName"].unescapeHTML(), folderData["folder"]);
         refreshEvents();
         refreshTasks();
         changeCalendarDisplay();
@@ -3194,6 +3205,11 @@ function deletePersonalCalendarCallback(http) {
 }
 
 function configureLists() {
+    // Move calendar view if lists are collapsed
+    if (!$("schedulerTabs").visible()) {
+        $('calendarView').setStyle({ top: '0' }).show();
+    }
+
     // TASK LIST
     var list = $("tasksList");
     list.multiselect = true;
@@ -3281,6 +3297,37 @@ function drawNowLine() {
   }
 }
 
+function onListCollapse(event, element) {
+    var img = element.select('img').first();
+    var tabs = $("schedulerTabs");
+    var handle = $("rightDragHandle");
+    var view = jQuery("#calendarView");
+    var state = 'collapse';
+
+    if (tabs.visible()) {
+        img.removeClassName('collapse').addClassName('rise');
+        handle.hide();
+        view.animate({ top: '0' }, 200, function() {
+            tabs.hide();
+        });
+    }
+    else {
+        state = 'rise';
+        img.removeClassName('rise').addClassName('collapse');
+        tabs.show();
+        tabs.controller.onWindowResize();
+        view.animate({ top: handle.getStyle('top') }, 200, function() {
+            handle.show();
+        });
+    }
+
+    var url =  ApplicationBaseURL + "saveListState";
+    var params = "state=" + state;
+    triggerAjaxRequest(url, null, null, params,
+                       { "Content-type": "application/x-www-form-urlencoded" });
+
+}
+
 function onDocumentKeydown(event) {
     var target = Event.element(event);
     if (target.tagName != "INPUT") {
@@ -3356,7 +3403,7 @@ function initScheduler() {
         // Calendar import form
         $("uploadCancel").observe("click", hideCalendarImport);
         $("uploadOK").observe("click", hideImportResults);
-
+        $("calendarView").on("click", "#listCollapse", onListCollapse);
         Event.observe(document, "keydown", onDocumentKeydown);
     }
 

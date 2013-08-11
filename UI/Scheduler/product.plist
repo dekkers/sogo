@@ -55,6 +55,11 @@
           pageName    = "UIxCalMainView";
           actionName  = "saveSelectedList";
         };          
+        saveListState = {
+          protectedBy = "View";
+          pageName    = "UIxCalMainView";
+          actionName  = "saveListState";
+        };
         dateselector = {
           protectedBy = "View";
           pageName    = "UIxCalDateSelector"; 
@@ -150,7 +155,7 @@
           actionName  = "redirectForUIDs";
         };
         import = {
-          protectedBy = "View";
+          protectedBy = "Add Documents, Images, and Files";
           actionClass = "UIxCalFolderActions";
           actionName  = "import";
         };
