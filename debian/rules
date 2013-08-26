@@ -7,7 +7,7 @@ export DEB_BUILD_MAINT_OPTIONS=hardening=+bindnow
 	dh $@ --parallel
 
 override_dh_auto_clean:
-	dh_auto_clean
+	[ ! -f config.make ] || $(MAKE) distclean
 	rm -f config.make
 
 override_dh_auto_build:
@@ -49,7 +49,7 @@ override_dh_auto_install:
 	rmdir debian/tmp/usr/lib/GNUstep/Libraries/Resources debian/tmp/usr/lib/GNUstep/Libraries
 
 override_dh_auto_test:
-	make check
+	$(MAKE) check
 
 override_dh_strip:
 	dh_strip --dbg-package=sogo-dbg
