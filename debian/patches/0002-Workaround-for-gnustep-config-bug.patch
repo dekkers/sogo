@@ -5,7 +5,7 @@ Subject: Workaround for gnustep-config bug
 This is a workaround for the following gnustep-config bug:
 https://savannah.gnu.org/bugs/index.php?38502
 ---
- configure |    3 +++
+ configure | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/configure b/configure

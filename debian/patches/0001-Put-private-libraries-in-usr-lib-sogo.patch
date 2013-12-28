@@ -3,29 +3,29 @@ Date: Thu, 10 May 2012 03:27:43 +0200
 Subject: Put private libraries in /usr/lib/sogo
 
 ---
- Main/GNUmakefile                       |    2 +-
- Main/GNUmakefile.preamble              |    2 +-
- OGoContentStore/GNUmakefile            |    2 ++
- OGoContentStore/GNUmakefile.preamble   |    2 +-
- OpenChange/GNUmakefile                 |    4 ++--
- SOPE/GDLContentStore/GNUmakefile       |    1 +
- SOPE/NGCards/GNUmakefile               |    1 +
- SoObjects/SOGo/GNUmakefile             |    3 +++
- SoObjects/common.make                  |    2 +-
- Tests/Integration/GNUmakefile.preamble |    2 +-
- Tests/Unit/GNUmakefile                 |    4 ++--
- Tools/GNUmakefile                      |    2 ++
- Tools/GNUmakefile.preamble             |    2 +-
- UI/AdministrationUI/GNUmakefile        |    1 +
- UI/Common/GNUmakefile                  |    1 +
- UI/Contacts/GNUmakefile                |    1 +
- UI/MailPartViewers/GNUmakefile         |    1 +
- UI/MailerUI/GNUmakefile                |    1 +
- UI/MainUI/GNUmakefile                  |    1 +
- UI/PreferencesUI/GNUmakefile           |    1 +
- UI/SOGoUI/GNUmakefile                  |    3 +++
- UI/Scheduler/GNUmakefile               |    1 +
- UI/common.make                         |    4 ++--
+ Main/GNUmakefile                       | 2 +-
+ Main/GNUmakefile.preamble              | 2 +-
+ OGoContentStore/GNUmakefile            | 2 ++
+ OGoContentStore/GNUmakefile.preamble   | 2 +-
+ OpenChange/GNUmakefile                 | 4 ++--
+ SOPE/GDLContentStore/GNUmakefile       | 1 +
+ SOPE/NGCards/GNUmakefile               | 1 +
+ SoObjects/SOGo/GNUmakefile             | 3 +++
+ SoObjects/common.make                  | 2 +-
+ Tests/Integration/GNUmakefile.preamble | 2 +-
+ Tests/Unit/GNUmakefile                 | 4 ++--
+ Tools/GNUmakefile                      | 2 ++
+ Tools/GNUmakefile.preamble             | 2 +-
+ UI/AdministrationUI/GNUmakefile        | 1 +
+ UI/Common/GNUmakefile                  | 1 +
+ UI/Contacts/GNUmakefile                | 1 +
+ UI/MailPartViewers/GNUmakefile         | 1 +
+ UI/MailerUI/GNUmakefile                | 1 +
+ UI/MainUI/GNUmakefile                  | 1 +
+ UI/PreferencesUI/GNUmakefile           | 1 +
+ UI/SOGoUI/GNUmakefile                  | 3 +++
+ UI/Scheduler/GNUmakefile               | 1 +
+ UI/common.make                         | 4 ++--
  23 files changed, 32 insertions(+), 12 deletions(-)
 
 diff --git a/Main/GNUmakefile b/Main/GNUmakefile
@@ -132,7 +132,7 @@ index 90f7584..31cfdd8 100644
  else
  include $(GNUSTEP_MAKEFILES)/framework.make
 diff --git a/SoObjects/SOGo/GNUmakefile b/SoObjects/SOGo/GNUmakefile
-index 43bce3e..c2ef3d9 100644
+index f9010db..f62d59c 100644
 --- a/SoObjects/SOGo/GNUmakefile
 +++ b/SoObjects/SOGo/GNUmakefile
 @@ -11,6 +11,8 @@ SOGo_VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
@@ -144,7 +144,7 @@ index 43bce3e..c2ef3d9 100644
  SOGo_HEADER_FILES = \
  	SOGoBuild.h \
  	SOGoProductLoader.h		\
-@@ -176,6 +178,7 @@ ADDITIONAL_LDFLAGS += -lmemcached
+@@ -183,6 +185,7 @@ ADDITIONAL_LDFLAGS += -lmemcached
  ifneq ($(FHS_INSTALL_ROOT),)
  GNUSTEP_HEADERS=$(DESTDIR)$(FHS_INSTALL_ROOT)/include
  endif
@@ -257,25 +257,25 @@ index b29b037..3f9e7ca 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MailPartViewers/GNUmakefile b/UI/MailPartViewers/GNUmakefile
-index 509121b..6e8f7a8 100644
+index a094e92..50ebd45 100644
 --- a/UI/MailPartViewers/GNUmakefile
 +++ b/UI/MailPartViewers/GNUmakefile
-@@ -55,6 +55,7 @@ MailPartViewers_LOCALIZED_RESOURCE_FILES += \
+@@ -37,6 +37,7 @@ MailPartViewers_LOCALIZED_RESOURCE_FILES += \
  
  ADDITIONAL_INCLUDE_DIRS += $(shell xml2-config --cflags)
- ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
+ ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/ -L../../SoObjects/Mailer/obj -L../../SoObjects/Appointments/obj
 +ADDITIONAL_LDFLAGS += -Wl,--rpath,/usr/lib/sogo
  
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MailerUI/GNUmakefile b/UI/MailerUI/GNUmakefile
-index b193221..ee24921 100644
+index e354d98..793a4e1 100644
 --- a/UI/MailerUI/GNUmakefile
 +++ b/UI/MailerUI/GNUmakefile
-@@ -50,6 +50,7 @@ MailerUI_LOCALIZED_RESOURCE_FILES += \
+@@ -45,6 +45,7 @@ MailerUI_LOCALIZED_RESOURCE_FILES += \
  
  ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
- ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
+ ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/ -L../MailPartViewers/obj/
 +ADDITIONAL_LDFLAGS += -Wl,--rpath,/usr/lib/sogo
  
  -include GNUmakefile.preamble
@@ -325,10 +325,10 @@ index 2b781ca..da8dcce 100644
  include $(GNUSTEP_MAKEFILES)/library.make
  -include GNUmakefile.postamble
 diff --git a/UI/Scheduler/GNUmakefile b/UI/Scheduler/GNUmakefile
-index 2ade175..1839360 100644
+index c3bc3b3..6b678e3 100644
 --- a/UI/Scheduler/GNUmakefile
 +++ b/UI/Scheduler/GNUmakefile
-@@ -72,6 +72,7 @@ SchedulerUI_RESOURCE_FILES +=		\
+@@ -71,6 +71,7 @@ SchedulerUI_RESOURCE_FILES +=		\
  
  ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
  ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/

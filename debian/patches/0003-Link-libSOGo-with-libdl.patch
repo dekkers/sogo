@@ -3,7 +3,7 @@ Date: Mon, 11 Mar 2013 19:37:45 +0100
 Subject: Link libSOGo with libdl
 
 ---
- SoObjects/SOGo/GNUmakefile.preamble |    4 ++++
+ SoObjects/SOGo/GNUmakefile.preamble | 4 ++++
  1 file changed, 4 insertions(+)
 
 diff --git a/SoObjects/SOGo/GNUmakefile.preamble b/SoObjects/SOGo/GNUmakefile.preamble
