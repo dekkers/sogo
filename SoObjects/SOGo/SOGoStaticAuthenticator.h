@@ -1,8 +1,6 @@
-/* UIxColorPicker.m - this file is part of SOGo
+/* SOGoStaticAuthenticator.h - this file is part of SOGo
  *
- * Copyright (C) 2008 Inverse inc.
- *
- * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
+ * Copyright (C) 2013 Inverse inc.
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,10 +18,34 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#import "UIxColorPicker.h"
+#ifndef SOGOSTATICAUTHENTICATOR_H
+#define SOGOSTATICAUTHENTICATOR_H
 
-#warning this module should probably be moved into a "Utility" product
+#import <Foundation/NSObject.h>
 
-@implementation UIxColorPicker
+
+#import "SOGoAuthenticator.h"
+
+/*
+  SOGoStaticAuthenticator
+  
+*/
+
+@interface SOGoStaticAuthenticator : NSObject <SOGoAuthenticator>
+{
+  NSString *_username;
+  NSString *_password;
+}
+
++ (id) authenticatorWithUser: (NSString *) user
+                 andPassword: (NSString *) password;
+
+- (id) initWithUser: (NSString *) user
+        andPassword: (NSString *) password;
+
+- (NSString *) username;
 
 @end
+
+#endif /* SOGOSTATICAUTHENTICATOR_H */
+

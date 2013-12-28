@@ -16,6 +16,7 @@ Mailer_OBJC_FILES += \
 	SOGoMailAccounts.m		\
 	SOGoMailAccount.m		\
 	SOGoMailFolder.m		\
+	SOGoMailLabel.m			\
 	SOGoMailNamespace.m		\
 	SOGoMailObject.m		\
 	SOGoMailObject+Draft.m		\
@@ -57,6 +58,8 @@ Mailer_RESOURCE_FILES += \
 	SOGoMailDutchReply.wo \
 	SOGoMailEnglishForward.wo \
 	SOGoMailEnglishReply.wo \
+	SOGoMailFinnishForward.wo \
+	SOGoMailFinnishReply.wo \
 	SOGoMailFrenchForward.wo \
 	SOGoMailFrenchReply.wo \
 	SOGoMailGermanForward.wo \
@@ -90,6 +93,7 @@ Mailer_RESOURCE_FILES += \
 
 
 ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
+ADDITIONAL_INCLUDE_DIRS += $(shell xml2-config --cflags)
 ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
 
 -include GNUmakefile.preamble

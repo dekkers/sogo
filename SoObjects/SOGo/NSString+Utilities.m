@@ -2,9 +2,6 @@
  *
  * Copyright (C) 2006-2013 Inverse inc.
  *
- * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
- *         Ludovic Marcotte <lmarcotte@inverse.ca>
- *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2, or (at your option)
@@ -317,12 +314,12 @@ static int cssEscapingCount;
   int count;
 
   strings = [NSArray arrayWithObjects: @"_U_", @"_D_", @"_H_", @"_A_", @"_S_",
-                     @"_C_", @"_CO_", @"_SP_", @"_SQ_", @"_AM_", @"_P_", nil];
+                     @"_C_", @"_CO_", @"_SP_", @"_SQ_", @"_AM_", @"_P_", @"_DS_", nil];
   [strings retain];
   cssEscapingStrings = [strings asPointersOfObjects];
 
   characters = [NSArray arrayWithObjects: @"_", @".", @"#", @"@", @"*", @":",
-                        @",", @" ", @"'", @"&", @"+", nil];
+                        @",", @" ", @"'", @"&", @"+", @"$", nil];
   cssEscapingCount = [strings count];
   cssEscapingCharacters = NSZoneMalloc (NULL,
                                         (cssEscapingCount + 1)
