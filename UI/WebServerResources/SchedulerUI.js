@@ -699,7 +699,6 @@ function onViewEventCallback(http) {
             var cellDimensions = cell.getDimensions();
             var div = $("eventDialog");
             var divDimensions = div.getDimensions();
-            var viewPosition = $("calendarView").cumulativeOffset();
             var view;
             var left;
             var top = cellPosition[1] - 5;
@@ -965,7 +964,7 @@ function eventsListCallback(http) {
                 td.observe("mousedown", listRowMouseDownHandler, true);
                 var colorDiv = createElement("div", false, "colorBox calendarFolder" + calendar);
                 td.appendChild(colorDiv);
-                colorDiv.update('OO');
+                colorDiv.update('&nbsp;');
                 var span = createElement("span");
                 td.appendChild(span);
                 span.update(data[i][4]); // title
@@ -1093,7 +1092,7 @@ function tasksListCallback(http) {
                 row.appendChild(cell);
                 var colorDiv = createElement("div", false, "colorBox calendarFolder" + calendar);
                 cell.appendChild(colorDiv);
-                colorDiv.update('OO');
+                colorDiv.update('&nbsp;');
                 var t = new Element ("span");
                 cell.appendChild(t);
                 t.update(data[i][4]); // title
@@ -1403,10 +1402,6 @@ function reloadWebCalendarCallback(http) {
                 if (remaining.length == 0) {
                     refreshEventsAndTasks();
                     changeCalendarDisplay();
-                }
-                else {
-                    var newFolderID = remaining[0];
-                    reloadWebCalendar(newFolderID, refreshOperations);
                 }
             }
             else {
@@ -2838,8 +2833,9 @@ function initCalendarSelector() {
 
 function onCalendarSelectionChange(event) {
     var target = Event.element(event);
-    if (target.tagName == 'SPAN')
+    if (target.tagName == 'DIV') {
         target = target.parentNode;
+    }
 
     onRowClick(event, target);
 }
@@ -3077,7 +3073,7 @@ function appendCalendar(folderName, folderPath) {
         var colorBox = document.createElement("div");
         li.appendChild(colorBox);
         li.appendChild(document.createTextNode(folderName));
-        colorBox.appendChild(document.createTextNode("OO"));
+        colorBox.appendChild(document.createTextNode("\u00a0"));
 
         $(colorBox).addClassName("colorBox");
         $(colorBox).addClassName('calendarFolder' + folderPath.substr(1));
@@ -3262,39 +3258,39 @@ function onWindowResize(event) {
 }
 
 function drawNowLine() {
-  var d = new Date();
-  var hours = d.getHours();
-  var minutes = d.getMinutes();
+    var d = new Date();
+    var hours = d.getHours();
+    var minutes = d.getMinutes();
 
-  if (currentView == "dayview") {
-    var today = new Date();
-    var m = parseInt(today.getMonth()) + 1;
-    var d = today.getDate();
-    if (m < 10)
-      m = "0" + m;
-    if (d < 10)
-      d = "0" + d;
-    var day = today.getFullYear() + "" + m + "" + d;
-    var targets = $$("DIV#daysView DIV.days DIV.day[day=" + day
-                     + "] DIV.clickableHourCell");
-  }
-  else if (currentView == "weekview")
-    var targets = $$("DIV#daysView DIV.days DIV.dayOfToday DIV.clickableHourCell");
-
-  if (targets) {
-    var target = targets[hours];
-
-    if (target) {
-      var div = $("nowLineDisplay");
-      if (!div)
-        div = new Element("div", {'id': 'nowLineDisplay'});
-
-      div.style.top = parseInt(((minutes * target.offsetHeight) / 60) - 1) + "px";
-      target.appendChild(div);
-
-      setTimeout("drawNowLine ();", 60000); // 1 min.
+    if (currentView == "dayview") {
+        var today = new Date();
+        var m = parseInt(today.getMonth()) + 1;
+        var d = today.getDate();
+        if (m < 10)
+            m = "0" + m;
+        if (d < 10)
+            d = "0" + d;
+        var day = today.getFullYear() + "" + m + "" + d;
+        var targets = $$("DIV#daysView DIV.days DIV.day[day=" + day
+                         + "] DIV.clickableHourCell");
     }
-  }
+    else if (currentView == "weekview")
+        var targets = $$("DIV#daysView DIV.days DIV.dayOfToday DIV.clickableHourCell");
+
+    if (targets) {
+        var target = targets[hours];
+
+        if (target) {
+            var div = $("nowLineDisplay");
+            if (!div)
+                div = new Element("div", {'id': 'nowLineDisplay'});
+
+            div.style.top = parseInt((minutes * target.offsetHeight / 60) - 1) + "px";
+            target.insertBefore(div, target.firstChild);
+
+            setTimeout("drawNowLine ();", 60000); // 1 min.
+        }
+    }
 }
 
 function onListCollapse(event, element) {

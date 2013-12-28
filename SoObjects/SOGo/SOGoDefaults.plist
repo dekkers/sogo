@@ -4,6 +4,8 @@
     WOLogFile = "/var/log/sogo/sogo.log";
     WOPidFile = "/var/run/sogo/sogo.pid";
 
+    WOPort = "127.0.0.1:20000";
+
     NGImap4ConnectionStringSeparator = "/";
     NGImap4ConnectionGroupIdPrefix = "$";
     NGImap4DisableIMAP4Pooling = YES;
@@ -74,4 +76,12 @@
     SOGoRemindWithASound = YES;
 
     SOGoSearchMinimumWordLength = 2;
+
+    SOGoMailLabelsColors = {
+        $label1 = ("Important", "#FF0000");
+        $label2 = ("Work", "#FF9900");
+        $label3 = ("Personal", "#009900");
+        $label4 = ("To Do", "#3333FF");
+        $label5 = ("Later", "#993399");
+    };
 }

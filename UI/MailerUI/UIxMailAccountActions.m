@@ -1,6 +1,6 @@
 /* UIxMailAccountActions.m - this file is part of SOGo
  *
- * Copyright (C) 2007-2011 Inverse inc.
+ * Copyright (C) 2007-2013 Inverse inc.
  *
  * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
  *         Ludovic Marcotte <lmarcotte@inverse.ca>
@@ -32,6 +32,7 @@
 #import <NGObjWeb/WOResponse.h>
 #import <NGImap4/NGImap4Connection.h>
 #import <NGImap4/NGImap4Client.h>
+#import <NGImap4/NSString+Imap4.h>
 #import <NGExtensions/NSString+misc.h>
 
 #import <Mailer/SOGoMailAccount.h>
@@ -86,21 +87,21 @@
     {
       co = [self clientObject];
       specialFolders = [[NSArray arrayWithObjects:
-				   [co inboxFolderNameInContext: context],
-				 [co draftsFolderNameInContext: context],
-				 [co sentFolderNameInContext: context],
-				 [co trashFolderNameInContext: context],
-				 [co otherUsersFolderNameInContext: context],
-				 [co sharedFoldersNameInContext: context],
-				 nil] stringsWithFormat: @"/%@"];
+                                 [co inboxFolderNameInContext: context],
+                                 [co draftsFolderNameInContext: context],
+                                 [co sentFolderNameInContext: context],
+                                 [co trashFolderNameInContext: context],
+                                 [co otherUsersFolderNameInContext: context],
+                                 [co sharedFoldersNameInContext: context],
+                                 nil] stringsWithFormat: @"/%@"];
       ASSIGN(inboxFolderName, [specialFolders objectAtIndex: 0]);
       ASSIGN(draftsFolderName, [specialFolders objectAtIndex: 1]);
       ASSIGN(sentFolderName, [specialFolders objectAtIndex: 2]);
       ASSIGN(trashFolderName, [specialFolders objectAtIndex: 3]);
       if ([specialFolders count] > 4)
-	ASSIGN(otherUsersFolderName, [specialFolders objectAtIndex: 4]);
+        ASSIGN(otherUsersFolderName, [specialFolders objectAtIndex: 4]);
       if ([specialFolders count] > 5)
-	ASSIGN(sharedFoldersName, [specialFolders objectAtIndex: 5]);
+        ASSIGN(sharedFoldersName, [specialFolders objectAtIndex: 5]);
     }
 
   if ([folderName isEqualToString: inboxFolderName])
@@ -123,7 +124,7 @@
 
 - (NSArray *) _jsonFolders: (NSEnumerator *) rawFolders
 {
-  NSString *currentFolder, *currentDisplayName, *currentFolderType, *login, *fullName;
+  NSString *currentFolder, *currentDecodedFolder, *currentDisplayName, *currentFolderType, *login, *fullName;
   NSMutableArray *pathComponents;
   SOGoUserManager *userManager;
   NSDictionary *folderData;
@@ -138,48 +139,52 @@
       // are never reused and "autoreleased" at the end. This loop would consume
       // lots of LDAP connections during its execution.
       pool = [[NSAutoreleasePool alloc] init];
+
+      currentDecodedFolder = [currentFolder stringByDecodingImap4FolderName];
       currentFolderType = [self _folderType: currentFolder];
 
       // We translate the "Other Users" and "Shared Folders" namespaces.
       // While we're at it, we also translate the user's mailbox names
       // to the full name of the person.
-      if (otherUsersFolderName && [currentFolder hasPrefix: otherUsersFolderName])
-	{
-	  // We have a string like /Other Users/lmarcotte/... under Cyrus, but we could
-	  // also have something like /shared under Dovecot. So we swap the username only
-	  // if we have one, of course.
-	  pathComponents = [NSMutableArray arrayWithArray: [currentFolder pathComponents]];
-	  
-	  if ([pathComponents count] > 2) 
-	    {
-	      login = [pathComponents objectAtIndex: 2];
-	      userManager = [SOGoUserManager sharedUserManager];
-	      fullName = [userManager getCNForUID: login];
-	      [pathComponents removeObjectsInRange: NSMakeRange(0,3)];
-	  
-	      currentDisplayName = [NSString stringWithFormat: @"/%@/%@/%@", 
-					     [self labelForKey: @"OtherUsersFolderName"],
-					     (fullName != nil ? fullName : login),
-					     [pathComponents componentsJoinedByString: @"/"]];
-	      
-	    }
-	  else
-	    {
-	      currentDisplayName = [NSString stringWithFormat: @"/%@%@", [self labelForKey: @"OtherUsersFolderName"],
-					     [currentFolder substringFromIndex: [otherUsersFolderName length]]];
-	    }
-	}
-      else if (sharedFoldersName && [currentFolder hasPrefix: sharedFoldersName])
-	currentDisplayName = [NSString stringWithFormat: @"/%@%@", [self labelForKey: @"SharedFoldersName"],
-				       [currentFolder substringFromIndex: [sharedFoldersName length]]];
+      if (otherUsersFolderName && [currentDecodedFolder hasPrefix: otherUsersFolderName])
+        {
+          // We have a string like /Other Users/lmarcotte/... under Cyrus, but we could
+          // also have something like /shared under Dovecot. So we swap the username only
+          // if we have one, of course.
+          pathComponents = [NSMutableArray arrayWithArray: [currentDecodedFolder pathComponents]];
+
+          if ([pathComponents count] > 2) 
+            {
+              login = [pathComponents objectAtIndex: 2];
+              userManager = [SOGoUserManager sharedUserManager];
+              fullName = [userManager getCNForUID: login];
+              [pathComponents removeObjectsInRange: NSMakeRange(0,3)];
+
+              currentDisplayName = [NSString stringWithFormat: @"/%@/%@/%@", 
+                                     [self labelForKey: @"OtherUsersFolderName"],
+                                     (fullName != nil ? fullName : login),
+                                     [pathComponents componentsJoinedByString: @"/"]];
+
+            }
+          else
+            {
+              currentDisplayName = [NSString stringWithFormat: @"/%@%@",
+                                     [self labelForKey: @"OtherUsersFolderName"],
+                                      [currentDecodedFolder substringFromIndex:
+                                        [otherUsersFolderName length]]];
+            }
+        }
+      else if (sharedFoldersName && [currentDecodedFolder hasPrefix: sharedFoldersName])
+        currentDisplayName = [NSString stringWithFormat: @"/%@%@", [self labelForKey: @"SharedFoldersName"],
+                           [currentDecodedFolder substringFromIndex: [sharedFoldersName length]]];
       else
-	currentDisplayName = currentFolder;
-      
+        currentDisplayName = currentDecodedFolder;
+
       folderData = [NSDictionary dictionaryWithObjectsAndKeys:
-				   currentFolder, @"path",
-				 currentFolderType, @"type",
-				 currentDisplayName, @"displayName",
-	nil];
+                     currentFolder, @"path",
+                     currentFolderType, @"type",
+                     currentDisplayName, @"displayName",
+                     nil];
       [folders addObject: folderData];
       [pool release];
     }
@@ -204,7 +209,7 @@
   response = [self responseWithStatus: 200
                             andString: [data jsonRepresentation]];
   [response setHeader: @"application/json"
-	    forKey: @"content-type"];
+               forKey: @"content-type"];
 
   return response;
 }
@@ -253,7 +258,7 @@
       nl = ([[[[context activeUser] userDefaults] mailComposeMessageType] isEqualToString: @"html"] ? @"<br/>" : @"\n");
 
       [newDraftMessage
-	setText: [NSString stringWithFormat: @"%@%@-- %@%@", nl, nl, nl, signature]];
+        setText: [NSString stringWithFormat: @"%@%@-- %@%@", nl, nl, nl, signature]];
       save = YES;
     }
   if (save)
@@ -261,8 +266,8 @@
 
   urlBase = [newDraftMessage baseURLInContext: context];
   url = [urlBase composeURLWithAction: @"edit"
-		 parameters: nil
-		 andHash: NO];
+                           parameters: nil
+                              andHash: NO];
 
   return [self redirectToLocation: url];  
 }

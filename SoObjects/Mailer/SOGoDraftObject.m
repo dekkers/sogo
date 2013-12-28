@@ -171,12 +171,17 @@ static NSString *headerKeys[] = {@"subject", @"to", @"cc", @"bcc",
 @implementation SOGoDraftObject
 
 static NGMimeType  *MultiMixedType = nil;
+static NGMimeType  *MultiAlternativeType = nil;
 static NSString    *userAgent      = nil;
 
 + (void) initialize
 {
   MultiMixedType = [NGMimeType mimeType: @"multipart" subType: @"mixed"];
   [MultiMixedType retain];
+
+  MultiAlternativeType = [NGMimeType mimeType: @"multipart" subType: @"alternative"];
+  [MultiAlternativeType retain];
+
   userAgent      = [NSString stringWithFormat: @"SOGoMail %@",
 			     SOGoVersion];
   [userAgent retain];
@@ -614,11 +619,40 @@ static NSString    *userAgent      = nil;
     TODO: what about sender (RFC 822 3.6.2)
   */
   NSMutableArray *to, *addrs, *allRecipients;
-  NSArray *envelopeAddresses, *userEmails;
+  NSArray *envelopeAddresses;
 
   allRecipients = [NSMutableArray array];
-  userEmails = [[context activeUser] allEmails];
-  [allRecipients addObjectsFromArray: userEmails];
+
+  //
+  // When we do a Reply-To or a Reply-To-All, we strip our own addresses
+  // from the list of recipients so we don't reply to ourself! We check
+  // which addresses we should use - that is the ones for the current
+  // user if we're dealing with the default "SOGo mail account" or
+  // the ones specified in the auxiliary IMAP accounts
+  //
+  if ([[[self->container mailAccountFolder] nameInContainer] intValue] == 0)
+    {
+      NSArray *userEmails;
+
+      userEmails = [[context activeUser] allEmails];
+      [allRecipients addObjectsFromArray: userEmails];
+    }
+  else
+    {
+      NSArray *identities;
+      NSString *email;
+      int i;
+
+      identities = [[[self container] mailAccountFolder] identities];
+      
+      for (i = 0; i < [identities count]; i++)
+        {
+          email = [[identities objectAtIndex: i] objectForKey: @"email"];
+          
+          if (email)
+            [allRecipients addObject: email];
+        }
+    }
 
   to = [NSMutableArray arrayWithCapacity: 2];
 
@@ -629,20 +663,19 @@ static NSString    *userAgent      = nil;
   else
     [addrs setArray: [_envelope from]];
 
-  [self _purgeRecipients: allRecipients
-	fromAddresses: addrs];
-  [self _addEMailsOfAddresses: addrs toArray: to];
-  [self _addRecipients: addrs toArray: allRecipients];
-  [_info setObject: to forKey: @"to"];
+  [self _purgeRecipients: allRecipients  fromAddresses: addrs];
+  [self _addEMailsOfAddresses: addrs  toArray: to];
+  [self _addRecipients: addrs  toArray: allRecipients];
+  [_info setObject: to  forKey: @"to"];
 
   /* If "to" is empty, we add at least ourself as a recipient!
      This is for emails in the "Sent" folder that we reply to... */
   if (![to count])
     {
       if ([[_envelope replyTo] count])
-	[self _addEMailsOfAddresses: [_envelope replyTo] toArray: to];
+	[self _addEMailsOfAddresses: [_envelope replyTo]  toArray: to];
       else
-	[self _addEMailsOfAddresses: [_envelope from] toArray: to];
+	[self _addEMailsOfAddresses: [_envelope from]  toArray: to];
     }
 
   /* If we have no To but we have Cc recipients, let's move the Cc
@@ -656,7 +689,7 @@ static NSString    *userAgent      = nil;
       [_info removeObjectForKey: @"cc"];
     }
 
-  /* CC processing if we reply-to-all: add all 'to' and 'cc'  */
+  /* CC processing if we reply-to-all: - we add all 'to' and 'cc' fields */
   if (_replyToAll)
     {
       to = [NSMutableArray new];
@@ -981,8 +1014,33 @@ static NSString    *userAgent      = nil;
   return error;  
 }
 
-/* NGMime representations */
+//
+// Only called when converting text/html to text/plain parts
+//
+- (NGMimeBodyPart *) plainTextBodyPartForText
+{
+  NGMutableHashMap *map;
+  NGMimeBodyPart   *bodyPart;
+  NSString *plainText;
 
+  /* prepare header of body part */
+  map = [[[NGMutableHashMap alloc] initWithCapacity: 1] autorelease];
+  
+  [map setObject: contentTypeValue forKey: @"content-type"];
+  
+   /* prepare body content */
+  bodyPart = [[[NGMimeBodyPart alloc] initWithHeader:map] autorelease];
+
+  plainText = [text htmlToText];
+  [bodyPart setBody: plainText];
+
+  return bodyPart;
+}
+
+
+//
+//
+//
 - (NGMimeBodyPart *) bodyPartForText
 {
   /*
@@ -992,25 +1050,14 @@ static NSString    *userAgent      = nil;
   NGMimeBodyPart   *bodyPart;
   
   /* prepare header of body part */
-
   map = [[[NGMutableHashMap alloc] initWithCapacity: 1] autorelease];
 
   // TODO: set charset in header!
-  [map setObject: @"text/plain" forKey: @"content-type"];
   if (text)
     [map setObject: (isHTML ? htmlContentTypeValue : contentTypeValue)
             forKey: @"content-type"];
-
-//   if ((body = text) != nil) {
-//     if ([body isKindOfClass: [NSString class]]) {
-//       [map setObject: contentTypeValue
-// 	   forKey: @"content-type"];
-// //       body = [body dataUsingEncoding:NSUTF8StringEncoding];
-//     }
-//   }
   
   /* prepare body content */
-  
   bodyPart = [[[NGMimeBodyPart alloc] initWithHeader:map] autorelease];
   [bodyPart setBody: text];
 
@@ -1020,32 +1067,29 @@ static NSString    *userAgent      = nil;
 - (NGMimeMessage *) mimeMessageForContentWithHeaderMap: (NGMutableHashMap *) map
 {
   NGMimeMessage *message;  
-//   BOOL     addSuffix;
-  id       body;
+  id body;
 
-  [map setObject: @"text/plain" forKey: @"content-type"];
-  body = text;
-  if (body)
+  message = [[[NGMimeMessage alloc] initWithHeader:map] autorelease];
+  
+  if (!isHTML)
     {
-//       if ([body isKindOfClass:[NSString class]])
-	/* Note: just 'utf8' is displayed wrong in Mail.app */
-      [map setObject: (isHTML ? htmlContentTypeValue : contentTypeValue)
-              forKey: @"content-type"];
-//       body = [body dataUsingEncoding:NSUTF8StringEncoding];
-//       else if ([body isKindOfClass:[NSData class]] && addSuffix) {
-// 	body = [[body mutableCopy] autorelease];
-//       }
-//       else if (addSuffix) {
-// 	[self warnWithFormat: @"Note: cannot add Internet marker to body: %@",
-// 	      NSStringFromClass([body class])];
-//       }
-
-      message = [[[NGMimeMessage alloc] initWithHeader:map] autorelease];
-      [message setBody: body];
+      [map setObject: contentTypeValue  forKey: @"content-type"];
+      body = text;
     }
   else
-    message = nil;
+    {
+      body = [[[NGMimeMultipartBody alloc] initWithPart: message] autorelease];
+      [map addObject: MultiAlternativeType forKey: @"content-type"];
 
+      // Get the text part from it and add it
+      [body addBodyPart: [self plainTextBodyPartForText]];
+
+      // Add the HTML part
+      [body addBodyPart: [self bodyPartForText]];
+    }
+  
+  [message setBody: body];
+  
   return message;
 }
 
@@ -1232,21 +1276,54 @@ static NSString    *userAgent      = nil;
   return bodyParts;
 }
 
+- (NGMimeBodyPart *) mimeMultipartAlternative
+{
+  NGMimeMultipartBody *textParts;
+  NGMutableHashMap *header;
+  NGMimeBodyPart *part;
+  
+  header = [NGMutableHashMap hashMap];
+  [header addObject: MultiAlternativeType forKey: @"content-type"];
+  
+  part = [NGMimeBodyPart bodyPartWithHeader: header];
+  
+  textParts = [[NGMimeMultipartBody alloc] initWithPart: part];
+  
+  // Get the text part from it and add it
+  [textParts addBodyPart: [self plainTextBodyPartForText]];
+
+  // Add the HTML part
+  [textParts addBodyPart: [self bodyPartForText]];
+
+  [part setBody: textParts];
+  RELEASE(textParts);
+
+  return part;
+}
+
 - (NGMimeMessage *) mimeMultiPartMessageWithHeaderMap: (NGMutableHashMap *) map
 					 andBodyParts: (NSArray *) _bodyParts
 {
   NGMimeMessage       *message;  
   NGMimeMultipartBody *mBody;
-  NGMimeBodyPart      *part;
   NSEnumerator        *e;
+  id                  part;
   
   [map addObject: MultiMixedType forKey: @"content-type"];
 
   message = [[NGMimeMessage alloc] initWithHeader: map];
   [message autorelease];
   mBody = [[NGMimeMultipartBody alloc] initWithPart: message];
+  
+  if (!isHTML)
+    {
+      part = [self bodyPartForText];
+    }
+  else
+    {
+      part = [self mimeMultipartAlternative];
+    }
 
-  part = [self bodyPartForText];
   [mBody addBodyPart: part];
 
   e = [_bodyParts objectEnumerator];

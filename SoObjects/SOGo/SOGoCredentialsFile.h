@@ -1,8 +1,6 @@
-/* UIxColorPicker.h - this file is part of SOGo
+/* SOGoCredentialsFile.h - this file is part of SOGo
  *
- * Copyright (C) 2008 Inverse inc.
- *
- * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
+ * Copyright (C) 2013 Inverse inc.
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +18,26 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef UIXCOLORPICKER_H
-#define UIXCOLORPICKER_H
+#ifndef SOGOCREDENTIALSFILE_H
+#define SOGOCREDENTIALSFILE_H
 
-#import <SOGoUI/UIxComponent.h>
+#import <Foundation/NSObject.h>
 
-@interface UIxColorPicker : UIxComponent
+@interface SOGoCredentialsFile : NSObject
+{
+  NSString *_credentialsFile;
+  NSString *_username, *_password;
+}
+
++ (id) credentialsFromFile: (NSString *) file;
+
+- (id) initFromFile: (NSString *) file
+                 withEncoding: (NSStringEncoding) enc;
+
+- (NSString *) username;
+- (NSString *) password;
+- (NSString *) credentialsFile;
+
 @end
 
-#endif /* UIXCOLORPICKER_H */
+#endif /* SOGOCREDENTIALSFILE_H */
