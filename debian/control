@@ -14,7 +14,7 @@ Build-Depends: debhelper (>= 9),
  libxml2-dev,
  python-minimal
 Section: mail
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Homepage: http://www.sogo.nu/
 Vcs-Browser: http://git.debian.org/?p=collab-maint/sogo.git
 Vcs-Git: git://git.debian.org/git/collab-maint/sogo.git
