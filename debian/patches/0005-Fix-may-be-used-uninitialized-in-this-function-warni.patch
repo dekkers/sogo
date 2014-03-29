@@ -1,0 +1,225 @@
+From: Jeroen Dekkers <jeroen@dekkers.ch>
+Date: Wed, 9 Apr 2014 22:59:40 +0200
+Subject: Fix "may be used uninitialized in this function" warnings.
+
+Forwarded: https://github.com/inverse-inc/sogo/pull/33
+---
+ OpenChange/MAPIStoreDBFolder.m   |  4 ++--
+ OpenChange/MAPIStoreFolder.m     | 13 ++++++++-----
+ OpenChange/MAPIStoreMailFolder.m |  4 +++-
+ OpenChange/MAPIStoreMessage.m    |  4 ++--
+ OpenChange/MAPIStoreObject.m     |  1 +
+ OpenChange/RTFHandler.m          |  4 ++--
+ OpenChange/SOGoMAPIDBFolder.m    |  8 ++++++--
+ OpenChange/SOGoMAPIDBObject.m    | 18 ++++++++++++------
+ 8 files changed, 36 insertions(+), 20 deletions(-)
+
+diff --git a/OpenChange/MAPIStoreDBFolder.m b/OpenChange/MAPIStoreDBFolder.m
+index 74bf12e..c3d5bcc 100644
+--- a/OpenChange/MAPIStoreDBFolder.m
++++ b/OpenChange/MAPIStoreDBFolder.m
+@@ -145,8 +145,8 @@ static NSString *MAPIStoreRightFolderContact = @"RightsFolderContact";
+       if (slashRange.location == NSNotFound)
+         [NSException raise: @"MAPIStoreIOException"
+                     format: @"db folder path must start with a '/'"];
+-      else
+-        pathComponent = [path substringFromIndex: slashRange.location + 1];
++
++      pathComponent = [path substringFromIndex: slashRange.location + 1];
+       targetPath = [[targetFolder sogoObject] path];
+       newPath = [NSString stringWithFormat: @"%@/%@",
+                           targetPath, pathComponent];
+diff --git a/OpenChange/MAPIStoreFolder.m b/OpenChange/MAPIStoreFolder.m
+index 2e54838..a1ba589 100644
+--- a/OpenChange/MAPIStoreFolder.m
++++ b/OpenChange/MAPIStoreFolder.m
+@@ -100,12 +100,17 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+   NSArray *parts;
+   NSUInteger lastPartIdx;
+   MAPIStoreUserContext *userContext;
++  /* We create this local variable so gcc knows it can't be changed in the
++     methods we call. This way we don't get a "may be used uninitialized in this
++     function" warning. */
++  BOOL pathBool;
+ 
+   folderURL = [NSURL URLWithString: [self url]];
+   /* note: -[NSURL path] returns an unescaped representation */
+   path = [folderURL path];
+   path = [path substringFromIndex: 1];
+-  if ([path length] > 0)
++  pathBool = [path length] > 0;
++  if (pathBool)
+     {
+       parts = [path componentsSeparatedByString: @"/"];
+       lastPartIdx = [parts count] - 1;
+@@ -123,7 +128,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+           [SOGoMAPIDBFolder objectWithName: folderName
+                                inContainer: [container dbFolder]]);
+   [dbFolder setTableUrl: [userContext folderTableURL]];
+-  if (!container && [path length] > 0)
++  if (!container && pathBool)
+     {
+       pathPrefix = [NSMutableString stringWithCapacity: 64];
+       [pathPrefix appendFormat: @"/%@", [folderURL host]];
+@@ -228,7 +233,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+ 
+ - (id) lookupFolder: (NSString *) folderKey
+ {
+-  MAPIStoreFolder *childFolder;
++  MAPIStoreFolder *childFolder = nil;
+   SOGoFolder *sogoFolder;
+   WOContext *woContext;
+ 
+@@ -244,8 +249,6 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+                                                inContainer: self];
+         }
+     }
+-  else
+-    childFolder = nil;
+ 
+   return childFolder;
+ }
+diff --git a/OpenChange/MAPIStoreMailFolder.m b/OpenChange/MAPIStoreMailFolder.m
+index bcc0253..d01df67 100644
+--- a/OpenChange/MAPIStoreMailFolder.m
++++ b/OpenChange/MAPIStoreMailFolder.m
+@@ -189,6 +189,8 @@ static Class SOGoMailFolderK, MAPIStoreMailFolderK, MAPIStoreOutboxFolderK;
+       else
+         rc = MAPISTORE_ERR_DENIED;
+     }
++  else
++    rc = MAPISTORE_ERROR;
+ 
+   return rc;
+ }
+@@ -854,7 +856,7 @@ _parseIMAPRange (const unichar *uniString, NSArray **UIDsP)
+ {
+   NSMutableArray *UIDs;
+   NSUInteger count = 0;
+-  uint32_t currentUid, rangeMin;
++  uint32_t currentUid, rangeMin = 0;
+   BOOL done = NO, inRange = NO;
+ 
+   UIDs = [NSMutableArray array];
+diff --git a/OpenChange/MAPIStoreMessage.m b/OpenChange/MAPIStoreMessage.m
+index 444ecd0..d9de23d 100644
+--- a/OpenChange/MAPIStoreMessage.m
++++ b/OpenChange/MAPIStoreMessage.m
+@@ -463,8 +463,8 @@ rtf2html (NSData *compressedRTF)
+ - (enum mapistore_error) saveMessage: (TALLOC_CTX *) memCtx
+ {
+   enum mapistore_error rc;
+-  NSArray *containerTables;
+-  NSUInteger count, max;
++  NSArray *containerTables = nil /* Silence GCC warning */;
++  NSUInteger count, max = 0 /* Silence GCC warning */;
+   struct mapistore_object_notification_parameters *notif_parameters;
+   uint64_t folderId;
+   struct mapistore_context *mstoreCtx;
+diff --git a/OpenChange/MAPIStoreObject.m b/OpenChange/MAPIStoreObject.m
+index 1d46891..877afab 100644
+--- a/OpenChange/MAPIStoreObject.m
++++ b/OpenChange/MAPIStoreObject.m
+@@ -250,6 +250,7 @@ static Class NSExceptionK, MAPIStoreFolderK;
+   id value;
+ 
+   tz = nil;
++  tzOffset = 0;
+ 
+   newProperties = [NSMutableDictionary dictionaryWithCapacity: aRow->cValues];
+   for (counter = 0; counter < aRow->cValues; counter++)
+diff --git a/OpenChange/RTFHandler.m b/OpenChange/RTFHandler.m
+index 1e15eba..b7ea4cf 100644
+--- a/OpenChange/RTFHandler.m
++++ b/OpenChange/RTFHandler.m
+@@ -502,7 +502,7 @@ const unsigned short ansicpg874[256] = {
+ {
+   NSMutableString *fontName;
+   RTFFontTable *fontTable;
+-  RTFFontInfo *fontInfo;
++  RTFFontInfo *fontInfo = nil;
+ 
+   unsigned int count;
+ 
+@@ -636,7 +636,7 @@ const unsigned short ansicpg874[256] = {
+ //
+ - (NSMutableData *) parse
+ {
+-  RTFFormattingOptions *formattingOptions;
++  RTFFormattingOptions *formattingOptions = nil;
+   RTFColorTable *colorTable;
+   RTFFontTable *fontTable;
+   RTFStack *stack;
+diff --git a/OpenChange/SOGoMAPIDBFolder.m b/OpenChange/SOGoMAPIDBFolder.m
+index 1ed8d23..5aaaf1d 100644
+--- a/OpenChange/SOGoMAPIDBFolder.m
++++ b/OpenChange/SOGoMAPIDBFolder.m
+@@ -223,14 +223,18 @@ Class SOGoMAPIDBObjectK = Nil;
+   NSArray *records;
+   NSDictionary *record;
+   NSUInteger count, max;
++  /* We make this a local variable so gcc knows it can't be changed in the super
++     method. This way we don't get a "may be used uninitialized in this
++     function" warning for oldPath. */
++  BOOL nameInContainerBool = nameInContainer ? YES : NO;
+ 
+   /* change the paths in children records */
+-  if (nameInContainer)
++  if (nameInContainerBool)
+     oldPath = [self path];
+ 
+   [super setNameInContainer: newName];
+ 
+-  if (nameInContainer)
++  if (nameInContainerBool)
+     {
+       newPath = [self path];
+ 
+diff --git a/OpenChange/SOGoMAPIDBObject.m b/OpenChange/SOGoMAPIDBObject.m
+index 6407fbd..c5fd05a 100644
+--- a/OpenChange/SOGoMAPIDBObject.m
++++ b/OpenChange/SOGoMAPIDBObject.m
+@@ -238,7 +238,7 @@ static EOAttribute *textColumn = nil;
+ 
+ - (Class) mapistoreMessageClass
+ {
+-  NSString *className, *mapiMsgClass;
++  NSString *className, *mapiMsgClass, *reason;
+ 
+   switch (objectType)
+     {
+@@ -265,9 +265,11 @@ static EOAttribute *textColumn = nil;
+       className = @"MAPIStoreFAIMessage";
+       break;
+     default:
+-      [NSException raise: @"MAPIStoreIOException"
+-                  format: @"message class should not be queried for objects"
+-                   @" of type '%d'", objectType];
++      reason = [NSString stringWithFormat:@"message class should not be queried"
++                         @" for objects of type '%d'", objectType];
++      @throw [NSException exceptionWithName: @"MAPIStoreIOException"
++                                     reason: reason
++                                   userInfo: nil];
+     }
+ 
+   return NSClassFromString (className);
+@@ -278,13 +280,17 @@ static EOAttribute *textColumn = nil;
+ {
+   NSMutableString *sql;
+   NSString *oldPath, *newPath;
++  /* We make this a local variable so gcc knows it can't be changed in the super
++     method. This way we don't get a "may be used uninitialized in this
++     function" warning for oldPath. */
++  BOOL nameInContainerBool = nameInContainer ? YES : NO;
+ 
+-  if (nameInContainer)
++  if (nameInContainerBool)
+     oldPath = [self path];
+ 
+   [super setNameInContainer: newNameInContainer];
+ 
+-  if (nameInContainer)
++  if (nameInContainerBool)
+     {
+       newPath = [self path];
+       

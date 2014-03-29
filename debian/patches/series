@@ -2,3 +2,4 @@
 0002-Workaround-for-gnustep-config-bug.patch
 0003-Link-libSOGo-with-libdl.patch
 0004-Change-sogo-backup-location-and-update-cronjob.patch
+0005-Fix-may-be-used-uninitialized-in-this-function-warni.patch
