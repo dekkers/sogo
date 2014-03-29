@@ -23,14 +23,14 @@ index 9edeb43..852c165 100755
  DAYS_TO_KEEP="30"
  
 diff --git a/Scripts/sogo.cron b/Scripts/sogo.cron
-index 5e14500..347c8f2 100644
+index 08aaa96..347c8f2 100644
 --- a/Scripts/sogo.cron
 +++ b/Scripts/sogo.cron
 @@ -15,8 +15,7 @@
  #* * * * *      sogo	/usr/sbin/sogo-ealarms-notify
  
  # Daily backups
--#   - writes to /home/sogo/backups/ by default
+-#   - writes to ~sogo/backups/ by default
 +#   - writes backups to /var/backups/sogo/
  #   - will keep 31 days worth of backups by default
  #   - runs once a day by default, but can run more frequently

@@ -208,7 +208,7 @@ index c5b56a1..7d09f56 100644
  SOGO_TOOL = sogo-tool
  $(SOGO_TOOL)_INSTALL_DIR = $(SOGO_ADMIN_TOOLS)
 diff --git a/Tools/GNUmakefile.preamble b/Tools/GNUmakefile.preamble
-index 8f087f0..103a0b9 100644
+index 3c07002..fdb0e77 100644
 --- a/Tools/GNUmakefile.preamble
 +++ b/Tools/GNUmakefile.preamble
 @@ -10,7 +10,7 @@ ADDITIONAL_INCLUDE_DIRS += \
@@ -281,10 +281,10 @@ index e354d98..793a4e1 100644
  -include GNUmakefile.preamble
  include $(GNUSTEP_MAKEFILES)/bundle.make
 diff --git a/UI/MainUI/GNUmakefile b/UI/MainUI/GNUmakefile
-index b2f8986..dfefe96 100644
+index 62837f3..05b23c9 100644
 --- a/UI/MainUI/GNUmakefile
 +++ b/UI/MainUI/GNUmakefile
-@@ -31,6 +31,7 @@ MainUI_LOCALIZED_RESOURCE_FILES += \
+@@ -32,6 +32,7 @@ MainUI_LOCALIZED_RESOURCE_FILES += \
  
  ADDITIONAL_INCLUDE_DIRS += -I../../SOPE/
  ADDITIONAL_LIB_DIRS += -L../../SOPE/GDLContentStore/obj/
