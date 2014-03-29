@@ -7,7 +7,7 @@ Subject: Put private libraries in /usr/lib/sogo
  Main/GNUmakefile.preamble              | 2 +-
  OGoContentStore/GNUmakefile            | 2 ++
  OGoContentStore/GNUmakefile.preamble   | 2 +-
- OpenChange/GNUmakefile                 | 4 ++--
+ OpenChange/GNUmakefile                 | 8 +++++---
  SOPE/GDLContentStore/GNUmakefile       | 1 +
  SOPE/NGCards/GNUmakefile               | 1 +
  SoObjects/SOGo/GNUmakefile             | 3 +++
@@ -26,7 +26,7 @@ Subject: Put private libraries in /usr/lib/sogo
  UI/SOGoUI/GNUmakefile                  | 3 +++
  UI/Scheduler/GNUmakefile               | 1 +
  UI/common.make                         | 4 ++--
- 23 files changed, 32 insertions(+), 12 deletions(-)
+ 23 files changed, 35 insertions(+), 13 deletions(-)
 
 diff --git a/Main/GNUmakefile b/Main/GNUmakefile
 index 962730c..ef3de99 100644
@@ -88,9 +88,18 @@ index 3a45858..9fb3000 100644
  SYSTEM_LIB_DIR += -L/usr/local/lib -L/usr/lib
  
 diff --git a/OpenChange/GNUmakefile b/OpenChange/GNUmakefile
-index 3d9fa5b..ffd36cc 100644
+index 3d9fa5b..4609074 100644
 --- a/OpenChange/GNUmakefile
 +++ b/OpenChange/GNUmakefile
+@@ -146,7 +146,7 @@ $(DBMSGREADER_TOOL)_OBJC_FILES += \
+ 	dbmsgreader.m
+ 
+ $(DBMSGREADER_TOOL)_LIB_DIRS += \
+-	-L../SoObjects/SOGo/SOGo.framework/ -lSOGo \
++	-L../SoObjects/SOGo/SOGo.framework/sogo -lSOGo \
+ 	-L../OGoContentStore/obj/ -lOGoContentStore \
+ 	-L../SOPE/GDLContentStore/obj/ -lGDLContentStore \
+ 	-L../SOPE/NGCards/obj/ -lNGCards \
 @@ -171,13 +171,13 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy -lWEExte
  
  $(MAPISTORESOGO)_INSTALL_DIR = $(DESTDIR)/$(SAMBA_LIB_DIR)/mapistore_backends
@@ -107,6 +116,15 @@ index 3d9fa5b..ffd36cc 100644
  	$(LIBMAPI_LIBS) \
  	$(LIBMAPISTORE_LIBS)
  
+@@ -190,6 +190,8 @@ ADDITIONAL_INCLUDE_DIRS += \
+ 	-DBACKEND_BUNDLE_NAME="@\"$(BUNDLE_NAME)$(BUNDLE_EXTENSION)\"" \
+ 	-DSOGO_BUNDLES_DIR="@\"$(BUNDLE_INSTALL_DIR)\""
+ 
++ADDITIONAL_LDFLAGS += -Wl,--rpath,/usr/lib/sogo
++
+ -include GNUmakefile.preamble
+ include $(GNUSTEP_MAKEFILES)/bundle.make
+ include $(GNUSTEP_MAKEFILES)/library.make
 diff --git a/SOPE/GDLContentStore/GNUmakefile b/SOPE/GDLContentStore/GNUmakefile
 index e0e50ca..b41faa8 100644
 --- a/SOPE/GDLContentStore/GNUmakefile

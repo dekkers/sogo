@@ -8,11 +8,14 @@ Build-Depends: debhelper (>= 9),
  libgnutls-dev,
  liblasso3-dev,
  libldap2-dev,
+ libmapi-dev (>= 1:2.0+git20140329),
+ libmapiproxy-dev (>= 1:2.0+git20140329),
+ libmapistore-dev (>= 1:2.0+git20140329),
  libmemcached-dev,
  libsbjson-dev,
  libsope-dev (>= 2.2.3),
  libxml2-dev,
- python-minimal
+ python-samba
 Section: mail
 Standards-Version: 3.9.5
 Homepage: http://www.sogo.nu/
@@ -59,3 +62,13 @@ Description: Scalable groupware server - debugging symbols
  the SOPE application server with focus on scalability.
  .
  This package contains the debugging symbols for SOGo.
+
+Package: sogo-openchange
+Architecture: any
+Depends: sogo (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Scalable groupware server - OpenChange backend
+ SOGo is a groupware server built around OpenGroupware.org (OGo) and
+ the SOPE application server with focus on scalability.
+ .
+ This package contains the plugin for using SOGo as a backend to
+ OpenChange.

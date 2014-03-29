@@ -2,22 +2,26 @@
 # -*- makefile -*-
 export DH_VERBOSE=1
 export DEB_BUILD_MAINT_OPTIONS=hardening=+bindnow
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 %:
 	dh $@ --parallel
 
 override_dh_auto_clean:
 	[ ! -f config.make ] || $(MAKE) distclean
+	[ ! -f config.make ] ||	$(MAKE) -C OpenChange distclean
 	rm -f config.make
 
 override_dh_auto_build:
 	dh_auto_build -- OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes
+	$(MAKE) -C OpenChange OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes
 
 override_dh_auto_configure:
-	./configure --with-ssl=gnutls --enable-saml2
+	./configure --with-ssl=gnutls --enable-saml2 --prefix=/usr/System
 
 override_dh_auto_install:
 	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp GNUSTEP_INSTALLATION_DOMAIN=SYSTEM OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes install
+	$(MAKE) -C OpenChange DESTDIR=$(CURDIR)/debian/tmp GNUSTEP_INSTALLATION_DOMAIN=SYSTEM OBJCFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" messages=yes install
 	mkdir -p debian/tmp/etc/default debian/tmp/etc/cron.d debian/tmp/usr/share/doc/sogo debian/tmp/usr/lib/tmpfiles.d
 	cp Scripts/sogo-default debian/tmp/etc/default/sogo
 	cp Scripts/sogo.cron debian/tmp/etc/cron.d/sogo
@@ -47,6 +51,9 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/usr/share/GNUstep/Libraries/Resources
 	mv debian/tmp/usr/lib/GNUstep/Libraries/Resources/NGCards debian/tmp/usr/share/GNUstep/Libraries/Resources
 	rmdir debian/tmp/usr/lib/GNUstep/Libraries/Resources debian/tmp/usr/lib/GNUstep/Libraries
+	rm debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/mapistore_backends/libMAPIStoreSOGo.so.1
+	rm debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/mapistore_backends/libMAPIStoreSOGo.so
+	mv debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/mapistore_backends/libMAPIStoreSOGo.so.1.0.0 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/mapistore_backends/SOGo.so
 
 override_dh_install:
 	dh_install --list-missing --fail-missing
