@@ -5,3 +5,4 @@ usr/sbin/*
 usr/lib/GNUstep/*
 usr/lib/sogo/*
 usr/include/GNUstep/*
+usr/lib/tmpfiles.d/sogo.conf
