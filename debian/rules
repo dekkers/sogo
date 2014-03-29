@@ -48,6 +48,9 @@ override_dh_auto_install:
 	mv debian/tmp/usr/lib/GNUstep/Libraries/Resources/NGCards debian/tmp/usr/share/GNUstep/Libraries/Resources
 	rmdir debian/tmp/usr/lib/GNUstep/Libraries/Resources debian/tmp/usr/lib/GNUstep/Libraries
 
+override_dh_install:
+	dh_install --list-missing --fail-missing
+
 override_dh_auto_test:
 	$(MAKE) check
 
