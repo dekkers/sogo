@@ -1,0 +1,39 @@
+From: Jeroen Dekkers <jeroen@dekkers.ch>
+Date: Thu, 10 Apr 2014 00:33:05 +0200
+Subject: Link correctly against libraries used
+
+Link the mapistore backend against libgnustep-base, libobjc,
+libNGObjWeb. Link the SAML code against gobject-2.0.
+
+Forwarded: https://github.com/inverse-inc/sogo/pull/35
+---
+ OpenChange/GNUmakefile | 2 +-
+ configure              | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/OpenChange/GNUmakefile b/OpenChange/GNUmakefile
+index 4609074..afb6a6c 100644
+--- a/OpenChange/GNUmakefile
++++ b/OpenChange/GNUmakefile
+@@ -171,7 +171,7 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy -lWEExte
+ 
+ $(MAPISTORESOGO)_INSTALL_DIR = $(DESTDIR)/$(SAMBA_LIB_DIR)/mapistore_backends
+ $(MAPISTORESOGO)_LIB_DIRS += \
+-        -L../SoObjects/SOGo/SOGo.framework/sogo/ -lSOGo \
++        -L../SoObjects/SOGo/SOGo.framework/sogo/ -lSOGo -lgnustep-base -lobjc -lNGObjWeb \
+ 	$(LIBMAPI_LIBS) \
+ 	$(LIBMAPISTORE_LIBS)
+ 
+diff --git a/configure b/configure
+index 822fbdb..564f830 100755
+--- a/configure
++++ b/configure
+@@ -384,7 +384,7 @@ checkDependencies() {
+       if test $? = 0; then
+           lasso_cflags="`pkg-config lasso --cflags`"
+           cfgwrite "LASSO_CFLAGS := $lasso_cflags"
+-          lasso_libs="`pkg-config lasso --libs`"
++          lasso_libs="`pkg-config lasso --libs` `pkg-config gobject-2.0 --libs`"
+           cfgwrite "LASSO_LIBS := $lasso_libs"
+       fi;
+   fi
