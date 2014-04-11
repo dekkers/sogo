@@ -1,3 +1,119 @@
+2.2.3 (2014-04-03)
+------------------
+
+Enhancements
+ - updated Dutch, Hungarian, Russian and Spanish (Argentina) translations
+ - initial support for ActiveSync event reminders support (#2681)
+ - updated CKEditor to version 4.3.4
+
+Bug fixes
+ - fixed possible exception when retrieving the default event reminder value on 64bit architectures (#2678)
+ - fixed calling unescapeHTML on null variables to avoid JavaScript exceptions in Contacts module
+ - fixed detection of IMAP flags support on the client side (#2664)
+ - fixed the ActiveSync issue marking all mails as read when downloading them
+ - fixed ActiveSync's move operations not working for multiple selections (#2691)
+ - fixed email validation regexp to allow gTLDs
+ - improved all-day events support for ActiveSync (#2686)
+
+2.2.2 (2014-03-21)
+------------------
+
+Enhancements
+ - updated French, Finnish, German and Spanish (Spain) translations
+ - added sanitization support for Outlook/ActiveSync to circumvent Outlook bugs (#2667)
+ - updated CKEditor to version 4.3.3
+ - updated jQuery File Upload to version 9.5.7
+
+Bug fixes
+ - fixed possible exception when retrieving the default event reminder value on 64bit architectures (#2647, #2648)
+ - disable file paste support in mail editor (#2641)
+ - fixed copying/moving messages to a mail folder begining with a digit (#2658)
+ - fixed unseen count for folders beginning with a digit and used in Sieve filters (#2652)
+ - fixed decoding of HTML entities in reminder alerts (#2659)
+ - fixed check for resource conflict when creating an event in the resource's calendar (#2541)
+ - fixed construction of mail folders tree
+ - fixed parsing of ORG attribute in cards (#2662)
+ - disabled ActiveSync provisioning for now (#2663)
+ - fixed messages move in Outlook which would create duplicates (#2650)
+ - fixed translations for OtherUsersFolderName and SharedFoldersName folders (#2657)
+ - fixed handling of accentuated characters when filtering contacts (#2656)
+ - fixed classification icon of events (#2651)
+ - fixed ActiveSync's SendMail with client version <= 12.1 (#2669)
+
+2.2.1 (2014-03-07)
+------------------
+
+Enhancements
+ - updated Czech, Dutch, Finnish, and Hungarian translations
+ - show current folder name in prompt dialog when renaming a mail folder
+
+Bug fixes
+ - fixed an issue with ActiveSync when the number of messages in the mailbox was greater than the window-size specified by the client
+ - fixed sogo-tool operations on Sieve script (#2617)
+ - fixed unsubscription when renaming an IMAP folder (#2630)
+ - fixed sorting of events list by calendar name (#2629)
+ - fixed wrong date format leading to Android email syncing issues (#2609)
+ - fixed possible exception when retrieving the default event reminder value (#2624)
+ - fixed encoding of mail folder name when creating a subfolder (#2637)
+ - fixed returned date format for email messages in ActiveSync
+ - fixed missing 'name part' in address for email messages in ActiveSync
+ - fixed race condition when syncing huge amount of deleted messages over ActiveSync
+ - fixed encoding of string as CSS identifier when the string starts with a digit
+ - fixed auto-completion popupmenu when UID is a digit
+
+2.2.0 (2014-02-24)
+------------------
+
+New features
+ - initial implementation of Microsoft ActiveSync protocol
+ - it's now possible to set a default reminder for calendar components
+   using SOGoCalendarDefaultReminder
+ - select multiple files to attach to a message or drag'n'drop files onto the
+   mail editor; will also now display progress of uploads
+ - new popup menu to download all attachments of a mail
+ - move & copy messages between different accounts
+ - support for the Sieve 'body' extension (mail filter based on the body content)
+
+Enhancements
+ - we now automatically convert <img src=data...> into file attachments
+   using CIDs to prevent Outlook issues
+ - updated French, Finnish, Polish, German, Russian, and Spanish (Spain) translations
+ - XMLHttpRequest.js is now loaded conditionaly (< IE9)
+ - format time in attendees invitation window according to the user's locale
+ - improved IE11 support
+ - respect signature placement when forwarding a message
+ - respect Sieve server capabilities
+ - encode messages in quoted-printable when content is bigger than 72 bytes
+ - we now use binary encoding in memcached (#2587)
+ - warn user when overbooking a resource by creating an event in its calendar (#2541)
+ - converted JavaScript alerts to inline CSS dialogs in appointment editor
+ - visually identify users with no freebusy information in autocompletion widget of attendees editor (#2565)
+ - respect occurences of recurrent events when deleting selected events (#1950)
+ - improved confirmation dialog box when deleting events and tasks
+ - moved the DN cache to SOGoCache - avoiding sogod restarts after RDN operations
+ - don't use the HTML editor with Internet Explorer 7
+ - add message-id header to appointment notifications (#2535)
+ - detect URLs in popup of events
+ - improved display of a contact (#2350)
+
+Bug fixes
+ - don't load 'background' attribute (#2437)
+ - fixed validation of subscribed folders (#2583)
+ - fixed display of folder names in messages filter editor (#2569)
+ - fixed contextual menu of the current calendar view (#2557)
+ - fixed handling of the '=' character in cards/events/tasks (#2505)
+ - simplify searches in the address book (#2187)
+ - warn user when dnd failed because of a resource conflict (#1613)
+ - respect the maximum number of bookings when viewing the freebusy information of a resource (#2560)
+ - encode HTML entities when forwarding an HTML message inline in plain text composition mode (#2411)
+ - encode HTML entities in JSON data (#2598)
+ - fixed handling of ACLs on shared calendars with multiple groups (#1854)
+ - fixed HTML formatting of appointment notifications for Outlook (#2233)
+ - replace slashes by dashes in filenames of attachments to avoid a 404 return code (#2537)
+ - avoid over-using LDAP connections when decomposing groups
+ - fixed display of a contact's birthday when not defined (#2503)
+ - fixed JavaScript error when switching views in calendar module (#2613)
+
 2.1.1b (2013-12-04)
 -------------------
 
@@ -5,7 +121,7 @@ Enhancements
  - updated CKEditor to version 4.3.0 and added tab module
 
 Bug fixes
- - HTML formatting is now retained when forwarding/replying to a mail using the HTML editor.
+ - HTML formatting is now retained when forwarding/replying to a mail using the HTML editor
  - put the text part before the HTML part when composing mail to fix a display issue with Thunderbird (#2512)
 
 2.1.1a (2013-11-22)
