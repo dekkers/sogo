@@ -1,6 +1,6 @@
 /* NSString+Utilities.m - this file is part of SOGo
  *
- * Copyright (C) 2006-2013 Inverse inc.
+ * Copyright (C) 2006-2014 Inverse inc.
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,10 @@ static NSMutableCharacterSet *urlStartChars = nil;
 static NSString **cssEscapingStrings = NULL;
 static unichar *cssEscapingCharacters = NULL;
 static int cssEscapingCount;
+
+static unichar thisCharCode[29];
+static NSString *controlCharString = nil;
+static NSCharacterSet *controlCharSet = nil;
 
 @implementation NSString (SOGoURLExtension)
 
@@ -274,16 +278,12 @@ static int cssEscapingCount;
   return [NSString stringWithFormat: @"\"%@\"", representation];
 }
 
-- (NSString *) jsonRepresentation
+- (NSCharacterSet *) safeCharacterSet
 {
-  static unichar thisCharCode[29];
-  static NSString *controlCharString = nil;
-  static NSCharacterSet *controlCharSet = nil;
-  NSString *cleanedString;
-  int i, j;
-
   if (!controlCharSet)
     {
+      int i, j;
+      
       // Create an array of chars for all control characters between 0x00 and 0x1F,
       // apart from \t, \n, \f and \r (0x08, 0x09, 0x0A, 0x0C and 0x0D)
       for (i = 0, j = 0x00; j < 0x08; i++, j++) {
@@ -293,7 +293,7 @@ static int cssEscapingCount;
       for (j = 0x0E; j <= 0x1F; i++, j++) {
         thisCharCode[i] = j;
       }
-
+      
       // Also add some unicode separators
       thisCharCode[i++] = 0x2028; // line separator
       thisCharCode[i++] = 0x2029; // paragraph separator
@@ -302,8 +302,15 @@ static int cssEscapingCount;
       [controlCharSet retain];
     }
 
+  return controlCharSet;
+}
+
+- (NSString *) jsonRepresentation
+{
+  NSString *cleanedString;
+
   // Escape double quotes and remove control characters
-  cleanedString = [[[self doubleQuotedString] componentsSeparatedByCharactersInSet: controlCharSet]
+  cleanedString = [[[self doubleQuotedString] componentsSeparatedByCharactersInSet: [self safeCharacterSet]]
                               componentsJoinedByString: @""];
   return cleanedString;
 }
@@ -325,8 +332,7 @@ static int cssEscapingCount;
                                         (cssEscapingCount + 1)
                                         * sizeof (unichar));
   for (count = 0; count < cssEscapingCount; count++)
-    *(cssEscapingCharacters + count)
-      = [[characters objectAtIndex: count] characterAtIndex: 0];
+    *(cssEscapingCharacters + count) = [[characters objectAtIndex: count] characterAtIndex: 0];
   *(cssEscapingCharacters + cssEscapingCount) = 0;
 }
 
@@ -353,14 +359,20 @@ static int cssEscapingCount;
 
   cssIdentifier = [NSMutableString string];
   max = [self length];
-  for (count = 0; count < max; count++)
+  if (max > 0)
     {
-      currentChar = [self characterAtIndex: count];
-      idx = [self _cssCharacterIndex: currentChar];
-      if (idx > -1)
-        [cssIdentifier appendString: cssEscapingStrings[idx]];
-      else
-        [cssIdentifier appendFormat: @"%C", currentChar];
+      if (isdigit([self characterAtIndex: 0]))
+        // A CSS identifier can't start with a digit; we add an underscore
+        [cssIdentifier appendString: @"_"];
+      for (count = 0; count < max; count++)
+        {
+          currentChar = [self characterAtIndex: count];
+          idx = [self _cssCharacterIndex: currentChar];
+          if (idx > -1)
+            [cssIdentifier appendString: cssEscapingStrings[idx]];
+          else
+            [cssIdentifier appendFormat: @"%C", currentChar];
+        }
     }
 
   return cssIdentifier;
@@ -390,7 +402,17 @@ static int cssEscapingCount;
 
   newString = [NSMutableString string];
   max = [self length];
-  for (count = 0; count < max - 2; count++)
+  count = 0;
+  if (max > 0
+      && [self characterAtIndex: 0] == '_'
+      && isdigit([self characterAtIndex: 1]))
+    {
+      /* If the identifier starts with an underscore followed by a digit,
+         we remove the underscore */
+      count = 1;
+    }
+
+  for (; count < max - 2; count++)
     {
       currentChar = [self characterAtIndex: count];
       if (currentChar == '_')

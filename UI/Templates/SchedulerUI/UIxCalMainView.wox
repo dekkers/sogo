@@ -15,6 +15,7 @@
     var firstDayOfWeek = <var:string value="firstDayOfWeek"/>;
     var dayStartHour = <var:string value="dayStartHour"/>;
     var currentView = '<var:string value="currentView"/>';
+    var localeCode = '<var:string value="localeCode" />';
   </script>
   <style type="text/css">
   <var:if condition="horizontalDragHandleStyle">
@@ -164,7 +165,7 @@
                 <td id="eventStartHeader" class="headerCell headerDateTime sortableTableHeader"><var:string label:value="Start"/></td>
                 <td id="eventEndHeader" class="headerCell headerDateTime sortableTableHeader"><var:string label:value="End"/></td>
                 <td id="eventLocationHeader" class="headerCell headerLocation sortableTableHeader"><var:string label:value="Location"/></td>
-                <td id="calendarNameHeader" class="headerCell headerCalendarName sortableTableHeader"><var:string label:value="Calendar"/></td>
+                <td id="eventCalendarNameHeader" class="headerCell headerCalendarName sortableTableHeader"><var:string label:value="Calendar"/></td>
               </tr>
             </thead>
             <tbody><!-- events list --></tbody>

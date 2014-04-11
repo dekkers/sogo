@@ -245,7 +245,7 @@ function mailListToggleMessageThread(row, cell) {
 
 /* Triggered when clicking on the read/unread dot of a message row or
  * through the contextual menu. */
-function mailListToggleMessagesRead(row) {
+function mailListToggleMessagesRead(row, force_mark_as_read) {
     var selectedRowsId = [];
     if (row) {
         selectedRowsId = [row.id];
@@ -265,9 +265,12 @@ function mailListToggleMessagesRead(row) {
             action = 'markMessageRead';
             markread = true;
         }
-        else {
+        else if (!force_mark_as_read) {
             action = 'markMessageUnread';
             markread = false;
+        }
+        else {
+            return;
         }
 
         for (var i = 0; i < selectedRowsId.length; i++) {
@@ -379,7 +382,7 @@ function onDocumentKeydown(event) {
             }
         }
 	if (keyCode == Event.KEY_DELETE ||
-            keyCode == Event.KEY_BACKSPACE && isMac()) {
+            keyCode == Event.KEY_BACKSPACE) {
             deleteSelectedMessages();
             Event.stop(event);
         }
@@ -637,7 +640,7 @@ function onMailboxTreeItemClick(event) {
     }
     else {
         var datatype = this.parentNode.getAttribute("datatype");
-        if (datatype == 'draft' || datatype == 'draft/folder' || datatype == 'sent' || datatype == 'sent/folder')
+        if (datatype == 'draft' || datatype == 'sent')
             toggleAddressColumn("from", "to");
         else
             toggleAddressColumn("to", "from");
@@ -1224,8 +1227,6 @@ function loadMessage(msguid) {
 							 { 'mailbox': Mailer.currentMailbox,
                                                            'msguid': msguid,
                                                            'seenStateHasChanged': seenStateHasChanged });
-	// Warning: We assume the user can set the read/unread flag of the message.
-        markMailInWindow(window, msguid, true);
     }
     else {
         div.innerHTML = cachedMessage['text'];
@@ -1239,7 +1240,6 @@ function loadMessage(msguid) {
         }
     }
 
-
     configureLoadImagesButton();
     configureSignatureFlagImage();
 
@@ -1249,36 +1249,22 @@ function loadMessage(msguid) {
     return seenStateHasChanged;
 }
 
+/**
+ * Hide the "Load Images" button when there's no unsafe content
+*/
 function configureLoadImagesButton() {
-    // We show/hide the "Load Images" button
     var loadImagesButton = $("loadImagesButton");
-    var content = $("messageContent");
-    var hiddenImgs = [];
-    var imgs = content.select("IMG");
-    $(imgs).each(function(img) {
-            var unsafeSrc = img.getAttribute("unsafe-src");
-            if (unsafeSrc) {
-                hiddenImgs.push(img);
-            }
-        });
-    content.hiddenImgs = hiddenImgs;
-
-    var hiddenObjects = [];
-    var objects = content.select("OBJECT");
-    $(objects).each(function(obj) {
-            if (obj.getAttribute("unsafe-data")
-                || obj.getAttribute("unsafe-classid")) {
-                hiddenObjects.push(obj);
-            }
-        });
-    content.hiddenObjects = hiddenObjects;
-
     if (typeof(loadImagesButton) == "undefined" ||
         loadImagesButton == null ) {
         return;
     }
-    if ((hiddenImgs.length + hiddenObjects.length) == 0) {
+    var content = $("messageContent");
+    var unsafeElements = content.select('[unsafe-src], [unsafe-data], [unsafe-classid], [unsafe-background]');
+    if (unsafeElements.length == 0) {
         loadImagesButton.setStyle({ display: 'none' });
+    }
+    else {
+        content.hiddenElements = unsafeElements;
     }
 }
 
@@ -1344,26 +1330,25 @@ function configureLinksInMessage() {
     if (!$(document.body).hasClassName("popup"))
         mailContentDiv.observe("contextmenu", onMessageContentMenu);
 
-    var anchors = messageDiv.getElementsByTagName('a');
-    for (var i = 0; i < anchors.length; i++) {
-        var anchor = $(anchors[i]);
-        if (!anchor.href && anchor.readAttribute("moz-do-not-send")) {
-            anchor.writeAttribute("moz-do-not-send", false);
-            anchor.removeClassName("moz-txt-link-abbreviated");
-            anchor.href = "mailto:" + anchors[i].innerHTML;
-        }
-        if (anchor.href.substring(0,7) == "mailto:") {
-            anchor.observe("click", onEmailTo);
-            anchor.observe("contextmenu", onEmailAddressClick);
-            anchor.writeAttribute("moz-do-not-send", false);
-        }
-        else
-            anchor.observe("click", onMessageAnchorClick);
-    }
+    configureLinks(messageDiv);
 
-    var attachments = messageDiv.select ("DIV.linked_attachment_body");
-    for (var i = 0; i < attachments.length; i++)
-        $(attachments[i]).observe("contextmenu", onAttachmentClick);
+    var attachmentsMenu = $("attachmentsMenu");
+    if (attachmentsMenu) {
+        var options = attachmentsMenu.select("li");
+        var callbacks = [];
+        for (var i = 0; i < options.length; i++) {
+            if (options[i].className == 'separator')
+                callbacks.push(null);
+            else
+                callbacks.push(saveAttachment);
+        }
+        initMenu(attachmentsMenu, callbacks);
+        $("attachmentsHref").on("click", function (event) {
+            popupMenu(event, 'attachmentsMenu', this);
+            preventDefault(event);
+            return false;
+        });
+    }
 
     var images = messageDiv.select("IMG.mailer_imagecontent");
     for (var i = 0; i < images.length; i++)
@@ -1371,12 +1356,11 @@ function configureLinksInMessage() {
 
     var editDraftButton = $("editDraftButton");
     if (editDraftButton)
-        editDraftButton.observe("click",
-                                onMessageEditDraft.bindAsEventListener(editDraftButton));
+        editDraftButton.on("click", onMessageEditDraft);
 
     var loadImagesButton = $("loadImagesButton");
     if (loadImagesButton)
-        $(loadImagesButton).observe("click", onMessageLoadImages);
+        loadImagesButton.on("click", onMessageLoadImages);
 
     configureiCalLinksInMessage();
 }
@@ -1562,34 +1546,29 @@ function onMessageContentMenu(event) {
 }
 
 function onMessageEditDraft(event) {
+    Event.stop(event);
     return openMessageWindowsForSelection("edit", true);
 }
 
 function onMessageLoadImages(event) {
-    loadRemoteImages();
     Event.stop(event);
+    loadRemoteImages();
 }
 
 function loadRemoteImages() {
     var content = $("messageContent");
-    $(content.hiddenImgs).each(function(img) {
-            var unSafeSrc = img.getAttribute("unsafe-src");
-            log ("unsafesrc: " + unSafeSrc);
-            img.src = img.getAttribute("unsafe-src");
+    if (content.hiddenElements) {
+        $(content.hiddenElements).each(function(element) {
+            ['src', 'data', 'classid', 'background'].each(function(attr) {
+                var unsafeAttr = element.readAttribute('unsafe-' + attr);
+                if (unsafeAttr) {
+                    log ('unsafe ' +  attr + ': ' + unsafeAttr);
+                    element.writeAttribute(attr, unsafeAttr);
+                }
+            });
         });
-    content.hiddenImgs = null;
-    $(content.hiddenObjects).each(function(obj) {
-            var unSafeData = obj.getAttribute("unsafe-data");
-            if (unSafeData) {
-                obj.setAttribute("data", unSafeData);
-            }
-            var unSafeClassId = obj.getAttribute("unsafe-classid");
-            if (unSafeClassId) {
-                obj.setAttribute("classid", unSafeClassId);
-            }
-        });
-    content.hiddenObjects = null;
-
+        content.hiddenElements = null;
+    }
     var loadImagesButton = $("loadImagesButton");
     if (loadImagesButton)
         loadImagesButton.setStyle({ display: 'none' });
@@ -1601,21 +1580,9 @@ function onEmailAddressClick(event) {
     return false;
 }
 
-function onMessageAnchorClick(event) {
-    if (this.href)
-        window.open(this.href);
-    preventDefault(event);
-}
-
 function onImageClick(event) {
     popupMenu(event, 'imageMenu', this);
     preventDefault(event);
-    return false;
-}
-
-function onAttachmentClick (event) {
-    popupMenu (event, 'attachmentMenu', this);
-    preventDefault (event);
     return false;
 }
 
@@ -1677,6 +1644,9 @@ function loadMessageCallback(http) {
             cachedMessage['text'] = http.responseText;
             if (cachedMessage['text'].length < 30000)
                 storeCachedMessage(cachedMessage);
+
+            // We mark the mail as read
+            mailListToggleMessagesRead($("row_" + msguid), true);
         }
     }
     else if (http.status == 404) {
@@ -1773,13 +1743,29 @@ function saveImage(event) {
     window.location.href = urlAsAttachment;
 }
 
-function saveAttachment(event) {
-    var div = document.menuTarget;
-    var link = div.select ("a").first ();
-    var url = link.getAttribute("href");
-    var urlAsAttachment = url.replace(/(\/[^\/]*)$/,"/asAttachment$1");
+/* Download a file using a temporary iframe that we delete once the download is started */
+function download(url) {
+    var form = createElement('form', null, 'hidden', { action: url, method: 'GET'});
+    $(document.body).appendChild(form);
+    var div = AIM.submit(form);
+    form.submit();
+    setTimeout(function () {
+        form.remove();
+        div.remove();
+    }, 2000);
+}
 
-    window.location.href = urlAsAttachment;
+function saveAttachment(event) {
+    var url = $(this).readAttribute('data-url');
+    if (url) {
+        download(url);
+    }
+    else {
+        $(this).up('ul').select('li[data-url]').each(function (item) {
+            url = $(item).readAttribute('data-url');
+            download(url);
+        });
+    }
 }
 
 /* contacts */
@@ -1797,16 +1783,6 @@ function newContactFromEmail(event) {
     }
 
     return false; /* stop following the link */
-}
-
-function onEmailTo(event) {
-    var s = this.innerHTML.strip();
-    if (!/@/.test(s)) {
-        s += ' <' + this.href.substr(7) + '>';
-    }
-    openMailTo(s);
-    Event.stop(event);
-    return false;
 }
 
 function newEmailTo(sender) {
@@ -1984,10 +1960,7 @@ function initMailer(event) {
         initMailboxTree();
         initMessageCheckTimer();
 
-        if (Prototype.Browser.Gecko)
-            Event.observe(document, "keypress", onDocumentKeydown); // for FF2
-        else
-            Event.observe(document, "keydown", onDocumentKeydown);
+        Event.observe(document, "keydown", onDocumentKeydown);
 
         /* Perform an expunge when leaving the webmail */
 //        if (isSafari()) {
@@ -2031,7 +2004,7 @@ function initMailboxTree() {
         node.parentNode.removeChild(node);
     mailboxTree = new dTree("mailboxTree");
     mailboxTree.config.hideRoot = true;
-    mailboxTree.icon.root = ResourcesURL + "/tbtv_account_17x17.gif";
+    mailboxTree.icon.root = ResourcesURL + "/tbtv_account_17x17.png";
     mailboxTree.icon.folder = ResourcesURL + "/tbtv_leaf_corner_17x17.png";
     mailboxTree.icon.folderOpen	= ResourcesURL + "/tbtv_leaf_corner_17x17.png";
     mailboxTree.icon.node = ResourcesURL + "/tbtv_leaf_corner_17x17.png";
@@ -2233,12 +2206,15 @@ function generateMenuForMailbox(mailbox, prefix, callback) {
 function updateMailboxMenus() {
     var mailboxActions = { move: onMailboxMenuMove,
                            copy: onMailboxMenuCopy };
+    var accountsMenus = { move: $$('#moveMailboxMenu li'),
+                          copy: $$('#copyMailboxMenu li') };
 
     for (var key in mailboxActions) {
         for (var i = 0; i < mailAccounts.length; i++) {
             var mailbox = accounts[i];
-            generateMenuForMailbox(mailbox, key + "-" + i,
-                                   mailboxActions[key]);
+            var id = generateMenuForMailbox(mailbox, key + "-" + i,
+                                            mailboxActions[key]);
+            accountsMenus[key][i].submenu = id;
         }
     }
 }
@@ -2337,7 +2313,8 @@ function onMenuCreateFolderConfirm(event) {
 }
 
 function onMenuRenameFolder(event) {
-    showPromptDialog(_("Rename Folder..."), _("Enter the new name of your folder :"), onMenuRenameFolderConfirm);
+    var folderName = document.menuTarget.down('.nodeName').childNodes[0].nodeValue;
+    showPromptDialog(_("Rename Folder..."), _("Enter the new name of your folder :"), onMenuRenameFolderConfirm, folderName);
 }
 
 function onMenuRenameFolderConfirm() {
@@ -2820,7 +2797,6 @@ function getMenus() {
                             saveAs, null, null,
                             onMenuDeleteMessage ],
         imageMenu: [ saveImage ],
-        attachmentMenu: [ saveAttachment ],
         messageContentMenu: [ onMenuReplyToSender,
                               onMenuReplyToAll,
                               onMenuForwardMessage,
@@ -2844,6 +2820,12 @@ function getMenus() {
                       setSearchCriteria ]
     };
 
+
+    if (typeof mailAccounts != 'undefined') {
+        menus['moveMailboxMenu'] = mailAccounts.collect(function (account) { return account.asCSSIdentifier() });
+        menus['copyMailboxMenu'] = mailAccounts.collect(function (account) { return account.asCSSIdentifier() });
+    }
+
     var labelMenu = $("label-menu");
     if (labelMenu) {
         labelMenu.prepareVisibility = onLabelMenuPrepareVisibility;
@@ -2852,14 +2834,6 @@ function getMenus() {
     var markMenu = $("mark-menu");
     if (markMenu) {
         markMenu.prepareVisibility = onMarkMenuPrepareVisibility;
-    }
-
-    var listMenus = [ "messageListMenu", "messagesListMenu", "messageContentMenu" ];
-    for (var i = 0; i < listMenus.length; i++) {
-        var menu = $(listMenus[i]);
-        if (menu) {
-            menu.prepareVisibility = onMessageListMenuPrepareVisibility;
-        }
     }
 
     var accountIconMenu = $("accountIconMenu");
@@ -2887,7 +2861,7 @@ function Mailbox(type, name, unseen, displayName) {
     else
       this.displayName = name;
     // log("name: " + name + "; dn: " + displayName);
-    this.name = name.asCSSIdentifier();
+    this.name = name;
     this.unseen = unseen;
     this.parentFolder = null;
     this.children = new Array();
@@ -2908,7 +2882,7 @@ Mailbox.prototype = {
 
         var currentFolder = this;
         while (currentFolder.parentFolder) {
-            fullName = "/folder" + currentFolder.name + fullName;
+            fullName = ("/folder" + currentFolder.name).asCSSIdentifier() + fullName;
             currentFolder = currentFolder.parentFolder;
         }
 
@@ -2917,11 +2891,9 @@ Mailbox.prototype = {
     findMailboxByName: function(name) {
         var mailbox = null;
 
-        var searchName = name.asCSSIdentifier();
-
         var i = 0;
         while (!mailbox && i < this.children.length)
-            if (this.children[i].name == searchName
+            if (this.children[i].name == name
                 || this.children[i].displayName == name)
                 mailbox = this.children[i];
             else
@@ -2995,20 +2967,14 @@ function stopDragging(event, ui) {
 
 function dropAction(event, ui) {
     var destination = $(this).up("div.dTreeNode");
-
-    var sourceAct = Mailer.currentMailbox.split("/")[1];
-    var destAct = destination.getAttribute("dataname").split("/")[1];
-    if (sourceAct == destAct) {
-        var f;
-        if (ui.helper.hasClass("copy")) {
-            // Message(s) copied
-            f = onMailboxMenuCopy.bind(destination);
-        }
-        else {
-            // Message(s) moved
-            f = onMailboxMenuMove.bind(destination);
-        }
-
-        f();
+    var f;
+    if (ui.helper.hasClass("copy")) {
+        // Message(s) copied
+        f = onMailboxMenuCopy.bind(destination);
     }
+    else {
+        // Message(s) moved
+        f = onMailboxMenuMove.bind(destination);
+    }
+    f();
 }

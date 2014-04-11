@@ -1,9 +1,6 @@
 /* UIxMailFolderActions.m - this file is part of SOGo
  *
- * Copyright (C) 2007-2011 Inverse inc.
- *
- * Author: Wolfgang Sourdeau <wsourdeau@inverse.ca>
- *         Francis Lachapelle <flachapelle@inverse.ca>
+ * Copyright (C) 2007-2013 Inverse inc.
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,8 +28,11 @@
 #import <NGObjWeb/WOContext+SoObjects.h>
 #import <NGObjWeb/WOResponse.h>
 #import <NGObjWeb/WORequest.h>
+
 #import <NGImap4/NGImap4Connection.h>
 #import <NGImap4/NGImap4Client.h>
+#import <NGImap4/NSString+Imap4.h>
+
 #import <EOControl/EOQualifier.h>
 
 #import <Mailer/SOGoMailAccount.h>
@@ -41,6 +41,7 @@
 #import <Mailer/SOGoTrashFolder.h>
 
 #import <SOGo/NSObject+Utilities.h>
+#import <SOGo/NSString+Utilities.h>
 #import <SOGo/SOGoDomainDefaults.h>
 #import <SOGo/SOGoUser.h>
 #import <SOGo/SOGoUserDefaults.h>
@@ -63,6 +64,7 @@
   folderName = [[context request] formValueForKey: @"name"];
   if ([folderName length] > 0)
     {
+      folderName = [folderName stringByEncodingImap4FolderName];
       newFolder
         = [co lookupName: [NSString stringWithFormat: @"folder%@", folderName]
                inContext: context
