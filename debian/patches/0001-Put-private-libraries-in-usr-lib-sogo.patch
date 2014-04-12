@@ -2,6 +2,7 @@ From: Jeroen Dekkers <jeroen@dekkers.ch>
 Date: Thu, 10 May 2012 03:27:43 +0200
 Subject: Put private libraries in /usr/lib/sogo
 
+Forwarded: https://github.com/inverse-inc/sogo/pull/3
 ---
  Main/GNUmakefile                       | 2 +-
  Main/GNUmakefile.preamble              | 2 +-

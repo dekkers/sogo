@@ -2,6 +2,7 @@ From: Jeroen Dekkers <jeroen@dekkers.ch>
 Date: Mon, 11 Mar 2013 19:37:45 +0100
 Subject: Link libSOGo with libdl
 
+Forwarded: https://github.com/inverse-inc/sogo/pull/10
 ---
  SoObjects/SOGo/GNUmakefile.preamble | 4 ++++
  1 file changed, 4 insertions(+)
