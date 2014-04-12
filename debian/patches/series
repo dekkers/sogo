@@ -4,3 +4,4 @@
 0004-Change-sogo-backup-location-and-update-cronjob.patch
 0005-Fix-may-be-used-uninitialized-in-this-function-warni.patch
 0006-Link-correctly-against-libraries-used.patch
+0007-Fix-tests-to-handle-list-component.patch
