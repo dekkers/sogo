@@ -1,54 +1,41 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: SOGo
 Source: http://www.sogo.nu/english/downloads/backend.html
-License: GPL-2+
 
 Files: *
-Copyright: 2005-2012 Inverse inc.
-	   2000-2005 SKYRIX Software AG
-	   2005, 2006 Helge Hess
+Copyright: 2000-2014 Inverse inc.
+	   2000-2007 SKYRIX Software AG
+	   2005-2007 Helge Hess
 	   2010 Wolfgang Sourdeau
+           2011-2012 Jeroen Dekkers
 License: GPL-2+
 
-Files: SOPE/NGCards/versitCardsSaxDriver
+Files: ActiveSync/*
+Copyright: 2013-2014 Inverse inc.
+License: BSD-3-clause
+
+Files: OpenChange/*
+Copyright: 2005-2014 Inverse inc.
+License: GPL-3+
+
+Files: SOPE/NGCards/versitCardsSaxDriver/*
 Copyright: 2003-2004 Max Berger
 	   2004-2005 OpenGroupware.org
 License: LGPL-2+
 
-Files: SoObjects/SOGo/NSData+Crypto.m
-Copyright: 2001, 2005 Niels Möller 
+Files: SoObjects/SOGo/NS*+Crypto.*
+Copyright: 2012 Inverse inc.
+           2012 Nicolas Höft
+           2012 Jeroen Dekkers
+           2001, 2005 Niels Möller
 License: LGPL-2+
 
-Files: UI/WebServerResources/dtree.*
-Copyright: 2002-2003 Geir Landrö
-License: 
- This script can be used freely as long as all copyright messages are
- intact.
-
-Files: UI/WebServerResources/js_color_picker_v2.*
-Copyright: 2005 DHTMLGoodies.com, Alf Magne Kalleland
+Files: UI/WebServerResources/XMLHttpRequest.js
+Copyright: 2011 Sergey Ilinsky
 License: LGPL-2+
-
-Files: UI/WebServerResources/tablekit*
-Copyright: 2007 Andrew Tetlaw & Millstream Web Software
-	   2008 Inverse inc.
-License: Expat
-
-Files: UI/WebServerResources/jquery.js
-Copyright: 2011 John Resig and others
-License: Expat
-
-Files: UI/WebServerResources/jquery-ui.js
-Copyright: 2011 Paul Bakaus and others
-License: Expat
-
-Files: UI/WebServerResources/prototype.js
-Copyright: 2005-2008 Marty Haught <mghaught@gmail.com>
-	   2005-2008 Thomas Fuchs <thomas@script.aculo.us>
-License: Expat
 
 Files: UI/WebServerResources/ckeditor/*
-Copyright: (C) 2003-2011 CKSource - Frederico Knabben
+Copyright: (C) 2003-2014 CKSource - Frederico Knabben
 License: GPL-2+
  The ckeditor is tripple licensed under the GNU General Public License (GPL),
  GNU Lesser General Public License (LGPL), and Mozilla Public License (MPL).
@@ -100,19 +87,102 @@ License: BSD
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
 
+Files: UI/WebServerResources/datepicker.*
+Copyright: 2012 Stefan Petre
+License: Apache-2.0
+
+Files: UI/WebServerResources/dtree.*
+Copyright: 2002-2003 Geir Landrö
+License: 
+ This script can be used freely as long as all copyright messages are
+ intact.
+
+Files: UI/WebServerResources/jquery.js
+Copyright: 2011 John Resig and others
+License: Expat
+
+Files: UI/WebServerResources/jquery-ui.js
+Copyright: 2013 jQuery Foundation and other contributors
+License: Expat
+
+Files: UI/WebServerResources/jquery.fileupload.js
+Copyright: 2010 Sebastian Tschan
+License: Expat
+
+Files: UI/WebServerResources/jquery.iframe-transport.js
+Copyright: 2011 Sebastian Tschan
+License: Expat
+
+Files: UI/WebServerResources/js_color_picker_v2.*
+Copyright: 2005 DHTMLGoodies.com, Alf Magne Kalleland
+License: LGPL-2+
+
 Files: UI/WebServerResources/layout2or3_xlib.txt
 Copyright: 2001-2005 Michael Foster (Cross-Browser.com).
 License: LGPL-2+
 
+Files: UI/WebServerResources/prototype.js
+Copyright: 2005-2008 Marty Haught <mghaught@gmail.com>
+	   2005-2008 Thomas Fuchs <thomas@script.aculo.us>
+License: Expat
+
+Files: UI/WebServerResources/tablekit*
+Copyright: 2007 Andrew Tetlaw & Millstream Web Software
+	   2008 Inverse inc.
+License: Expat
+
 Files: debian/*
-Copyright: 2011-2012 Jeroen Dekkers <jeroen@dekkers.ch>
+Copyright: 2011-2014 Jeroen Dekkers <jeroen@dekkers.ch>
 License: GPL-2+
 
 License: GPL-2+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
  On Debian systems the full text of the GNU General Public License can
  be found in the `/usr/share/common-licenses/GPL-2' file.
 
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems the full text of the GNU General Public License can
+ be found in the `/usr/share/common-licenses/GPL-3' file.
+
 License: LGPL-2+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
  On Debian systems the full text of the GNU Lesser General Public
  License can be found in the `/usr/share/common-licenses/LGPL-2'
  file.
@@ -137,3 +207,43 @@ License: Expat
  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
+
+License: Apache-2.0
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ .
+ http://www.apache.org/licenses/LICENSE-2.0
+ .
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ .
+ On Debian systems, the complete text of the Apache License, Version 2.0 can be
+ found in "/usr/share/common-licenses/Apache-2.0".
+
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ .
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of the Inverse inc. nor the
+       names of its contributors may be used to endorse or promote products
+       derived from this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
