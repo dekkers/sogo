@@ -1,3 +1,20 @@
+sogo (2.2.3-1) experimental; urgency=medium
+
+  * [0837e058] New upstream release
+  * [9dff26d8] Update patches to new upstream version
+  * [40f1ddf6] Update version of libsope-dev build-depends to 2.2.3
+  * [770e90c9] Bump Standards version to 3.9.5 (no changes needed)
+  * [87c0717d] Change VCS-* fields to their canonical URI
+  * [2f95d6d8] Call dh_install with --list-missing --fail-missing
+  * [53a018b3] Include tmpfiles.d/sogo.conf in sogo.install
+  * [b70eaa27] Add patch to fix warnings from -Werror in OpenChange backend
+  * [ea9345a1] Build OpenChange backend, add sogo-openchange package
+  * [e71ff33c] Add patch to link correctly against libraries used
+  * [a974b2c4] Add upstream patch to fix unit test
+  * [4979ec49] Update debian/copyright
+
+ -- Jeroen Dekkers <jeroen@dekkers.ch>  Sun, 13 Apr 2014 00:09:03 +0200
+
 sogo (2.1.1b-1) unstable; urgency=medium
 
   * New upstream release. (Closes: #732189)
