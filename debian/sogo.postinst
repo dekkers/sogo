@@ -22,10 +22,19 @@ case "$1" in
             --no-create-home --disabled-login sogo
         fi
 
-        chown -R sogo:adm /var/log/sogo
-        chmod -R 750 /var/log/sogo
-        chown -R sogo: /var/spool/sogo
-        chmod -R 750 /var/spool/sogo
+        if ! dpkg-statoverride --list /var/log/sogo >/dev/null 2>&1 ; then
+            chown -R sogo:adm /var/log/sogo
+            chmod -R 750 /var/log/sogo
+        fi
+        if ! dpkg-statoverride --list /var/spool/sogo >/dev/null 2>&1 ; then
+            chown -R sogo: /var/spool/sogo
+            chmod -R 750 /var/spool/sogo
+        fi
+        if ! dpkg-statoverride --list /etc/sogo/sogo.conf >/dev/null 2>&1 ; then
+            chgrp sogo /etc/sogo/sogo.conf
+            chmod 640 /etc/sogo/sogo.conf
+        fi
+
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
