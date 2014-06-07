@@ -13,7 +13,7 @@ Build-Depends: debhelper (>= 9),
  libmapistore-dev (>= 1:2.0+git20140329),
  libmemcached-dev,
  libsbjson-dev,
- libsope-dev (>= 2.2.3),
+ libsope-dev (>= 2.2.5),
  libxml2-dev,
  python-samba
 Section: mail
