@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SOGoMailObject+ActiveSync.h"
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSCalendarDate.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
@@ -284,20 +285,31 @@ struct GlobalObjectId {
           [self _sanitizedMIMEPart: body
                          performed: b];
         }
-      else if ([body isKindOfClass: [NSData class]] &&
+      else if (([body isKindOfClass: [NSData class]] || [body isKindOfClass: [NSString class]]) &&
                [[[thePart contentType] type] isEqualToString: @"text"] &&
                ([[[thePart contentType] subType] isEqualToString: @"plain"] || [[[thePart contentType] subType] isEqualToString: @"html"]))
         {
           // We make sure everything is encoded in UTF-8
-          NSString *charset, *s;
           NGMimeType *mimeType;
-          int encoding;
+          NSString *s;
 
-          charset = [[thePart contentType] valueOfParameter: @"charset"];
-          encoding = [NGMimeType stringEncodingForCharset: charset];
+          if ([body isKindOfClass: [NSData class]])
+            {
+              NSString *charset;
+              int encoding;
 
-          s = [[NSString alloc] initWithData: body  encoding: encoding];
-          AUTORELEASE(s);
+              charset = [[thePart contentType] valueOfParameter: @"charset"];
+              encoding = [NGMimeType stringEncodingForCharset: charset];
+              
+              s = [[NSString alloc] initWithData: body  encoding: encoding];
+              AUTORELEASE(s);
+            }
+          else
+            {
+              // Handle situations when SOPE stupidly returns us a NSString
+              // This can happen for Content-Type: text/plain, Content-Transfer-Encoding: 8bit
+              s = body;
+            }
 
           if (s)
             {
@@ -479,7 +491,9 @@ struct GlobalObjectId {
 //
 - (NSString *) activeSyncRepresentationInContext: (WOContext *) _context
 {
+  NSAutoreleasePool *pool;
   NSData *d, *globalObjId;
+  NSArray *attachmentKeys;
   NSMutableString *s;
   id value;
 
@@ -670,6 +684,10 @@ struct GlobalObjectId {
   // Body - namespace 17
   preferredBodyType = [[context objectForKey: @"BodyPreferenceType"] intValue];
 
+  // Make use of a local pool here as _preferredBodyDataUsingType:nativeType: will consume
+  // a significant amout of RAM and file descriptors
+  pool = [[NSAutoreleasePool alloc] init];
+
   nativeBodyType = 1;
   d = [self _preferredBodyDataUsingType: preferredBodyType  nativeType: &nativeBodyType];
   
@@ -710,8 +728,10 @@ struct GlobalObjectId {
       [s appendString: @"</Body>"];
     }
 
+  DESTROY(pool);
+
   // Attachments -namespace 16
-  NSArray *attachmentKeys = [self fetchFileAttachmentKeys];
+  attachmentKeys = [self fetchFileAttachmentKeys];
   if ([attachmentKeys count])
     {
       int i;
