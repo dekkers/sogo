@@ -4,18 +4,19 @@ Subject: Fix "may be used uninitialized in this function" warnings.
 
 Forwarded: https://github.com/inverse-inc/sogo/pull/33
 ---
- OpenChange/MAPIStoreDBFolder.m   |  4 ++--
- OpenChange/MAPIStoreFolder.m     | 13 ++++++++-----
- OpenChange/MAPIStoreMailFolder.m |  4 +++-
- OpenChange/MAPIStoreMessage.m    |  4 ++--
- OpenChange/MAPIStoreObject.m     |  1 +
- OpenChange/RTFHandler.m          |  4 ++--
- OpenChange/SOGoMAPIDBFolder.m    |  8 ++++++--
- OpenChange/SOGoMAPIDBObject.m    | 18 ++++++++++++------
- 8 files changed, 36 insertions(+), 20 deletions(-)
+ OpenChange/MAPIStoreDBFolder.m            |  4 ++--
+ OpenChange/MAPIStoreFolder.m              | 13 ++++++++-----
+ OpenChange/MAPIStoreMailFolder.m          |  4 +++-
+ OpenChange/MAPIStoreMessage.m             |  4 ++--
+ OpenChange/MAPIStoreObject.m              |  1 +
+ OpenChange/RTFHandler.m                   |  4 ++--
+ OpenChange/SOGoCacheGCSObject+MAPIStore.m | 10 ++++++----
+ SoObjects/SOGo/SOGoCacheGCSFolder.m       |  8 ++++++--
+ SoObjects/SOGo/SOGoCacheGCSObject.m       |  8 ++++++--
+ 9 files changed, 36 insertions(+), 20 deletions(-)
 
 diff --git a/OpenChange/MAPIStoreDBFolder.m b/OpenChange/MAPIStoreDBFolder.m
-index 74bf12e..c3d5bcc 100644
+index f9b2e12..ad83c78 100644
 --- a/OpenChange/MAPIStoreDBFolder.m
 +++ b/OpenChange/MAPIStoreDBFolder.m
 @@ -145,8 +145,8 @@ static NSString *MAPIStoreRightFolderContact = @"RightsFolderContact";
@@ -30,10 +31,10 @@ index 74bf12e..c3d5bcc 100644
        newPath = [NSString stringWithFormat: @"%@/%@",
                            targetPath, pathComponent];
 diff --git a/OpenChange/MAPIStoreFolder.m b/OpenChange/MAPIStoreFolder.m
-index 2e54838..a1ba589 100644
+index 3dba819..5ecd772 100644
 --- a/OpenChange/MAPIStoreFolder.m
 +++ b/OpenChange/MAPIStoreFolder.m
-@@ -100,12 +100,17 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+@@ -99,12 +99,17 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
    NSArray *parts;
    NSUInteger lastPartIdx;
    MAPIStoreUserContext *userContext;
@@ -52,8 +53,8 @@ index 2e54838..a1ba589 100644
      {
        parts = [path componentsSeparatedByString: @"/"];
        lastPartIdx = [parts count] - 1;
-@@ -123,7 +128,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
-           [SOGoMAPIDBFolder objectWithName: folderName
+@@ -122,7 +127,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+           [SOGoCacheGCSFolder objectWithName: folderName
                                 inContainer: [container dbFolder]]);
    [dbFolder setTableUrl: [userContext folderTableURL]];
 -  if (!container && [path length] > 0)
@@ -61,7 +62,7 @@ index 2e54838..a1ba589 100644
      {
        pathPrefix = [NSMutableString stringWithCapacity: 64];
        [pathPrefix appendFormat: @"/%@", [folderURL host]];
-@@ -228,7 +233,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+@@ -227,7 +232,7 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
  
  - (id) lookupFolder: (NSString *) folderKey
  {
@@ -70,7 +71,7 @@ index 2e54838..a1ba589 100644
    SOGoFolder *sogoFolder;
    WOContext *woContext;
  
-@@ -244,8 +249,6 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
+@@ -243,8 +248,6 @@ Class NSExceptionK, MAPIStoreFAIMessageK, MAPIStoreMessageTableK, MAPIStoreFAIMe
                                                 inContainer: self];
          }
      }
@@ -80,7 +81,7 @@ index 2e54838..a1ba589 100644
    return childFolder;
  }
 diff --git a/OpenChange/MAPIStoreMailFolder.m b/OpenChange/MAPIStoreMailFolder.m
-index bcc0253..d01df67 100644
+index f0912d8..523eec2 100644
 --- a/OpenChange/MAPIStoreMailFolder.m
 +++ b/OpenChange/MAPIStoreMailFolder.m
 @@ -189,6 +189,8 @@ static Class SOGoMailFolderK, MAPIStoreMailFolderK, MAPIStoreOutboxFolderK;
@@ -150,11 +151,39 @@ index 1e15eba..b7ea4cf 100644
    RTFColorTable *colorTable;
    RTFFontTable *fontTable;
    RTFStack *stack;
-diff --git a/OpenChange/SOGoMAPIDBFolder.m b/OpenChange/SOGoMAPIDBFolder.m
-index 1ed8d23..5aaaf1d 100644
---- a/OpenChange/SOGoMAPIDBFolder.m
-+++ b/OpenChange/SOGoMAPIDBFolder.m
-@@ -223,14 +223,18 @@ Class SOGoMAPIDBObjectK = Nil;
+diff --git a/OpenChange/SOGoCacheGCSObject+MAPIStore.m b/OpenChange/SOGoCacheGCSObject+MAPIStore.m
+index 679bee0..e58944b 100644
+--- a/OpenChange/SOGoCacheGCSObject+MAPIStore.m
++++ b/OpenChange/SOGoCacheGCSObject+MAPIStore.m
+@@ -30,7 +30,7 @@
+ 
+ - (Class) mapistoreMessageClass
+ {
+-  NSString *className, *mapiMsgClass;
++  NSString *className, *mapiMsgClass, *reason;
+ 
+   switch (objectType)
+     {
+@@ -57,9 +57,11 @@
+       className = @"MAPIStoreFAIMessage";
+       break;
+     default:
+-      [NSException raise: @"MAPIStoreIOException"
+-                  format: @"message class should not be queried for objects"
+-                   @" of type '%d'", objectType];
++      reason = [NSString stringWithFormat:@"message class should not be queried"
++                         @" for objects of type '%d'", objectType];
++      @throw [NSException exceptionWithName: @"MAPIStoreIOException"
++                                     reason: reason
++                                   userInfo: nil];
+     }
+ 
+   return NSClassFromString (className);
+diff --git a/SoObjects/SOGo/SOGoCacheGCSFolder.m b/SoObjects/SOGo/SOGoCacheGCSFolder.m
+index f8d25d3..48f6c7e 100644
+--- a/SoObjects/SOGo/SOGoCacheGCSFolder.m
++++ b/SoObjects/SOGo/SOGoCacheGCSFolder.m
+@@ -219,14 +219,18 @@ Class SOGoCacheGCSObjectK = Nil;
    NSArray *records;
    NSDictionary *record;
    NSUInteger count, max;
@@ -175,35 +204,11 @@ index 1ed8d23..5aaaf1d 100644
      {
        newPath = [self path];
  
-diff --git a/OpenChange/SOGoMAPIDBObject.m b/OpenChange/SOGoMAPIDBObject.m
-index 6407fbd..c5fd05a 100644
---- a/OpenChange/SOGoMAPIDBObject.m
-+++ b/OpenChange/SOGoMAPIDBObject.m
-@@ -238,7 +238,7 @@ static EOAttribute *textColumn = nil;
- 
- - (Class) mapistoreMessageClass
- {
--  NSString *className, *mapiMsgClass;
-+  NSString *className, *mapiMsgClass, *reason;
- 
-   switch (objectType)
-     {
-@@ -265,9 +265,11 @@ static EOAttribute *textColumn = nil;
-       className = @"MAPIStoreFAIMessage";
-       break;
-     default:
--      [NSException raise: @"MAPIStoreIOException"
--                  format: @"message class should not be queried for objects"
--                   @" of type '%d'", objectType];
-+      reason = [NSString stringWithFormat:@"message class should not be queried"
-+                         @" for objects of type '%d'", objectType];
-+      @throw [NSException exceptionWithName: @"MAPIStoreIOException"
-+                                     reason: reason
-+                                   userInfo: nil];
-     }
- 
-   return NSClassFromString (className);
-@@ -278,13 +280,17 @@ static EOAttribute *textColumn = nil;
+diff --git a/SoObjects/SOGo/SOGoCacheGCSObject.m b/SoObjects/SOGo/SOGoCacheGCSObject.m
+index 03269d9..d3eaf3a 100644
+--- a/SoObjects/SOGo/SOGoCacheGCSObject.m
++++ b/SoObjects/SOGo/SOGoCacheGCSObject.m
+@@ -215,13 +215,17 @@ static EOAttribute *textColumn = nil;
  {
    NSMutableString *sql;
    NSString *oldPath, *newPath;

@@ -12,10 +12,10 @@ Forwarded: https://github.com/inverse-inc/sogo/pull/35
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/OpenChange/GNUmakefile b/OpenChange/GNUmakefile
-index 4609074..afb6a6c 100644
+index f836285..051fe61 100644
 --- a/OpenChange/GNUmakefile
 +++ b/OpenChange/GNUmakefile
-@@ -171,7 +171,7 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy -lWEExte
+@@ -161,7 +161,7 @@ LIBMAPISTORE_LIBS = $(shell pkg-config libmapistore --libs) -lmapiproxy -lWEExte
  
  $(MAPISTORESOGO)_INSTALL_DIR = $(DESTDIR)/$(SAMBA_LIB_DIR)/mapistore_backends
  $(MAPISTORESOGO)_LIB_DIRS += \
