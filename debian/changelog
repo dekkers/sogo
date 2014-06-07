@@ -1,3 +1,12 @@
+sogo (2.2.5-1) unstable; urgency=medium
+
+  * [90b8c6d3] New upstream release
+  * [6dc419c5] Update patches
+  * [04a02370] Update version of libsope-dev build-depend
+  * [010e6b08] Change /etc/sogo/sogo.conf group to sogo and mode to 0640
+
+ -- Jeroen Dekkers <jeroen@dekkers.ch>  Sun, 08 Jun 2014 01:47:37 +0200
+
 sogo (2.2.3-1) experimental; urgency=medium
 
   * [0837e058] New upstream release
